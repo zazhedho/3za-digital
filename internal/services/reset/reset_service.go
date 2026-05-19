@@ -1,13 +1,13 @@
 package servicereset
 
 import (
+	interfacereset "3za-digital/internal/interfaces/reset"
+	"3za-digital/pkg/config"
+	"3za-digital/pkg/mailer"
+	"3za-digital/utils"
 	"context"
 	"errors"
 	"fmt"
-	interfacereset "starter-kit/internal/interfaces/reset"
-	"starter-kit/pkg/config"
-	"starter-kit/pkg/mailer"
-	"starter-kit/utils"
 	"strings"
 	"time"
 

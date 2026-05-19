@@ -1,8 +1,8 @@
 package handlerappconfig
 
 import (
-	domainaudit "starter-kit/internal/domain/audit"
-	handlercommon "starter-kit/internal/handlers/http/common"
+	domainaudit "3za-digital/internal/domain/audit"
+	handlercommon "3za-digital/internal/handlers/http/common"
 
 	"github.com/gin-gonic/gin"
 )

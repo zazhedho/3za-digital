@@ -1,13 +1,13 @@
 package servicelocation
 
 import (
+	domainlocation "3za-digital/internal/domain/location"
+	"3za-digital/internal/dto"
 	"context"
 	"errors"
 	"io"
 	"net/http"
 	"reflect"
-	domainlocation "starter-kit/internal/domain/location"
-	"starter-kit/internal/dto"
 	"strings"
 	"testing"
 	"time"

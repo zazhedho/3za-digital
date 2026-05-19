@@ -1,11 +1,11 @@
 package handlercommon
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
+	"3za-digital/pkg/logger"
+	"3za-digital/utils"
 	"fmt"
-	domainaudit "starter-kit/internal/domain/audit"
-	interfaceaudit "starter-kit/internal/interfaces/audit"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 
 	"github.com/gin-gonic/gin"
 )

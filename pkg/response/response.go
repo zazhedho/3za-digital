@@ -1,9 +1,9 @@
 package response
 
 import (
+	"3za-digital/pkg/messages"
 	"math"
 	"net/http"
-	"starter-kit/pkg/messages"
 
 	"github.com/google/uuid"
 )

@@ -1,9 +1,9 @@
 package interfacerole
 
 import (
+	domainrole "3za-digital/internal/domain/role"
+	interfacegeneric "3za-digital/internal/interfaces/generic"
 	"context"
-	domainrole "starter-kit/internal/domain/role"
-	interfacegeneric "starter-kit/internal/interfaces/generic"
 )
 
 type RepoRoleInterface interface {

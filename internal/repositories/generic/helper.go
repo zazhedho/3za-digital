@@ -1,9 +1,9 @@
 package repositorygeneric
 
 import (
+	"3za-digital/pkg/filter"
 	"fmt"
 	"reflect"
-	"starter-kit/pkg/filter"
 	"strings"
 
 	"gorm.io/gorm"

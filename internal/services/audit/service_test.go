@@ -1,10 +1,10 @@
 package serviceaudit
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	"3za-digital/pkg/filter"
 	"context"
 	"errors"
-	domainaudit "starter-kit/internal/domain/audit"
-	"starter-kit/pkg/filter"
 	"strings"
 	"testing"
 )

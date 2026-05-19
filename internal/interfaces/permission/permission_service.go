@@ -1,10 +1,10 @@
 package interfacepermission
 
 import (
+	domainpermission "3za-digital/internal/domain/permission"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
-	domainpermission "starter-kit/internal/domain/permission"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 )
 
 type ServicePermissionInterface interface {

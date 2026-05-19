@@ -1,9 +1,9 @@
 package servicereset
 
 import (
+	"3za-digital/pkg/config"
 	"context"
 	"errors"
-	"starter-kit/pkg/config"
 	"testing"
 	"time"
 

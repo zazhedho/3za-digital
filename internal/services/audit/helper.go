@@ -1,11 +1,11 @@
 package serviceaudit
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	"3za-digital/internal/dto"
+	"3za-digital/utils"
 	"encoding/json"
 	"fmt"
-	domainaudit "starter-kit/internal/domain/audit"
-	"starter-kit/internal/dto"
-	"starter-kit/utils"
 	"strings"
 )
 

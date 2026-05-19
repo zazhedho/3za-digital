@@ -1,16 +1,16 @@
 package servicelocation
 
 import (
+	locationcache "3za-digital/internal/cache/location"
+	domainlocation "3za-digital/internal/domain/location"
+	"3za-digital/internal/dto"
+	interfacelocation "3za-digital/internal/interfaces/location"
+	"3za-digital/pkg/logger"
+	"3za-digital/utils"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	locationcache "starter-kit/internal/cache/location"
-	domainlocation "starter-kit/internal/domain/location"
-	"starter-kit/internal/dto"
-	interfacelocation "starter-kit/internal/interfaces/location"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"sync/atomic"
 	"time"
 

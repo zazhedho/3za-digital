@@ -1,15 +1,15 @@
 package handlerlocation
 
 import (
+	"3za-digital/internal/dto"
+	servicelocation "3za-digital/internal/services/location"
+	"3za-digital/utils"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"starter-kit/internal/dto"
-	servicelocation "starter-kit/internal/services/location"
-	"starter-kit/utils"
 	"testing"
 
 	"github.com/gin-gonic/gin"

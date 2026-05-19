@@ -1,11 +1,11 @@
 package servicepermission
 
 import (
+	domainpermission "3za-digital/internal/domain/permission"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
 	"errors"
-	domainpermission "starter-kit/internal/domain/permission"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"testing"
 )
 

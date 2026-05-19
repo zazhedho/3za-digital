@@ -1,10 +1,10 @@
 package database
 
 import (
+	"3za-digital/pkg/logger"
+	"3za-digital/utils"
 	"database/sql"
 	"fmt"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"time"
 
 	"gorm.io/driver/postgres"

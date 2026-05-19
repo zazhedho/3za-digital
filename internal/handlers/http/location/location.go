@@ -1,17 +1,17 @@
 package handlerlocation
 
 import (
+	"3za-digital/internal/dto"
+	interfacelocation "3za-digital/internal/interfaces/location"
+	servicelocation "3za-digital/internal/services/location"
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/messages"
+	"3za-digital/pkg/response"
+	"3za-digital/utils"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
-	"starter-kit/internal/dto"
-	interfacelocation "starter-kit/internal/interfaces/location"
-	servicelocation "starter-kit/internal/services/location"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

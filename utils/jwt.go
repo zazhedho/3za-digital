@@ -1,10 +1,10 @@
 package utils
 
 import (
+	domainuser "3za-digital/internal/domain/user"
 	"errors"
 	"fmt"
 	"os"
-	domainuser "starter-kit/internal/domain/user"
 	"strings"
 	"time"
 

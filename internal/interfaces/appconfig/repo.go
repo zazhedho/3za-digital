@@ -1,9 +1,9 @@
 package interfaceappconfig
 
 import (
+	domainappconfig "3za-digital/internal/domain/appconfig"
+	interfacegeneric "3za-digital/internal/interfaces/generic"
 	"context"
-	domainappconfig "starter-kit/internal/domain/appconfig"
-	interfacegeneric "starter-kit/internal/interfaces/generic"
 )
 
 type RepoAppConfigInterface interface {

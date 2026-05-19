@@ -1,8 +1,8 @@
 package interfaceauth
 
 import (
+	domainauth "3za-digital/internal/domain/auth"
 	"context"
-	domainauth "starter-kit/internal/domain/auth"
 	"time"
 )
 

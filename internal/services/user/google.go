@@ -1,15 +1,15 @@
 package serviceuser
 
 import (
+	domainuser "3za-digital/internal/domain/user"
+	"3za-digital/internal/dto"
+	"3za-digital/utils"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	domainuser "starter-kit/internal/domain/user"
-	"starter-kit/internal/dto"
-	"starter-kit/utils"
 	"strings"
 	"time"
 

@@ -1,15 +1,15 @@
 package servicerole
 
 import (
+	"3za-digital/internal/authscope"
+	domainmenu "3za-digital/internal/domain/menu"
+	domainpermission "3za-digital/internal/domain/permission"
+	domainrole "3za-digital/internal/domain/role"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
 	"errors"
-	"starter-kit/internal/authscope"
-	domainmenu "starter-kit/internal/domain/menu"
-	domainpermission "starter-kit/internal/domain/permission"
-	domainrole "starter-kit/internal/domain/role"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"testing"
 )
 

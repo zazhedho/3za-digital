@@ -1,10 +1,10 @@
 package interfacemenu
 
 import (
+	domainmenu "3za-digital/internal/domain/menu"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
-	domainmenu "starter-kit/internal/domain/menu"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 )
 
 type ServiceMenuInterface interface {

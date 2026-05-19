@@ -1,12 +1,12 @@
 package repositoryrole
 
 import (
+	domainrole "3za-digital/internal/domain/role"
+	interfacerole "3za-digital/internal/interfaces/role"
+	repositorygeneric "3za-digital/internal/repositories/generic"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
-	domainrole "starter-kit/internal/domain/role"
-	interfacerole "starter-kit/internal/interfaces/role"
-	repositorygeneric "starter-kit/internal/repositories/generic"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 
 	"gorm.io/gorm"
 )

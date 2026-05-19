@@ -1,11 +1,11 @@
 package repositoryuser
 
 import (
+	domainuser "3za-digital/internal/domain/user"
+	interfaceuser "3za-digital/internal/interfaces/user"
+	repositorygeneric "3za-digital/internal/repositories/generic"
+	"3za-digital/pkg/filter"
 	"context"
-	domainuser "starter-kit/internal/domain/user"
-	interfaceuser "starter-kit/internal/interfaces/user"
-	repositorygeneric "starter-kit/internal/repositories/generic"
-	"starter-kit/pkg/filter"
 
 	"gorm.io/gorm"
 )

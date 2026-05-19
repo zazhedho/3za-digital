@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	domainsession "starter-kit/internal/domain/session"
-	domainuser "starter-kit/internal/domain/user"
+	domainsession "3za-digital/internal/domain/session"
+	domainuser "3za-digital/internal/domain/user"
 )
 
 type ServiceSessionInterface interface {

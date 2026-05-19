@@ -1,15 +1,15 @@
 package middlewares
 
 import (
+	domainauth "3za-digital/internal/domain/auth"
+	domainpermission "3za-digital/internal/domain/permission"
+	domainuser "3za-digital/internal/domain/user"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	domainauth "starter-kit/internal/domain/auth"
-	domainpermission "starter-kit/internal/domain/permission"
-	domainuser "starter-kit/internal/domain/user"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"testing"
 	"time"
 

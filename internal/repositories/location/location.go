@@ -1,10 +1,10 @@
 package repositorylocation
 
 import (
+	domainlocation "3za-digital/internal/domain/location"
+	interfacelocation "3za-digital/internal/interfaces/location"
+	"3za-digital/utils"
 	"context"
-	domainlocation "starter-kit/internal/domain/location"
-	interfacelocation "starter-kit/internal/interfaces/location"
-	"starter-kit/utils"
 	"time"
 
 	"gorm.io/gorm"

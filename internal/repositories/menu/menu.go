@@ -1,13 +1,13 @@
 package repositorymenu
 
 import (
+	domainmenu "3za-digital/internal/domain/menu"
+	interfacemenu "3za-digital/internal/interfaces/menu"
+	repositorygeneric "3za-digital/internal/repositories/generic"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
 	"sort"
-	domainmenu "starter-kit/internal/domain/menu"
-	interfacemenu "starter-kit/internal/interfaces/menu"
-	repositorygeneric "starter-kit/internal/repositories/generic"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 
 	"gorm.io/gorm"
 )

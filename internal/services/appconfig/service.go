@@ -1,13 +1,13 @@
 package serviceappconfig
 
 import (
+	domainappconfig "3za-digital/internal/domain/appconfig"
+	"3za-digital/internal/dto"
+	interfaceappconfig "3za-digital/internal/interfaces/appconfig"
+	"3za-digital/pkg/configvalue"
+	"3za-digital/pkg/filter"
 	"context"
 	"errors"
-	domainappconfig "starter-kit/internal/domain/appconfig"
-	"starter-kit/internal/dto"
-	interfaceappconfig "starter-kit/internal/interfaces/appconfig"
-	"starter-kit/pkg/configvalue"
-	"starter-kit/pkg/filter"
 	"time"
 
 	"gorm.io/gorm"

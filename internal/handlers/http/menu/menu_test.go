@@ -1,17 +1,17 @@
 package handlermenu
 
 import (
+	"3za-digital/internal/authscope"
+	domainaudit "3za-digital/internal/domain/audit"
+	domainmenu "3za-digital/internal/domain/menu"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"starter-kit/internal/authscope"
-	domainaudit "starter-kit/internal/domain/audit"
-	domainmenu "starter-kit/internal/domain/menu"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"testing"
 
 	"github.com/gin-gonic/gin"

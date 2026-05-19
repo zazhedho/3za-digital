@@ -64,6 +64,9 @@ func TestRouteGroupsRegisterWithDryRunDB(t *testing.T) {
 	routes.AppConfigRoutes()
 	routes.AuditRoutes()
 	routes.LocationRoutes()
+	routes.SMMRoutes()
+	routes.ProviderRoutes()
+	routes.DashboardRoutes()
 
 	registered := map[string]bool{}
 	for _, route := range routes.App.Routes() {
@@ -80,6 +83,15 @@ func TestRouteGroupsRegisterWithDryRunDB(t *testing.T) {
 		"GET /api/audits",
 		"GET /api/location/province",
 		"POST /api/location/sync",
+		"GET /api/smm/services",
+		"POST /api/smm/services/sync",
+		"GET /api/smm/orders",
+		"POST /api/smm/orders",
+		"GET /api/smm/orders/:id",
+		"POST /api/smm/orders/:id/refresh-status",
+		"GET /api/provider/h2h/balance",
+		"GET /api/provider/api-logs",
+		"GET /api/dashboard/summary",
 	} {
 		if !registered[want] {
 			t.Fatalf("expected route %s to be registered", want)

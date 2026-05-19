@@ -1,15 +1,15 @@
 package handleruser
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	handlercommon "3za-digital/internal/handlers/http/common"
+	"3za-digital/pkg/messages"
+	"3za-digital/pkg/response"
+	"3za-digital/utils"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	domainaudit "starter-kit/internal/domain/audit"
-	handlercommon "starter-kit/internal/handlers/http/common"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -82,7 +82,7 @@ func authEmailAppName() string {
 	if appName != "" {
 		return appName
 	}
-	return utils.GetEnv("APP_NAME", "STARTER-KIT")
+	return utils.GetEnv("APP_NAME", "3ZA Digital")
 }
 
 func buildAuthTokenResponse(accessToken string, refreshToken string) map[string]interface{} {

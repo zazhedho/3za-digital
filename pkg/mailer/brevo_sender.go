@@ -131,7 +131,7 @@ func buildPasswordResetMessage(from, to, subject, appName, token, resetURL strin
 }
 
 func buildMultipartMessage(from, to, subject, textBody, htmlBody string) []byte {
-	boundary := "starter-kit-mail-boundary"
+	boundary := "3za-digital-mail-boundary"
 
 	var buf bytes.Buffer
 	buf.WriteString("From: " + from + "\r\n")

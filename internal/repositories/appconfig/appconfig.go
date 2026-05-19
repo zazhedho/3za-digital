@@ -1,11 +1,11 @@
 package repositoryappconfig
 
 import (
+	domainappconfig "3za-digital/internal/domain/appconfig"
+	interfaceappconfig "3za-digital/internal/interfaces/appconfig"
+	repositorygeneric "3za-digital/internal/repositories/generic"
+	"3za-digital/pkg/filter"
 	"context"
-	domainappconfig "starter-kit/internal/domain/appconfig"
-	interfaceappconfig "starter-kit/internal/interfaces/appconfig"
-	repositorygeneric "starter-kit/internal/repositories/generic"
-	"starter-kit/pkg/filter"
 
 	"gorm.io/gorm"
 )

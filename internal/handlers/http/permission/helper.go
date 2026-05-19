@@ -1,12 +1,12 @@
 package handlerpermission
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	handlercommon "3za-digital/internal/handlers/http/common"
+	"3za-digital/pkg/messages"
+	"3za-digital/pkg/response"
 	"errors"
 	"net/http"
-	domainaudit "starter-kit/internal/domain/audit"
-	handlercommon "starter-kit/internal/handlers/http/common"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
 	"strings"
 
 	"github.com/gin-gonic/gin"

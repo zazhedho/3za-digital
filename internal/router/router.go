@@ -1,50 +1,66 @@
 package router
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"starter-kit/infrastructure/database"
-	permissioncache "starter-kit/internal/cache/permission"
-	appConfigHandler "starter-kit/internal/handlers/http/appconfig"
-	auditHandler "starter-kit/internal/handlers/http/audit"
-	locationHandler "starter-kit/internal/handlers/http/location"
-	menuHandler "starter-kit/internal/handlers/http/menu"
-	permissionHandler "starter-kit/internal/handlers/http/permission"
-	roleHandler "starter-kit/internal/handlers/http/role"
-	sessionHandler "starter-kit/internal/handlers/http/session"
-	userHandler "starter-kit/internal/handlers/http/user"
-	interfacesession "starter-kit/internal/interfaces/session"
-	appConfigRepo "starter-kit/internal/repositories/appconfig"
-	auditRepo "starter-kit/internal/repositories/audit"
-	authRepo "starter-kit/internal/repositories/auth"
-	locationRepo "starter-kit/internal/repositories/location"
-	menuRepo "starter-kit/internal/repositories/menu"
-	otpRepo "starter-kit/internal/repositories/otp"
-	permissionRepo "starter-kit/internal/repositories/permission"
-	resetRepo "starter-kit/internal/repositories/reset"
-	roleRepo "starter-kit/internal/repositories/role"
-	sessionRepo "starter-kit/internal/repositories/session"
-	userRepo "starter-kit/internal/repositories/user"
-	appConfigSvc "starter-kit/internal/services/appconfig"
-	auditSvc "starter-kit/internal/services/audit"
-	locationSvc "starter-kit/internal/services/location"
-	menuSvc "starter-kit/internal/services/menu"
-	otpSvc "starter-kit/internal/services/otp"
-	permissionSvc "starter-kit/internal/services/permission"
-	resetSvc "starter-kit/internal/services/reset"
-	roleSvc "starter-kit/internal/services/role"
-	sessionSvc "starter-kit/internal/services/session"
-	userSvc "starter-kit/internal/services/user"
-	"starter-kit/middlewares"
-	"starter-kit/pkg/config"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/mailer"
-	"starter-kit/pkg/security"
-	"starter-kit/utils"
+	"3za-digital/infrastructure/database"
+	permissioncache "3za-digital/internal/cache/permission"
+	domaincatalog "3za-digital/internal/domain/catalog"
+	domainprovider "3za-digital/internal/domain/provider"
+	appConfigHandler "3za-digital/internal/handlers/http/appconfig"
+	auditHandler "3za-digital/internal/handlers/http/audit"
+	dashboardHandler "3za-digital/internal/handlers/http/dashboard"
+	locationHandler "3za-digital/internal/handlers/http/location"
+	menuHandler "3za-digital/internal/handlers/http/menu"
+	permissionHandler "3za-digital/internal/handlers/http/permission"
+	providerHandler "3za-digital/internal/handlers/http/provider"
+	roleHandler "3za-digital/internal/handlers/http/role"
+	sessionHandler "3za-digital/internal/handlers/http/session"
+	smmHandler "3za-digital/internal/handlers/http/smm"
+	userHandler "3za-digital/internal/handlers/http/user"
+	"3za-digital/internal/integrations/h2h"
+	interfaceprovider "3za-digital/internal/interfaces/provider"
+	interfacesession "3za-digital/internal/interfaces/session"
+	appConfigRepo "3za-digital/internal/repositories/appconfig"
+	auditRepo "3za-digital/internal/repositories/audit"
+	authRepo "3za-digital/internal/repositories/auth"
+	catalogRepo "3za-digital/internal/repositories/catalog"
+	dashboardRepo "3za-digital/internal/repositories/dashboard"
+	locationRepo "3za-digital/internal/repositories/location"
+	menuRepo "3za-digital/internal/repositories/menu"
+	orderRepo "3za-digital/internal/repositories/order"
+	otpRepo "3za-digital/internal/repositories/otp"
+	permissionRepo "3za-digital/internal/repositories/permission"
+	providerRepo "3za-digital/internal/repositories/provider"
+	resetRepo "3za-digital/internal/repositories/reset"
+	roleRepo "3za-digital/internal/repositories/role"
+	sessionRepo "3za-digital/internal/repositories/session"
+	userRepo "3za-digital/internal/repositories/user"
+	appConfigSvc "3za-digital/internal/services/appconfig"
+	auditSvc "3za-digital/internal/services/audit"
+	catalogSvc "3za-digital/internal/services/catalog"
+	dashboardSvc "3za-digital/internal/services/dashboard"
+	locationSvc "3za-digital/internal/services/location"
+	menuSvc "3za-digital/internal/services/menu"
+	orderSvc "3za-digital/internal/services/order"
+	otpSvc "3za-digital/internal/services/otp"
+	permissionSvc "3za-digital/internal/services/permission"
+	providerSvc "3za-digital/internal/services/provider"
+	resetSvc "3za-digital/internal/services/reset"
+	roleSvc "3za-digital/internal/services/role"
+	sessionSvc "3za-digital/internal/services/session"
+	userSvc "3za-digital/internal/services/user"
+	"3za-digital/middlewares"
+	"3za-digital/pkg/config"
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/mailer"
+	"3za-digital/pkg/security"
+	"3za-digital/utils"
 )
 
 type Routes struct {
@@ -320,4 +336,83 @@ func (r *Routes) LocationRoutes() {
 		locationPriv.POST("/sync", mdw.PermissionMiddleware("locations", "sync"), h.Sync)
 		locationPriv.GET("/sync/:id", mdw.PermissionMiddleware("locations", "sync"), h.GetSyncJob)
 	}
+}
+
+func (r *Routes) SMMRoutes() {
+	repoCatalog := catalogRepo.NewCatalogRepo(r.DB)
+	repoOrder := orderRepo.NewOrderRepo(r.DB)
+	repoProvider := providerRepo.NewProviderRepo(r.DB)
+	providerFactory := func() (interfaceprovider.Client, error) {
+		return newObservedH2HClient(repoProvider)
+	}
+	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory)
+	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory)
+	h := smmHandler.NewSMMHandler(svcCatalog, svcOrder)
+
+	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
+
+	smm := r.App.Group("/api/smm").Use(mdw.AuthMiddleware())
+	{
+		smm.GET("/services", mdw.PermissionMiddleware("smm_services", "list"), h.GetServices)
+		smm.POST("/services/sync", mdw.PermissionMiddleware("smm_services", "sync"), h.SyncServices)
+		smm.GET("/orders", mdw.PermissionMiddleware("smm_orders", "list"), h.GetOrders)
+		smm.POST("/orders", mdw.PermissionMiddleware("smm_orders", "create"), h.CreateOrder)
+		smm.GET("/orders/:id", mdw.PermissionMiddleware("smm_orders", "view"), h.GetOrderByID)
+		smm.GET("/orders/:id/status-logs", mdw.PermissionMiddleware("smm_orders", "view"), h.GetOrderStatusLogs)
+		smm.POST("/orders/:id/refresh-status", mdw.PermissionMiddleware("smm_orders", "refresh_status"), h.RefreshOrderStatus)
+	}
+}
+
+func (r *Routes) ProviderRoutes() {
+	repoProvider := providerRepo.NewProviderRepo(r.DB)
+	svcProvider := providerSvc.NewProviderService(repoProvider, func() (interfaceprovider.Client, error) {
+		return newObservedH2HClient(repoProvider)
+	})
+	h := providerHandler.NewProviderHandler(svcProvider)
+
+	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
+
+	provider := r.App.Group("/api/provider").Use(mdw.AuthMiddleware())
+	{
+		provider.GET("/h2h/balance", mdw.PermissionMiddleware("provider_balance", "view"), h.GetH2HBalance)
+		provider.GET("/api-logs", mdw.PermissionMiddleware("provider_api_logs", "list"), h.GetAPILogs)
+	}
+}
+
+func newObservedH2HClient(repo interfaceprovider.RepoProviderInterface) (interfaceprovider.Client, error) {
+	client, err := h2h.NewClient(h2h.LoadConfigFromEnv())
+	if err != nil {
+		return nil, err
+	}
+	client.SetObserver(func(ctx context.Context, event h2h.RequestLog) {
+		if err := repo.StoreAPILog(ctx, domainprovider.APILog{
+			Provider:       domaincatalog.ProviderH2H,
+			ProductType:    event.ProductType,
+			Endpoint:       event.Endpoint,
+			RequestRef:     event.RequestRef,
+			ResponseStatus: new(event.ResponseStatus),
+			ResponseBody:   event.ResponseBody,
+			DurationMS:     new(event.DurationMS),
+			ErrorMessage:   event.ErrorMessage,
+		}); err != nil {
+			logger.WriteLog(logger.LogLevelWarn, "Failed to store provider API log: ", err)
+		}
+	})
+	return client, nil
+}
+
+func (r *Routes) DashboardRoutes() {
+	repoDashboard := dashboardRepo.NewDashboardRepo(r.DB)
+	svcDashboard := dashboardSvc.NewDashboardService(repoDashboard)
+	h := dashboardHandler.NewDashboardHandler(svcDashboard)
+
+	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
+
+	r.App.GET("/api/dashboard/summary", mdw.AuthMiddleware(), mdw.PermissionMiddleware("dashboard", "view"), h.GetSummary)
 }

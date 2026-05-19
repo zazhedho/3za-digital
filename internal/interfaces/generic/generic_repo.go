@@ -1,8 +1,8 @@
 package interfacegeneric
 
 import (
+	"3za-digital/pkg/filter"
 	"context"
-	"starter-kit/pkg/filter"
 )
 
 type GenericRepository[T any] interface {

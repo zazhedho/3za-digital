@@ -1,14 +1,14 @@
 package serviceotp
 
 import (
+	interfaceotp "3za-digital/internal/interfaces/otp"
+	"3za-digital/pkg/config"
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/mailer"
+	"3za-digital/utils"
 	"context"
 	"errors"
 	"fmt"
-	interfaceotp "starter-kit/internal/interfaces/otp"
-	"starter-kit/pkg/config"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/mailer"
-	"starter-kit/utils"
 	"strings"
 	"time"
 

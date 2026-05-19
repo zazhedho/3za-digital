@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"starter-kit/utils"
+	"3za-digital/utils"
 )
 
 type PasswordResetConfig struct {

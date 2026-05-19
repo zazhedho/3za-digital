@@ -1,10 +1,10 @@
 package middlewares
 
 import (
+	"3za-digital/internal/authscope"
+	"3za-digital/pkg/logger"
 	"fmt"
 	"net/http"
-	"starter-kit/internal/authscope"
-	"starter-kit/pkg/logger"
 	"time"
 
 	"github.com/gin-gonic/gin"

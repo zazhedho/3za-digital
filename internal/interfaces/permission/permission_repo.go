@@ -1,9 +1,9 @@
 package interfacepermission
 
 import (
+	domainpermission "3za-digital/internal/domain/permission"
+	interfacegeneric "3za-digital/internal/interfaces/generic"
 	"context"
-	domainpermission "starter-kit/internal/domain/permission"
-	interfacegeneric "starter-kit/internal/interfaces/generic"
 )
 
 type RepoPermissionInterface interface {

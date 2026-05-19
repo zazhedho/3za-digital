@@ -1,6 +1,10 @@
 package servicelocation
 
 import (
+	locationcache "3za-digital/internal/cache/location"
+	domainlocation "3za-digital/internal/domain/location"
+	"3za-digital/internal/dto"
+	"3za-digital/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,10 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	locationcache "starter-kit/internal/cache/location"
-	domainlocation "starter-kit/internal/domain/location"
-	"starter-kit/internal/dto"
-	"starter-kit/utils"
 	"strings"
 	"time"
 

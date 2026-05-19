@@ -1,17 +1,17 @@
 package handlerpermission
 
 import (
+	"3za-digital/internal/authscope"
+	domainaudit "3za-digital/internal/domain/audit"
+	domainpermission "3za-digital/internal/domain/permission"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"starter-kit/internal/authscope"
-	domainaudit "starter-kit/internal/domain/audit"
-	domainpermission "starter-kit/internal/domain/permission"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"strings"
 	"testing"
 

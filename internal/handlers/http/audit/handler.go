@@ -1,14 +1,14 @@
 package handleraudit
 
 import (
+	interfaceaudit "3za-digital/internal/interfaces/audit"
+	"3za-digital/pkg/filter"
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/messages"
+	"3za-digital/pkg/response"
+	"3za-digital/utils"
 	"fmt"
 	"net/http"
-	interfaceaudit "starter-kit/internal/interfaces/audit"
-	"starter-kit/pkg/filter"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
 
 	"github.com/gin-gonic/gin"
 )

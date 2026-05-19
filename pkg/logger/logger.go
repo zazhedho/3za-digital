@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"starter-kit/utils"
+	"3za-digital/utils"
 
 	"log/slog"
 

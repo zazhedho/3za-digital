@@ -1,9 +1,9 @@
 package repositoryauth
 
 import (
+	domainauth "3za-digital/internal/domain/auth"
 	"context"
 	"errors"
-	domainauth "starter-kit/internal/domain/auth"
 	"testing"
 	"time"
 )

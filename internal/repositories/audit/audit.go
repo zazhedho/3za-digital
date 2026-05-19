@@ -1,11 +1,11 @@
 package repositoryaudit
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
+	repositorygeneric "3za-digital/internal/repositories/generic"
+	"3za-digital/pkg/filter"
 	"context"
-	domainaudit "starter-kit/internal/domain/audit"
-	interfaceaudit "starter-kit/internal/interfaces/audit"
-	repositorygeneric "starter-kit/internal/repositories/generic"
-	"starter-kit/pkg/filter"
 
 	"gorm.io/gorm"
 )

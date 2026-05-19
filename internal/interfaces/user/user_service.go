@@ -1,10 +1,10 @@
 package interfaceuser
 
 import (
+	domainuser "3za-digital/internal/domain/user"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
-	domainuser "starter-kit/internal/domain/user"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 )
 
 type ServiceUserInterface interface {

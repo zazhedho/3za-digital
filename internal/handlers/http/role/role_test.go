@@ -1,16 +1,16 @@
 package handlerrole
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	domainrole "3za-digital/internal/domain/role"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	domainaudit "starter-kit/internal/domain/audit"
-	domainrole "starter-kit/internal/domain/role"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"testing"
 
 	"github.com/gin-gonic/gin"

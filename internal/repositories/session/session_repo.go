@@ -1,12 +1,12 @@
 package repositorysession
 
 import (
+	domainsession "3za-digital/internal/domain/session"
+	"3za-digital/pkg/logger"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	domainsession "starter-kit/internal/domain/session"
-	"starter-kit/pkg/logger"
 	"time"
 
 	"github.com/redis/go-redis/v9"

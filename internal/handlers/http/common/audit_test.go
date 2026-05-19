@@ -1,13 +1,13 @@
 package handlercommon
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	domainaudit "starter-kit/internal/domain/audit"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"testing"
 
 	"github.com/gin-gonic/gin"

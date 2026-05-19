@@ -1,11 +1,11 @@
 package main
 
 import (
+	"3za-digital/pkg/moduleseed"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"starter-kit/pkg/moduleseed"
 	"strings"
 )
 

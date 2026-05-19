@@ -1,8 +1,8 @@
 package repositorysession
 
 import (
+	domainsession "3za-digital/internal/domain/session"
 	"context"
-	domainsession "starter-kit/internal/domain/session"
 	"testing"
 	"time"
 )

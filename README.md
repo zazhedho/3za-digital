@@ -1,6 +1,6 @@
-# Starter Kit
+# 3ZA Digital
 
-Backend starter template for Go services with:
+Backend for 3ZA Digital with:
 - Gin HTTP router
 - PostgreSQL via GORM
 - JWT authentication
@@ -14,7 +14,7 @@ This repository is intended to be the foundation for future projects. The curren
 
 ### Permission-First RBAC
 
-RBAC in this starter kit is designed with these rules:
+RBAC in this backend is designed with these rules:
 - `permission` is the runtime source of truth for access control
 - `role` is a label and a grouping mechanism for permissions
 - `superadmin` is the only exception and bypasses permission checks
@@ -41,7 +41,7 @@ Built-in auth feature flags:
 - `auth.register_otp_enabled`: require OTP verification for public registration
 - `auth.password_reset_email_enabled`: send password reset tokens through the email sender instead of returning a development token in the API response
 
-The starter kit now includes a typed helper on top of `app_configs`, so services do not need to parse raw strings manually for common cases such as:
+This backend includes a typed helper on top of `app_configs`, so services do not need to parse raw strings manually for common cases such as:
 - `GetString`
 - `GetBool`
 - `GetInt`
@@ -84,7 +84,7 @@ System modules currently included:
 Main backend layout:
 
 ```text
-starter-kit/
+3za-digital/
 ├── infrastructure/
 ├── internal/
 │   ├── domain/

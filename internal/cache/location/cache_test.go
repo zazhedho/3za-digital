@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"starter-kit/internal/dto"
+	"3za-digital/internal/dto"
 
 	redismock "github.com/go-redis/redismock/v9"
 )

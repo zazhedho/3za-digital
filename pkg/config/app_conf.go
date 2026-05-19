@@ -1,13 +1,13 @@
 package config
 
 import (
+	"3za-digital/pkg/logger"
+	"3za-digital/utils"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"strings"
 	"time"
 

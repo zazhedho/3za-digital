@@ -1,10 +1,10 @@
 package interfacerole
 
 import (
+	domainrole "3za-digital/internal/domain/role"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
-	domainrole "starter-kit/internal/domain/role"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 )
 
 type ServiceRoleInterface interface {

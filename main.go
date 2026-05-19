@@ -1,17 +1,17 @@
 package main
 
 import (
+	"3za-digital/infrastructure/database"
+	"3za-digital/internal/router"
+	"3za-digital/pkg/config"
+	"3za-digital/pkg/logger"
+	"3za-digital/utils"
 	"database/sql"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"starter-kit/infrastructure/database"
-	"starter-kit/internal/router"
-	"starter-kit/pkg/config"
-	"starter-kit/pkg/logger"
-	"starter-kit/utils"
 	"strings"
 	"time"
 
@@ -99,6 +99,9 @@ func main() {
 	routes.AppConfigRoutes()
 	routes.AuditRoutes()
 	routes.LocationRoutes()
+	routes.SMMRoutes()
+	routes.ProviderRoutes()
+	routes.DashboardRoutes()
 
 	// Register session routes if Redis is available
 	if redisClient != nil {

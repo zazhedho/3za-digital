@@ -1,18 +1,18 @@
 package servicerole
 
 import (
+	"3za-digital/internal/authscope"
+	permissioncache "3za-digital/internal/cache/permission"
+	domainrole "3za-digital/internal/domain/role"
+	"3za-digital/internal/dto"
+	interfacemenu "3za-digital/internal/interfaces/menu"
+	interfacepermission "3za-digital/internal/interfaces/permission"
+	interfacerole "3za-digital/internal/interfaces/role"
+	serviceshared "3za-digital/internal/services/shared"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
 	"errors"
-	"starter-kit/internal/authscope"
-	permissioncache "starter-kit/internal/cache/permission"
-	domainrole "starter-kit/internal/domain/role"
-	"starter-kit/internal/dto"
-	interfacemenu "starter-kit/internal/interfaces/menu"
-	interfacepermission "starter-kit/internal/interfaces/permission"
-	interfacerole "starter-kit/internal/interfaces/role"
-	serviceshared "starter-kit/internal/services/shared"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"time"
 )
 

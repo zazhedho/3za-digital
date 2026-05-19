@@ -1,10 +1,10 @@
 package servicesession
 
 import (
+	domainsession "3za-digital/internal/domain/session"
+	domainuser "3za-digital/internal/domain/user"
 	"context"
 	"errors"
-	domainsession "starter-kit/internal/domain/session"
-	domainuser "starter-kit/internal/domain/user"
 	"testing"
 	"time"
 )

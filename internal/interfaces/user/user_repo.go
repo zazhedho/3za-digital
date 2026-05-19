@@ -1,9 +1,9 @@
 package interfaceuser
 
 import (
+	domainuser "3za-digital/internal/domain/user"
+	interfacegeneric "3za-digital/internal/interfaces/generic"
 	"context"
-	domainuser "starter-kit/internal/domain/user"
-	interfacegeneric "starter-kit/internal/interfaces/generic"
 )
 
 type RepoUserInterface interface {

@@ -1,16 +1,16 @@
 package handlersession
 
 import (
+	"3za-digital/internal/authscope"
+	domainaudit "3za-digital/internal/domain/audit"
+	domainsession "3za-digital/internal/domain/session"
+	domainuser "3za-digital/internal/domain/user"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"starter-kit/internal/authscope"
-	domainaudit "starter-kit/internal/domain/audit"
-	domainsession "starter-kit/internal/domain/session"
-	domainuser "starter-kit/internal/domain/user"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"testing"
 	"time"
 

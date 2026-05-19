@@ -1,10 +1,10 @@
 package repositorygeneric
 
 import (
+	"3za-digital/pkg/filter"
 	"context"
 	"errors"
 	"fmt"
-	"starter-kit/pkg/filter"
 	"strings"
 
 	"gorm.io/gorm"

@@ -1,10 +1,10 @@
 package media
 
 import (
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/storage"
+	"3za-digital/utils"
 	"fmt"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/storage"
-	"starter-kit/utils"
 	"strconv"
 	"strings"
 )

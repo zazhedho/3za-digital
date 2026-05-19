@@ -1,19 +1,19 @@
 package handlermenu
 
 import (
+	"3za-digital/internal/authscope"
+	domainaudit "3za-digital/internal/domain/audit"
+	"3za-digital/internal/dto"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
+	interfacemenu "3za-digital/internal/interfaces/menu"
+	"3za-digital/pkg/filter"
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/messages"
+	"3za-digital/pkg/response"
+	"3za-digital/utils"
 	"fmt"
 	"net/http"
 	"reflect"
-	"starter-kit/internal/authscope"
-	domainaudit "starter-kit/internal/domain/audit"
-	"starter-kit/internal/dto"
-	interfaceaudit "starter-kit/internal/interfaces/audit"
-	interfacemenu "starter-kit/internal/interfaces/menu"
-	"starter-kit/pkg/filter"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,14 +1,14 @@
 package servicepermission
 
 import (
+	permissioncache "3za-digital/internal/cache/permission"
+	domainpermission "3za-digital/internal/domain/permission"
+	"3za-digital/internal/dto"
+	interfacepermission "3za-digital/internal/interfaces/permission"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
 	"errors"
-	permissioncache "starter-kit/internal/cache/permission"
-	domainpermission "starter-kit/internal/domain/permission"
-	"starter-kit/internal/dto"
-	interfacepermission "starter-kit/internal/interfaces/permission"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"time"
 )
 

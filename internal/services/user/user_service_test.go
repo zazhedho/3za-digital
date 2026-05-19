@@ -1,16 +1,16 @@
 package serviceuser
 
 import (
+	"3za-digital/internal/authscope"
+	domainauth "3za-digital/internal/domain/auth"
+	domainpermission "3za-digital/internal/domain/permission"
+	domainrole "3za-digital/internal/domain/role"
+	domainuser "3za-digital/internal/domain/user"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
 	"errors"
-	"starter-kit/internal/authscope"
-	domainauth "starter-kit/internal/domain/auth"
-	domainpermission "starter-kit/internal/domain/permission"
-	domainrole "starter-kit/internal/domain/role"
-	domainuser "starter-kit/internal/domain/user"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"testing"
 	"time"
 

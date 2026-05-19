@@ -1,9 +1,9 @@
 package utils
 
 import (
+	domainuser "3za-digital/internal/domain/user"
 	"errors"
 	"net/http/httptest"
-	domainuser "starter-kit/internal/domain/user"
 	"testing"
 	"time"
 

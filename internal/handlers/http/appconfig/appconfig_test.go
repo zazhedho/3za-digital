@@ -1,16 +1,16 @@
 package handlerappconfig
 
 import (
+	domainappconfig "3za-digital/internal/domain/appconfig"
+	domainaudit "3za-digital/internal/domain/audit"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	domainappconfig "starter-kit/internal/domain/appconfig"
-	domainaudit "starter-kit/internal/domain/audit"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"testing"
 	"time"
 

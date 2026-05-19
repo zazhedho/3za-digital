@@ -1,12 +1,12 @@
 package repositorypermission
 
 import (
+	domainpermission "3za-digital/internal/domain/permission"
+	interfacepermission "3za-digital/internal/interfaces/permission"
+	repositorygeneric "3za-digital/internal/repositories/generic"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
-	domainpermission "starter-kit/internal/domain/permission"
-	interfacepermission "starter-kit/internal/interfaces/permission"
-	repositorygeneric "starter-kit/internal/repositories/generic"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 
 	"gorm.io/gorm"
 )

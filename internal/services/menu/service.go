@@ -1,13 +1,13 @@
 package servicemenu
 
 import (
+	domainmenu "3za-digital/internal/domain/menu"
+	"3za-digital/internal/dto"
+	interfacemenu "3za-digital/internal/interfaces/menu"
+	interfacepermission "3za-digital/internal/interfaces/permission"
+	serviceshared "3za-digital/internal/services/shared"
+	"3za-digital/pkg/filter"
 	"context"
-	domainmenu "starter-kit/internal/domain/menu"
-	"starter-kit/internal/dto"
-	interfacemenu "starter-kit/internal/interfaces/menu"
-	interfacepermission "starter-kit/internal/interfaces/permission"
-	serviceshared "starter-kit/internal/services/shared"
-	"starter-kit/pkg/filter"
 	"time"
 )
 

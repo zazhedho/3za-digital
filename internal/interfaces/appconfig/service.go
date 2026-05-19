@@ -1,10 +1,10 @@
 package interfaceappconfig
 
 import (
+	domainappconfig "3za-digital/internal/domain/appconfig"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
-	domainappconfig "starter-kit/internal/domain/appconfig"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"time"
 )
 

@@ -1,14 +1,14 @@
 package serviceuser
 
 import (
+	domainuser "3za-digital/internal/domain/user"
+	"3za-digital/internal/dto"
+	interfacerole "3za-digital/internal/interfaces/role"
+	"3za-digital/utils"
 	"context"
 	"errors"
 	"net/mail"
 	"regexp"
-	domainuser "starter-kit/internal/domain/user"
-	"starter-kit/internal/dto"
-	interfacerole "starter-kit/internal/interfaces/role"
-	"starter-kit/utils"
 	"strings"
 )
 

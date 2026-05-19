@@ -1,18 +1,18 @@
 package handlerrole
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	"3za-digital/internal/dto"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
+	interfacerole "3za-digital/internal/interfaces/role"
+	"3za-digital/pkg/filter"
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/messages"
+	"3za-digital/pkg/response"
+	"3za-digital/utils"
 	"fmt"
 	"net/http"
 	"reflect"
-	domainaudit "starter-kit/internal/domain/audit"
-	"starter-kit/internal/dto"
-	interfaceaudit "starter-kit/internal/interfaces/audit"
-	interfacerole "starter-kit/internal/interfaces/role"
-	"starter-kit/pkg/filter"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
 
 	"github.com/gin-gonic/gin"
 )

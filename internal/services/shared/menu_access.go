@@ -1,11 +1,11 @@
 package serviceshared
 
 import (
+	"3za-digital/internal/authscope"
+	domainmenu "3za-digital/internal/domain/menu"
+	domainpermission "3za-digital/internal/domain/permission"
+	interfacepermission "3za-digital/internal/interfaces/permission"
 	"context"
-	"starter-kit/internal/authscope"
-	domainmenu "starter-kit/internal/domain/menu"
-	domainpermission "starter-kit/internal/domain/permission"
-	interfacepermission "starter-kit/internal/interfaces/permission"
 	"strings"
 )
 

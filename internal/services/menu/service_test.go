@@ -1,12 +1,12 @@
 package servicemenu
 
 import (
+	domainmenu "3za-digital/internal/domain/menu"
+	domainpermission "3za-digital/internal/domain/permission"
+	"3za-digital/internal/dto"
+	"3za-digital/pkg/filter"
 	"context"
 	"errors"
-	domainmenu "starter-kit/internal/domain/menu"
-	domainpermission "starter-kit/internal/domain/permission"
-	"starter-kit/internal/dto"
-	"starter-kit/pkg/filter"
 	"testing"
 )
 

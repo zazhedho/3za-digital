@@ -1,17 +1,17 @@
 package handlersession
 
 import (
+	"3za-digital/internal/authscope"
+	domainaudit "3za-digital/internal/domain/audit"
+	handlercommon "3za-digital/internal/handlers/http/common"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
+	interfacesession "3za-digital/internal/interfaces/session"
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/messages"
+	"3za-digital/pkg/response"
+	"3za-digital/utils"
 	"fmt"
 	"net/http"
-	"starter-kit/internal/authscope"
-	domainaudit "starter-kit/internal/domain/audit"
-	handlercommon "starter-kit/internal/handlers/http/common"
-	interfaceaudit "starter-kit/internal/interfaces/audit"
-	interfacesession "starter-kit/internal/interfaces/session"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/messages"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,9 +1,9 @@
 package interfacemenu
 
 import (
+	domainmenu "3za-digital/internal/domain/menu"
+	interfacegeneric "3za-digital/internal/interfaces/generic"
 	"context"
-	domainmenu "starter-kit/internal/domain/menu"
-	interfacegeneric "starter-kit/internal/interfaces/generic"
 )
 
 type RepoMenuInterface interface {

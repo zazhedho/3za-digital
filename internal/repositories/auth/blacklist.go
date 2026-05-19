@@ -1,11 +1,11 @@
 package repositoryauth
 
 import (
+	domainauth "3za-digital/internal/domain/auth"
+	interfaceauth "3za-digital/internal/interfaces/auth"
+	repositorygeneric "3za-digital/internal/repositories/generic"
 	"context"
 	"errors"
-	domainauth "starter-kit/internal/domain/auth"
-	interfaceauth "starter-kit/internal/interfaces/auth"
-	repositorygeneric "starter-kit/internal/repositories/generic"
 	"time"
 
 	"gorm.io/gorm"

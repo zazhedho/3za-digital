@@ -1,11 +1,11 @@
 package middlewares
 
 import (
+	"3za-digital/pkg/logger"
+	"3za-digital/pkg/response"
+	"3za-digital/utils"
 	"fmt"
 	"net/http"
-	"starter-kit/pkg/logger"
-	"starter-kit/pkg/response"
-	"starter-kit/utils"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,13 +1,13 @@
 package serviceaudit
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
+	"3za-digital/internal/dto"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
+	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"context"
 	"errors"
-	domainaudit "starter-kit/internal/domain/audit"
-	"starter-kit/internal/dto"
-	interfaceaudit "starter-kit/internal/interfaces/audit"
-	"starter-kit/pkg/filter"
-	"starter-kit/utils"
 	"strings"
 	"time"
 )

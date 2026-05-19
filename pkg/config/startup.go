@@ -10,7 +10,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"starter-kit/utils"
+	"3za-digital/utils"
 )
 
 func ValidateStartupConfig(port string) error {

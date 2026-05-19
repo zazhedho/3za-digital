@@ -1,8 +1,8 @@
 package repositorylocation
 
 import (
+	domainlocation "3za-digital/internal/domain/location"
 	"context"
-	domainlocation "starter-kit/internal/domain/location"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"

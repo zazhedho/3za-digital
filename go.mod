@@ -1,4 +1,4 @@
-module starter-kit
+module 3za-digital
 
 go 1.26.3
 
