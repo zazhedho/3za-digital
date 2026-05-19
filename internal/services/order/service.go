@@ -59,32 +59,30 @@ func (s *OrderService) GetStatusLogs(ctx context.Context, orderID string) ([]dom
 	return s.Repo.GetStatusLogs(ctx, orderID)
 }
 
-func (s *OrderService) CreateSMMOrder(ctx context.Context, req dto.CreateSMMOrderRequest, createdBy string) (domainorder.Order, error) {
+func (s *OrderService) CreateOrder(ctx context.Context, productType string, req dto.CreateOrderRequest, createdBy string) (domainorder.Order, error) {
 	req.Target = strings.TrimSpace(req.Target)
 	if req.Target == "" || req.Quantity <= 0 || strings.TrimSpace(req.ServiceID) == "" {
 		return domainorder.Order{}, ErrInvalidOrderRequest
 	}
+	productType = strings.ToLower(strings.TrimSpace(productType))
 
 	service, err := s.Repo.GetServiceByID(ctx, req.ServiceID)
 	if err != nil {
 		return domainorder.Order{}, err
 	}
-	if err := validateSMMService(service, req.Quantity); err != nil {
+	if err := validateService(service, productType, req.Quantity); err != nil {
 		return domainorder.Order{}, err
 	}
 
-	now := time.Now()
-	serviceID := service.Id
-	quantity := req.Quantity
 	order := domainorder.Order{
 		Id:                utils.CreateUUID(),
 		Provider:          domaincatalog.ProviderH2H,
-		ProductType:       domaincatalog.ProductTypeSMM,
-		RefID:             generateRefID(domaincatalog.ProductTypeSMM),
-		ServiceID:         &serviceID,
+		ProductType:       productType,
+		RefID:             generateRefID(productType),
+		ServiceID:         new(service.Id),
 		ProviderServiceID: service.ProviderServiceID,
 		Target:            req.Target,
-		Quantity:          &quantity,
+		Quantity:          new(req.Quantity),
 		Status:            domainorder.StatusPending,
 		Amount:            "0",
 		ProviderCharge:    "0",
@@ -92,7 +90,7 @@ func (s *OrderService) CreateSMMOrder(ctx context.Context, req dto.CreateSMMOrde
 		Metadata:          mustJSON(map[string]string{"source": "api"}),
 		ProviderResponse:  json.RawMessage(`{}`),
 		CreatedBy:         normalizeOptionalString(createdBy),
-		UpdatedAt:         &now,
+		UpdatedAt:         new(time.Now()),
 	}
 
 	order, err = s.Repo.CreateWithStatusLog(ctx, order, domainorder.OrderStatusLog{
@@ -111,7 +109,7 @@ func (s *OrderService) CreateSMMOrder(ctx context.Context, req dto.CreateSMMOrde
 	}
 
 	providerResp, err := client.CreateOrder(ctx, h2h.CreateOrderRequest{
-		Type:        h2h.ProductTypeSMM,
+		Type:        productType,
 		ServiceCode: service.ProviderServiceID,
 		Target:      req.Target,
 		Quantity:    int(req.Quantity),
@@ -163,7 +161,6 @@ func (s *OrderService) providerClient() (interfaceprovider.Client, error) {
 
 func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domainorder.Order, providerResp *h2h.CreateOrderResponse) (domainorder.Order, error) {
 	oldStatus := order.Status
-	now := time.Now()
 	newStatus := normalizeProviderStatus(providerResp.ProviderStatus)
 	if newStatus == "" {
 		newStatus = domainorder.StatusProcessing
@@ -176,7 +173,7 @@ func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domai
 	order.StartCount = optionalInt64(providerResp.StartCount.String())
 	order.Remains = optionalInt64(providerResp.Remains.String())
 	order.ProviderResponse = providerResp.Raw
-	order.UpdatedAt = &now
+	order.UpdatedAt = new(time.Now())
 
 	log := domainorder.OrderStatusLog{
 		OldStatus:        oldStatus,
@@ -197,7 +194,6 @@ func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domai
 
 func (s *OrderService) applyStatusResponse(ctx context.Context, order domainorder.Order, providerResp *h2h.OrderStatusResponse) (domainorder.Order, error) {
 	oldStatus := order.Status
-	now := time.Now()
 	newStatus := normalizeProviderStatus(providerResp.ProviderStatus)
 	if newStatus == "" {
 		newStatus = order.Status
@@ -215,7 +211,7 @@ func (s *OrderService) applyStatusResponse(ctx context.Context, order domainorde
 		order.Remains = remains
 	}
 	order.ProviderResponse = providerResp.Raw
-	order.UpdatedAt = &now
+	order.UpdatedAt = new(time.Now())
 
 	log := domainorder.OrderStatusLog{
 		OldStatus:        oldStatus,
@@ -236,14 +232,13 @@ func (s *OrderService) applyStatusResponse(ctx context.Context, order domainorde
 
 func (s *OrderService) markOrderFailed(ctx context.Context, order domainorder.Order, cause error, providerResponse json.RawMessage) error {
 	oldStatus := order.Status
-	now := time.Now()
 	order.Status = domainorder.StatusFailed
 	order.Metadata = mustJSON(map[string]string{
 		"source":        "api",
 		"error_message": cause.Error(),
 	})
 	order.ProviderResponse = providerResponse
-	order.UpdatedAt = &now
+	order.UpdatedAt = new(time.Now())
 
 	return s.Repo.UpdateWithStatusLog(ctx, order, domainorder.OrderStatusLog{
 		OldStatus:        oldStatus,
@@ -253,8 +248,8 @@ func (s *OrderService) markOrderFailed(ctx context.Context, order domainorder.Or
 	})
 }
 
-func validateSMMService(service domaincatalog.ProviderService, quantity int64) error {
-	if service.Provider != domaincatalog.ProviderH2H || service.ProductType != domaincatalog.ProductTypeSMM {
+func validateService(service domaincatalog.ProviderService, productType string, quantity int64) error {
+	if service.Provider != domaincatalog.ProviderH2H || service.ProductType != productType {
 		return ErrUnsupportedService
 	}
 	if !service.IsActive {

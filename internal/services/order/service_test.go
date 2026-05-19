@@ -13,7 +13,7 @@ import (
 	"3za-digital/pkg/filter"
 )
 
-func TestOrderServiceCreateSMMOrder(t *testing.T) {
+func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 	minQty := int64(10)
 	maxQty := int64(1000)
 	repo := &mockOrderRepo{
@@ -43,13 +43,13 @@ func TestOrderServiceCreateSMMOrder(t *testing.T) {
 		return provider, nil
 	})
 
-	order, err := service.CreateSMMOrder(context.Background(), dto.CreateSMMOrderRequest{
+	order, err := service.CreateOrder(context.Background(), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
 		ServiceID: "service-id",
 		Target:    "https://instagram.com/3zadigital",
 		Quantity:  100,
 	}, "user-id")
 	if err != nil {
-		t.Fatalf("CreateSMMOrder returned error: %v", err)
+		t.Fatalf("CreateOrder returned error: %v", err)
 	}
 
 	if provider.createReq.Type != h2h.ProductTypeSMM {
@@ -72,7 +72,7 @@ func TestOrderServiceCreateSMMOrder(t *testing.T) {
 	}
 }
 
-func TestOrderServiceCreateSMMOrderRejectsBelowMinimum(t *testing.T) {
+func TestOrderServiceCreateOrderRejectsBelowMinimum(t *testing.T) {
 	minQty := int64(10)
 	repo := &mockOrderRepo{
 		service: domaincatalog.ProviderService{
@@ -88,7 +88,7 @@ func TestOrderServiceCreateSMMOrderRejectsBelowMinimum(t *testing.T) {
 		return &mockOrderProvider{}, nil
 	})
 
-	_, err := service.CreateSMMOrder(context.Background(), dto.CreateSMMOrderRequest{
+	_, err := service.CreateOrder(context.Background(), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
 		ServiceID: "service-id",
 		Target:    "target",
 		Quantity:  1,

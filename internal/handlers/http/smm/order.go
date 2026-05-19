@@ -85,7 +85,7 @@ func (h *SMMHandler) CreateOrder(ctx *gin.Context) {
 	logPrefix := "[SMMHandler][CreateOrder]"
 	reqCtx := ctx.Request.Context()
 
-	var req dto.CreateSMMOrderRequest
+	var req dto.CreateOrderRequest
 	if err := ctx.BindJSON(&req); err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; BindJSON; Error: %+v", logPrefix, err))
 		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logID, nil)
@@ -95,7 +95,7 @@ func (h *SMMHandler) CreateOrder(ctx *gin.Context) {
 	}
 
 	createdBy, _ := utils.GetActorContext(ctx)
-	data, err := h.OrderService.CreateSMMOrder(reqCtx, req, createdBy)
+	data, err := h.OrderService.CreateOrder(reqCtx, domaincatalog.ProductTypeSMM, req, createdBy)
 	if err != nil {
 		writeOrderError(ctx, logPrefix, logID, err)
 		return

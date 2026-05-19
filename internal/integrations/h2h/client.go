@@ -83,13 +83,6 @@ func (c *Client) GetPriceList(ctx context.Context, req PriceListRequest) (*Price
 	return &response, nil
 }
 
-func (c *Client) GetSMMPriceList(ctx context.Context, platform string) (*PriceListResponse, error) {
-	return c.GetPriceList(ctx, PriceListRequest{
-		Type:     ProductTypeSMM,
-		Platform: platform,
-	})
-}
-
 func (c *Client) CreateOrder(ctx context.Context, req CreateOrderRequest) (*CreateOrderResponse, error) {
 	query := url.Values{}
 	if req.Type != "" {
@@ -126,11 +119,6 @@ func (c *Client) CreateOrder(ctx context.Context, req CreateOrderRequest) (*Crea
 		return nil, err
 	}
 	return &response, nil
-}
-
-func (c *Client) CreateSMMOrder(ctx context.Context, req CreateOrderRequest) (*CreateOrderResponse, error) {
-	req.Type = ProductTypeSMM
-	return c.CreateOrder(ctx, req)
 }
 
 func (c *Client) GetOrderStatus(ctx context.Context, refID string) (*OrderStatusResponse, error) {

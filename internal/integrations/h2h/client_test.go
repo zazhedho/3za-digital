@@ -41,7 +41,7 @@ func TestClientGetBalance(t *testing.T) {
 	}
 }
 
-func TestClientGetSMMPriceList(t *testing.T) {
+func TestClientGetPriceListForSMM(t *testing.T) {
 	server := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assertAuth(t, r)
 		if r.URL.Path != "/pricelist" {
@@ -76,9 +76,12 @@ func TestClientGetSMMPriceList(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(t, server.URL)
-	response, err := client.GetSMMPriceList(context.Background(), "instagram")
+	response, err := client.GetPriceList(context.Background(), PriceListRequest{
+		Type:     ProductTypeSMM,
+		Platform: "instagram",
+	})
 	if err != nil {
-		t.Fatalf("GetSMMPriceList returned error: %v", err)
+		t.Fatalf("GetPriceList returned error: %v", err)
 	}
 
 	if response.Total != 1 {
@@ -89,7 +92,7 @@ func TestClientGetSMMPriceList(t *testing.T) {
 	}
 }
 
-func TestClientCreateSMMOrder(t *testing.T) {
+func TestClientCreateOrderWithSMMType(t *testing.T) {
 	server := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assertAuth(t, r)
 		if r.URL.Path != "/" {
@@ -121,14 +124,15 @@ func TestClientCreateSMMOrder(t *testing.T) {
 	defer server.Close()
 
 	client := newTestClient(t, server.URL)
-	response, err := client.CreateSMMOrder(context.Background(), CreateOrderRequest{
+	response, err := client.CreateOrder(context.Background(), CreateOrderRequest{
+		Type:        ProductTypeSMM,
 		ServiceCode: "1001",
 		Target:      "https://instagram.com/3zadigital",
 		Quantity:    100,
 		RefID:       "SMM-001",
 	})
 	if err != nil {
-		t.Fatalf("CreateSMMOrder returned error: %v", err)
+		t.Fatalf("CreateOrder returned error: %v", err)
 	}
 
 	if response.RefID != "SMM-001" {
