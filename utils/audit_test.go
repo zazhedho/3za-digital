@@ -10,7 +10,7 @@ func TestGetImpersonationMetadataReturnsNilForRegularSession(t *testing.T) {
 	ctx := &gin.Context{}
 	ctx.Set(CtxKeyAuthData, map[string]interface{}{
 		"user_id": "user-1",
-		"role":    "staff",
+		"role":    "operator",
 	})
 
 	got := GetImpersonationMetadata(ctx)
@@ -24,7 +24,7 @@ func TestGetImpersonationMetadataReturnsOriginalActorData(t *testing.T) {
 	ctx.Set(CtxKeyAuthData, map[string]interface{}{
 		"user_id":           "target-1",
 		"username":          "Target User",
-		"role":              "viewer",
+		"role":              "member",
 		"is_impersonated":   true,
 		"original_user_id":  "admin-1",
 		"original_username": "Admin User",
@@ -48,7 +48,7 @@ func TestGetImpersonationMetadataReturnsOriginalActorData(t *testing.T) {
 	if got["impersonated_user_id"] != "target-1" {
 		t.Fatalf("expected impersonated user id, got %v", got["impersonated_user_id"])
 	}
-	if got["impersonated_role"] != "viewer" {
+	if got["impersonated_role"] != "member" {
 		t.Fatalf("expected impersonated role, got %v", got["impersonated_role"])
 	}
 }
@@ -57,7 +57,7 @@ func TestGetActorContextUsesOriginalActorForImpersonatedSession(t *testing.T) {
 	ctx := &gin.Context{}
 	ctx.Set(CtxKeyAuthData, map[string]interface{}{
 		"user_id":           "target-1",
-		"role":              "viewer",
+		"role":              "member",
 		"is_impersonated":   true,
 		"original_user_id":  "admin-1",
 		"original_username": "Admin User",

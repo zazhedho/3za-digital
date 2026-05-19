@@ -158,7 +158,7 @@ func TestJwtClaimsReadsAuthorizationHeader(t *testing.T) {
 	token, err := GenerateJwt(&domainuser.Users{
 		Id:   "user-1",
 		Name: "Jane",
-		Role: RoleViewer,
+		Role: RoleMember,
 	}, "log-1")
 	if err != nil {
 		t.Fatalf("generate token: %v", err)

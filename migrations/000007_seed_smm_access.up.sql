@@ -26,14 +26,6 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
-WHERE r.name = 'staff'
+WHERE r.name = 'member'
 AND p.name IN ('list_smm_services', 'list_smm_orders', 'view_smm_orders', 'create_smm_orders', 'refresh_status_smm_orders', 'view_dashboard')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r
-CROSS JOIN permissions p
-WHERE r.name = 'viewer'
-AND p.name IN ('list_smm_services', 'list_smm_orders', 'view_smm_orders')
 ON CONFLICT DO NOTHING;

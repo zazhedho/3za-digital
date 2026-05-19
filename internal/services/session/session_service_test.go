@@ -73,7 +73,7 @@ func TestCreateSessionStoresSessionWithDerivedDeviceInfo(t *testing.T) {
 		Id:    "user-1",
 		Name:  "Jane",
 		Email: "jane@example.com",
-		Role:  "viewer",
+		Role:  "member",
 	}, "access", "refresh", domainsession.RequestMeta{
 		IP:        "127.0.0.1",
 		UserAgent: "Mozilla/5.0 (Windows NT 10.0)",

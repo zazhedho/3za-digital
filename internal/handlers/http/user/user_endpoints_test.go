@@ -436,7 +436,7 @@ func TestUserHandlerRegisterOTPAndStopImpersonationFlows(t *testing.T) {
 		t.Fatalf("expected register OTP verification, got %q", otpService.verifiedEmail)
 	}
 
-	scope := authscope.New("target-1", "Target User", "viewer", nil)
+	scope := authscope.New("target-1", "Target User", "member", nil)
 	scope.IsImpersonated = true
 	scope.OriginalUserID = "admin-1"
 	scope.OriginalUsername = "Admin User"
@@ -851,14 +851,14 @@ func TestUserHandlerNotFoundAndValidationErrorBranches(t *testing.T) {
 	assertUserHandlerStatus(t, rec, http.StatusForbidden)
 
 	handler = NewUserHandler(&userServiceTestDouble{err: errors.New("database down")}, nil, nil, nil, nil, nil, nil, nil)
-	impersonated := authscope.New("target-1", "Target", "viewer", nil)
+	impersonated := authscope.New("target-1", "Target", "member", nil)
 	impersonated.IsImpersonated = true
 	impersonated.OriginalUserID = "admin-1"
 	ctx, rec = newUserHandlerTestContext(t, http.MethodPost, "/stop-impersonation", "", &impersonated)
 	handler.StopImpersonation(ctx)
 	assertUserHandlerStatus(t, rec, http.StatusInternalServerError)
 
-	ctx, rec = newUserHandlerTestContext(t, http.MethodPost, "/stop-impersonation", "", new(authscope.New("user-1", "Jane", "viewer", nil)))
+	ctx, rec = newUserHandlerTestContext(t, http.MethodPost, "/stop-impersonation", "", new(authscope.New("user-1", "Jane", "member", nil)))
 	handler.StopImpersonation(ctx)
 	assertUserHandlerStatus(t, rec, http.StatusBadRequest)
 }
@@ -910,7 +910,7 @@ func TestUserHandlerEmailPasswordResetBranches(t *testing.T) {
 func TestUserHandlerResetPasswordRevokesSessions(t *testing.T) {
 	t.Setenv("JWT_KEY", "test-secret-must-be-at-least-32-bytes")
 
-	user := domainuser.Users{Id: "user-1", Email: "jane@example.com", Role: utils.RoleViewer}
+	user := domainuser.Users{Id: "user-1", Email: "jane@example.com", Role: utils.RoleMember}
 	service := &userServiceTestDouble{user: user}
 	sessionSvc := &sessionServiceUserHandlerTestDouble{}
 	handler := NewUserHandler(service, nil, sessionSvc, nil, nil, &appConfigServiceUserTestDouble{enabled: true}, nil, &resetServiceUserHandlerTestDouble{email: user.Email})

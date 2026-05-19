@@ -61,10 +61,10 @@ func (s *ServiceUser) LoginWithGoogle(ctx context.Context, req dto.GoogleLogin, 
 		return domainuser.Users{}, false, ErrPublicRegistrationDisabled
 	}
 
-	roleName := utils.RoleViewer
+	roleName := utils.RoleMember
 	roleId, ok := findRoleIDByName(ctx, s.RoleRepo, roleName)
 	if !ok {
-		return domainuser.Users{}, false, errors.New("role viewer is not configured")
+		return domainuser.Users{}, false, errors.New("role member is not configured")
 	}
 
 	passwordSeed := "Google-" + utils.CreateUUID() + "-" + fmt.Sprintf("%d", time.Now().UnixNano()) + "!"

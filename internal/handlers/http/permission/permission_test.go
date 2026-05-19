@@ -262,7 +262,7 @@ func TestGetUserPermissionsUsesAuthScopeUserID(t *testing.T) {
 		userPermissions: []domainpermission.Permission{{Id: "perm-1", Resource: "users", Action: "list"}},
 	}, &auditServicePermissionTestDouble{})
 
-	rec := performPermissionRequest(http.MethodGet, "/permissions/me", nil, handler.GetUserPermissions, authscope.New("user-1", "Jane", "viewer", nil))
+	rec := performPermissionRequest(http.MethodGet, "/permissions/me", nil, handler.GetUserPermissions, authscope.New("user-1", "Jane", "member", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}

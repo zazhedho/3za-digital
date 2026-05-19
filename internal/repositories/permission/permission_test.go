@@ -104,7 +104,7 @@ func TestPermissionRepositoryGetUserPermissions(t *testing.T) {
 
 		mock.ExpectQuery(`SELECT role_id, role FROM "users" WHERE id = \$1 ORDER BY .* LIMIT \$2`).
 			WithArgs("user-1", 1).
-			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(nil, utils.RoleViewer))
+			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(nil, utils.RoleMember))
 
 		permissions, err := repo.GetUserPermissions(context.Background(), "user-1")
 		if err != nil {
@@ -126,7 +126,7 @@ func TestPermissionRepositoryGetUserPermissions(t *testing.T) {
 
 		mock.ExpectQuery(`SELECT role_id, role FROM "users" WHERE id = \$1 ORDER BY .* LIMIT \$2`).
 			WithArgs("user-1", 1).
-			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(roleID, utils.RoleViewer))
+			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(roleID, utils.RoleMember))
 		mock.ExpectQuery(`SELECT DISTINCT p\.\*[\s\S]+FROM permissions p[\s\S]+INNER JOIN role_permissions rp[\s\S]+WHERE rp\.role_id = \$1 AND p\.deleted_at IS NULL[\s\S]+ORDER BY p\.resource, p\.action`).
 			WithArgs(roleID).
 			WillReturnRows(sqlmock.NewRows([]string{

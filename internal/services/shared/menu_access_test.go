@@ -74,13 +74,13 @@ func (m *permissionRepoSharedTestDouble) GetUserPermissions(ctx context.Context,
 }
 
 func TestHasPermissionUsesScopeAndRepositoryFallback(t *testing.T) {
-	ctx := authscope.WithContext(context.Background(), authscope.New("user-1", "Jane", "staff", []string{"users:list"}))
+	ctx := authscope.WithContext(context.Background(), authscope.New("user-1", "Jane", "operator", []string{"users:list"}))
 	ok, err := HasPermission(ctx, &permissionRepoSharedTestDouble{}, "users", "list")
 	if err != nil || !ok {
 		t.Fatalf("expected scope permission to allow, ok=%v err=%v", ok, err)
 	}
 
-	ctx = authscope.WithContext(context.Background(), authscope.New("user-1", "Jane", "staff", nil))
+	ctx = authscope.WithContext(context.Background(), authscope.New("user-1", "Jane", "operator", nil))
 	ok, err = HasPermission(ctx, &permissionRepoSharedTestDouble{
 		permissions: []domainpermission.Permission{{Resource: "users", Action: "delete"}},
 	}, "users", "delete")

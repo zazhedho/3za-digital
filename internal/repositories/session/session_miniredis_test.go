@@ -39,7 +39,7 @@ func TestSessionRepositoryWithRedisMock(t *testing.T) {
 		UserID:       "user-1",
 		Username:     "Jane",
 		Email:        "jane@example.com",
-		Role:         "viewer",
+		Role:         "member",
 		AccessToken:  "access-1",
 		RefreshToken: "refresh-1",
 		DeviceInfo:   "Mac",

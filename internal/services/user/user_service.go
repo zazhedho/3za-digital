@@ -65,9 +65,9 @@ func (s *ServiceUser) RegisterUser(ctx context.Context, req dto.UserRegister) (d
 		return domainuser.Users{}, err
 	}
 
-	// SECURITY: Public registration always uses vendor role
+	// SECURITY: Public registration always uses member role
 	// This prevents privilege escalation through request manipulation
-	roleName := utils.RoleViewer
+	roleName := utils.RoleMember
 
 	roleId, _ := findRoleIDByName(ctx, s.RoleRepo, roleName)
 	var emailVerifiedAt *time.Time
@@ -129,7 +129,7 @@ func (s *ServiceUser) AdminCreateUser(ctx context.Context, req dto.AdminCreateUs
 		return domainuser.Users{}, err
 	}
 
-	if roleName != utils.RoleViewer && !canAssignRole {
+	if roleName != utils.RoleMember && !canAssignRole {
 		return domainuser.Users{}, errors.New("access denied: missing permission users:assign_role")
 	}
 

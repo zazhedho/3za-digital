@@ -37,7 +37,7 @@ func TestWriteAuditPreservesExplicitActorWhenContextIsPublic(t *testing.T) {
 
 	WriteAudit(ctx, auditService, domainaudit.AuditEvent{
 		ActorUserID: "00000000-0000-0000-0000-000000000001",
-		ActorRole:   "viewer",
+		ActorRole:   "member",
 		Action:      domainaudit.ActionLogin,
 		Resource:    "auth",
 		Status:      domainaudit.StatusSuccess,
@@ -46,7 +46,7 @@ func TestWriteAuditPreservesExplicitActorWhenContextIsPublic(t *testing.T) {
 	if auditService.stored.ActorUserID != "00000000-0000-0000-0000-000000000001" {
 		t.Fatalf("expected explicit actor user to be preserved, got %q", auditService.stored.ActorUserID)
 	}
-	if auditService.stored.ActorRole != "viewer" {
+	if auditService.stored.ActorRole != "member" {
 		t.Fatalf("expected explicit actor role to be preserved, got %q", auditService.stored.ActorRole)
 	}
 }

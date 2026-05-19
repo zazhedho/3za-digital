@@ -133,7 +133,7 @@ func TestAssignPermissionsRequiresManageSystemPermissionForSystemRole(t *testing
 		MenuRepo:       &menuRepoMock{},
 	}
 
-	err := service.AssignPermissions(roleAuthContext("user-1", "Staff User", utils.RoleStaff), "role-1", dto.AssignPermissions{PermissionIds: []string{"perm-1"}})
+	err := service.AssignPermissions(roleAuthContext("user-1", "Operator User", utils.RoleMember), "role-1", dto.AssignPermissions{PermissionIds: []string{"perm-1"}})
 	if err == nil || err.Error() != "access denied: missing permission roles:manage_system" {
 		t.Fatalf("expected manage_system access error, got %v", err)
 	}
@@ -221,7 +221,7 @@ func TestRoleServiceCRUDAndDetails(t *testing.T) {
 		t.Fatalf("unexpected details: %+v", details)
 	}
 
-	roles, total, err := service.GetAll(roleAuthContext("user-1", "Staff", utils.RoleStaff), filter.BaseParams{})
+	roles, total, err := service.GetAll(roleAuthContext("user-1", "Operator", utils.RoleMember), filter.BaseParams{})
 	if err != nil {
 		t.Fatalf("get all: %v", err)
 	}

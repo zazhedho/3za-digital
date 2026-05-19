@@ -105,7 +105,7 @@ func TestMenuRepositoryGetUserMenus(t *testing.T) {
 
 		mock.ExpectQuery(`SELECT role_id, role FROM "users" WHERE id = \$1 ORDER BY .* LIMIT \$2`).
 			WithArgs("user-1", 1).
-			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(nil, utils.RoleViewer))
+			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(nil, utils.RoleMember))
 
 		menus, err := repo.GetUserMenus(context.Background(), "user-1")
 		if err != nil {
@@ -129,7 +129,7 @@ func TestMenuRepositoryGetUserMenus(t *testing.T) {
 
 		mock.ExpectQuery(`SELECT role_id, role FROM "users" WHERE id = \$1 ORDER BY .* LIMIT \$2`).
 			WithArgs("user-1", 1).
-			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(roleID, utils.RoleViewer))
+			WillReturnRows(sqlmock.NewRows([]string{"role_id", "role"}).AddRow(roleID, utils.RoleMember))
 		mock.ExpectQuery(`SELECT DISTINCT m\.\*[\s\S]+FROM menu_items m[\s\S]+INNER JOIN permissions p[\s\S]+INNER JOIN role_permissions rp[\s\S]+WHERE rp\.role_id = \$1[\s\S]+ORDER BY m\.order_index ASC`).
 			WithArgs(roleID).
 			WillReturnRows(sqlmock.NewRows([]string{

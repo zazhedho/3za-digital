@@ -83,7 +83,7 @@ func TestRoleMiddlewareAllowsAndRejectsRoles(t *testing.T) {
 	}
 
 	rec = performMiddlewareRequest(
-		testToken(t, "access", utils.RoleViewer),
+		testToken(t, "access", utils.RoleMember),
 		mdw.AuthMiddleware(),
 		mdw.RoleMiddleware(utils.RoleAdmin),
 	)

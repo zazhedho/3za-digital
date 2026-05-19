@@ -126,13 +126,13 @@ func performRoleRawRequest(method, routePath, requestPath, body string, handler 
 
 func TestRoleCRUDHandlers(t *testing.T) {
 	handler := NewRoleHandler(&roleServiceHandlerTestDouble{
-		role:    domainrole.Role{Id: "role-1", Name: "staff"},
-		details: dto.RoleWithDetails{Id: "role-1", Name: "staff"},
-		roles:   []domainrole.Role{{Id: "role-1", Name: "staff"}},
+		role:    domainrole.Role{Id: "role-1", Name: "operator"},
+		details: dto.RoleWithDetails{Id: "role-1", Name: "operator"},
+		roles:   []domainrole.Role{{Id: "role-1", Name: "operator"}},
 		total:   1,
 	}, &auditServiceRoleTestDouble{})
 
-	if rec := performRoleRequest(http.MethodPost, "/roles", "/roles", dto.RoleCreate{Name: "staff", DisplayName: "Staff"}, handler.Create); rec.Code != http.StatusCreated {
+	if rec := performRoleRequest(http.MethodPost, "/roles", "/roles", dto.RoleCreate{Name: "operator", DisplayName: "Operator"}, handler.Create); rec.Code != http.StatusCreated {
 		t.Fatalf("expected create 201, got %d", rec.Code)
 	}
 	if rec := performRoleRequest(http.MethodGet, "/roles/:id", "/roles/role-1", nil, handler.GetByID); rec.Code != http.StatusOK {
@@ -141,7 +141,7 @@ func TestRoleCRUDHandlers(t *testing.T) {
 	if rec := performRoleRequest(http.MethodGet, "/roles", "/roles", nil, handler.GetAll); rec.Code != http.StatusOK {
 		t.Fatalf("expected get all 200, got %d", rec.Code)
 	}
-	if rec := performRoleRequest(http.MethodPut, "/roles/:id", "/roles/role-1", dto.RoleUpdate{DisplayName: "Staff"}, handler.Update); rec.Code != http.StatusOK {
+	if rec := performRoleRequest(http.MethodPut, "/roles/:id", "/roles/role-1", dto.RoleUpdate{DisplayName: "Operator"}, handler.Update); rec.Code != http.StatusOK {
 		t.Fatalf("expected update 200, got %d", rec.Code)
 	}
 	if rec := performRoleRequest(http.MethodDelete, "/roles/:id", "/roles/role-1", nil, handler.Delete); rec.Code != http.StatusOK {
@@ -151,7 +151,7 @@ func TestRoleCRUDHandlers(t *testing.T) {
 
 func TestRoleMutationErrorsAndAssignments(t *testing.T) {
 	handler := NewRoleHandler(&roleServiceHandlerTestDouble{err: errors.New("role with this name already exists")}, &auditServiceRoleTestDouble{})
-	rec := performRoleRequest(http.MethodPost, "/roles", "/roles", dto.RoleCreate{Name: "staff", DisplayName: "Staff"}, handler.Create)
+	rec := performRoleRequest(http.MethodPost, "/roles", "/roles", dto.RoleCreate{Name: "operator", DisplayName: "Operator"}, handler.Create)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected duplicate create 400, got %d", rec.Code)
 	}

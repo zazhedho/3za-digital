@@ -121,7 +121,7 @@ func TestMenuReadHandlersMapServiceErrors(t *testing.T) {
 		{name: "get by id", method: http.MethodGet, routePath: "/menus/:id", path: "/menus/menu-1", call: handler.GetByID, want: http.StatusNotFound},
 		{name: "get all", method: http.MethodGet, routePath: "/menus", path: "/menus", call: handler.GetAll, want: http.StatusInternalServerError},
 		{name: "get active", method: http.MethodGet, routePath: "/menus/active", path: "/menus/active", call: handler.GetActiveMenus, want: http.StatusInternalServerError},
-		{name: "get user menus", method: http.MethodGet, routePath: "/menus/me", path: "/menus/me", call: handler.GetUserMenus, scope: authscope.New("user-1", "Jane", "viewer", nil), want: http.StatusInternalServerError},
+		{name: "get user menus", method: http.MethodGet, routePath: "/menus/me", path: "/menus/me", call: handler.GetUserMenus, scope: authscope.New("user-1", "Jane", "member", nil), want: http.StatusInternalServerError},
 	}
 
 	for _, tt := range tests {
@@ -142,7 +142,7 @@ func TestGetUserMenusRequiresScope(t *testing.T) {
 	}
 
 	handler = NewMenuHandler(&menuServiceHandlerTestDouble{menus: []domainmenu.MenuItem{{Id: "menu-1", Name: "users"}}}, &auditServiceMenuTestDouble{})
-	rec = performMenuRequest(http.MethodGet, "/menus/me", "/menus/me", nil, handler.GetUserMenus, authscope.New("user-1", "Jane", "viewer", nil))
+	rec = performMenuRequest(http.MethodGet, "/menus/me", "/menus/me", nil, handler.GetUserMenus, authscope.New("user-1", "Jane", "member", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}

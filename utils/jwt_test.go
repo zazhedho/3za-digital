@@ -17,7 +17,7 @@ func TestGenerateJwtIncludesAccessClaims(t *testing.T) {
 	token, err := GenerateJwt(&domainuser.Users{
 		Id:   "user-1",
 		Name: "Jane",
-		Role: RoleViewer,
+		Role: RoleMember,
 	}, "log-1")
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
@@ -39,7 +39,7 @@ func TestGenerateRefreshJwtIncludesRefreshTokenType(t *testing.T) {
 	token, err := GenerateRefreshJwt(&domainuser.Users{
 		Id:   "user-1",
 		Name: "Jane",
-		Role: RoleViewer,
+		Role: RoleMember,
 	}, "log-1", nil)
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
@@ -60,7 +60,7 @@ func TestJwtExpiresAt(t *testing.T) {
 	token, err := GenerateJwt(&domainuser.Users{
 		Id:   "user-1",
 		Name: "Jane",
-		Role: RoleViewer,
+		Role: RoleMember,
 	}, "log-1")
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
@@ -108,7 +108,7 @@ func TestJWTRequiresConfiguredSecret(t *testing.T) {
 	user := &domainuser.Users{
 		Id:   "user-1",
 		Name: "Jane",
-		Role: RoleViewer,
+		Role: RoleMember,
 	}
 
 	if _, err := GenerateJwt(user, "log-1"); !errors.Is(err, ErrJWTKeyNotConfigured) {
