@@ -61,5 +61,23 @@ VALUES
         'false',
         'Enable password reset tokens to be sent through the email sender service.',
         TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'pricing.default_markup_percent',
+        'Default Markup Percent',
+        'pricing',
+        '0',
+        'Default markup percentage applied when no product-specific pricing markup is configured.',
+        TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'pricing.product_markup_percent.smm',
+        'SMM Markup Percent',
+        'pricing',
+        '5',
+        'Markup percentage applied to SMM provider charge before charging reseller or enduser wallet.',
+        TRUE
     )
 ON CONFLICT (config_key) DO NOTHING;
