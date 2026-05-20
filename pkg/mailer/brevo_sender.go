@@ -67,7 +67,7 @@ func NewBrevoSenderFromEnv() (*BrevoSender, error) {
 		From:         from,
 		Subject:      subject,
 		ResetSubject: resetSubject,
-		TTL:          parseDurationEnv([]string{"OTP_TTL", "OTP_TTL_SECONDS"}, 5*time.Minute),
+		TTL:          utils.DurationFromEnv([]string{"OTP_TTL", "OTP_TTL_SECONDS"}, 5*time.Minute),
 		AppName:      appName,
 	}, nil
 }
@@ -156,8 +156,4 @@ func extractEmail(from string) string {
 		return from[start+1 : end]
 	}
 	return from
-}
-
-func parseDurationEnv(keys []string, fallback time.Duration) time.Duration {
-	return utils.DurationFromEnv(keys, fallback)
 }

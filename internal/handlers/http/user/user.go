@@ -73,7 +73,7 @@ func (h *HandlerUser) Register(ctx *gin.Context) {
 	logPrefix := "[UserHandler][Register]"
 	reqCtx := ctx.Request.Context()
 
-	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, publicRegistrationConfigKey(), true)
+	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_PUBLIC_REGISTRATION", defaultConfigPublicRegistrationEnabled), true)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)
@@ -96,7 +96,7 @@ func (h *HandlerUser) Register(ctx *gin.Context) {
 	}
 	logger.WriteLogWithContext(ctx, logger.LogLevelDebug, fmt.Sprintf("%s; Request: %+v;", logPrefix, utils.JsonEncode(req)))
 
-	otpEnabled, err := h.isRuntimeConfigEnabled(reqCtx, registerOTPConfigKey(), false)
+	otpEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_REGISTER_OTP", defaultConfigRegisterOTPEnabled), false)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)
@@ -190,7 +190,7 @@ func (h *HandlerUser) GetRegisterStatus(ctx *gin.Context) {
 	logPrefix := "[UserHandler][GetRegisterStatus]"
 	reqCtx := ctx.Request.Context()
 
-	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, publicRegistrationConfigKey(), true)
+	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_PUBLIC_REGISTRATION", defaultConfigPublicRegistrationEnabled), true)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)
@@ -210,7 +210,7 @@ func (h *HandlerUser) SendRegisterOTP(ctx *gin.Context) {
 	logPrefix := "[UserHandler][SendRegisterOTP]"
 	reqCtx := ctx.Request.Context()
 
-	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, publicRegistrationConfigKey(), true)
+	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_PUBLIC_REGISTRATION", defaultConfigPublicRegistrationEnabled), true)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)
@@ -231,7 +231,7 @@ func (h *HandlerUser) SendRegisterOTP(ctx *gin.Context) {
 		return
 	}
 
-	otpEnabled, err := h.isRuntimeConfigEnabled(reqCtx, registerOTPConfigKey(), false)
+	otpEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_REGISTER_OTP", defaultConfigRegisterOTPEnabled), false)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)
@@ -259,7 +259,7 @@ func (h *HandlerUser) SendRegisterOTP(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.OTPService.SendRegisterOTP(ctx.Request.Context(), normalizedEmail, authEmailAppName()); err != nil {
+	if err := h.OTPService.SendRegisterOTP(ctx.Request.Context(), normalizedEmail, utils.FirstNonEmptyString(utils.GetEnv("AUTH_EMAIL_APP_NAME", ""), utils.GetEnv("APP_NAME", "3ZA Digital"))); err != nil {
 		h.writeAudit(ctx, domainaudit.AuditEvent{
 			Action:       domainaudit.ActionCreate,
 			Resource:     "user_registration_otp",
@@ -534,7 +534,7 @@ func (h *HandlerUser) GoogleLogin(ctx *gin.Context) {
 		return
 	}
 
-	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, publicRegistrationConfigKey(), true)
+	registerEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_PUBLIC_REGISTRATION", defaultConfigPublicRegistrationEnabled), true)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)
@@ -1307,7 +1307,7 @@ func (h *HandlerUser) ForgotPassword(ctx *gin.Context) {
 		return
 	}
 
-	emailResetEnabled, err := h.isRuntimeConfigEnabled(reqCtx, passwordResetEmailConfigKey(), false)
+	emailResetEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_PASSWORD_RESET_EMAIL", defaultConfigPasswordResetEmailEnabled), false)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)
@@ -1324,7 +1324,7 @@ func (h *HandlerUser) ForgotPassword(ctx *gin.Context) {
 
 		normalizedEmail := utils.SanitizeEmail(req.Email)
 		if data, err := h.Service.GetUserByEmail(reqCtx, normalizedEmail); err == nil && data.Id != "" {
-			if err := h.ResetService.RequestReset(ctx.Request.Context(), normalizedEmail, authEmailAppName()); err != nil {
+			if err := h.ResetService.RequestReset(ctx.Request.Context(), normalizedEmail, utils.FirstNonEmptyString(utils.GetEnv("AUTH_EMAIL_APP_NAME", ""), utils.GetEnv("APP_NAME", "3ZA Digital"))); err != nil {
 				h.writeAudit(ctx, domainaudit.AuditEvent{
 					Action:       domainaudit.ActionUpdate,
 					Resource:     "user_password_reset",
@@ -1414,7 +1414,7 @@ func (h *HandlerUser) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	emailResetEnabled, err := h.isRuntimeConfigEnabled(reqCtx, passwordResetEmailConfigKey(), false)
+	emailResetEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_PASSWORD_RESET_EMAIL", defaultConfigPasswordResetEmailEnabled), false)
 	if err != nil {
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
 		res := response.InternalServerError(logId)

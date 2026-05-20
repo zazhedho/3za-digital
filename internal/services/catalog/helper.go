@@ -26,7 +26,7 @@ func mapH2HService(productType string, item h2h.Service, syncedAt time.Time) dom
 		Platform:          utils.FirstNonEmptyString(item.Platform, productType),
 		MinQuantity:       utils.Int64PtrIfPositive(minQuantity),
 		MaxQuantity:       utils.Int64PtrIfPositive(maxQuantity),
-		Price:             catalogPrice(item),
+		Price:             utils.FirstNonEmptyString(item.Price.String(), item.PricePer1K.String(), "0"),
 		Metadata:          utils.MustJSON(map[string]string{"source": "h2h", "price_unit": priceUnit(productType)}),
 		RawResponse:       rawResponse,
 		IsActive:          serviceIsActive(item.Status.String()),
@@ -46,10 +46,6 @@ func isSupportedProductType(productType string) bool {
 	default:
 		return false
 	}
-}
-
-func catalogPrice(item h2h.Service) string {
-	return utils.FirstNonEmptyString(item.Price.String(), item.PricePer1K.String(), "0")
 }
 
 func priceUnit(productType string) string {

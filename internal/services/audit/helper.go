@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-func humanizeAuditValue(value string) string {
-	return utils.HumanizeKey(value)
-}
-
 func toAuditResponses(items []domainaudit.AuditTrail) []dto.AuditTrailResponse {
 	responses := make([]dto.AuditTrailResponse, 0, len(items))
 	for _, item := range items {
@@ -22,14 +18,14 @@ func toAuditResponses(items []domainaudit.AuditTrail) []dto.AuditTrailResponse {
 }
 
 func toAuditResponse(item domainaudit.AuditTrail) dto.AuditTrailResponse {
-	actionLabel := titleAuditValue(item.Action)
-	resourceLabel := titleAuditValue(item.Resource)
-	statusLabel := titleAuditValue(item.Status)
+	actionLabel := utils.TitleHumanized(item.Action)
+	resourceLabel := utils.TitleHumanized(item.Resource)
+	statusLabel := utils.TitleHumanized(item.Status)
 
 	return dto.AuditTrailResponse{
 		ID:            item.ID,
 		OccurredAt:    item.OccurredAt,
-		Actor:         dto.AuditActor{UserID: item.ActorUserID, Role: titleAuditValue(item.ActorRole)},
+		Actor:         dto.AuditActor{UserID: item.ActorUserID, Role: utils.TitleHumanized(item.ActorRole)},
 		Action:        item.Action,
 		ActionLabel:   actionLabel,
 		Resource:      item.Resource,
@@ -74,8 +70,4 @@ func decodeAuditJSON(value string) interface{} {
 		return value
 	}
 	return decoded
-}
-
-func titleAuditValue(value string) string {
-	return utils.TitleHumanized(value)
 }
