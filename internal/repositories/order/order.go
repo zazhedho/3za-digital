@@ -2,7 +2,6 @@ package repositoryorder
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -254,7 +253,7 @@ func mutateWallet(tx *gorm.DB, req walletMutation) error {
 		BalanceAfter:  money.FormatCents(next),
 		Reference:     strings.TrimSpace(req.Reference),
 		Description:   strings.TrimSpace(req.Description),
-		Metadata:      json.RawMessage(`{}`),
+		Metadata:      utils.EmptyJSON(),
 		CreatedBy:     req.CreatedBy,
 	}
 	return tx.Create(&walletTx).Error

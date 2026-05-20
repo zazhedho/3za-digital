@@ -2,7 +2,6 @@ package repositorywallet
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -94,7 +93,7 @@ func (r *repo) CreatePaymentGatewayDeposit(ctx context.Context, deposit domainwa
 		deposit.Method = domainwallet.DepositMethodPaymentGateway
 	}
 	if len(deposit.Metadata) == 0 {
-		deposit.Metadata = json.RawMessage(`{}`)
+		deposit.Metadata = utils.EmptyJSON()
 	}
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if _, err := r.ensureWalletTx(tx.WithContext(ctx), deposit.UserID); err != nil {
@@ -115,7 +114,7 @@ func (r *repo) CreateManualTopup(ctx context.Context, deposit domainwallet.Depos
 	deposit.PaidAt = &now
 	deposit.UpdatedAt = &now
 	if len(deposit.Metadata) == 0 {
-		deposit.Metadata = json.RawMessage(`{}`)
+		deposit.Metadata = utils.EmptyJSON()
 	}
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -163,7 +162,7 @@ func (r *repo) CompleteDepositByPaymentReference(ctx context.Context, provider, 
 	var deposit domainwallet.DepositRequest
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if len(log.Payload) == 0 {
-			log.Payload = json.RawMessage(`{}`)
+			log.Payload = utils.EmptyJSON()
 		}
 		if log.Id == "" {
 			log.Id = utils.CreateUUID()
@@ -177,7 +176,7 @@ func (r *repo) CompleteDepositByPaymentReference(ctx context.Context, provider, 
 			First(&deposit).Error; err != nil {
 			return err
 		}
-		if normalizeAmount(deposit.Amount) != normalizeAmount(amount) {
+		if money.NormalizeOrTrim(deposit.Amount) != money.NormalizeOrTrim(amount) {
 			return domainwallet.ErrDepositAmountMismatch
 		}
 		if deposit.Status == domainwallet.DepositStatusPaid {
@@ -216,7 +215,7 @@ func (r *repo) UpdateDepositStatusByPaymentReference(ctx context.Context, provid
 	var deposit domainwallet.DepositRequest
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if len(log.Payload) == 0 {
-			log.Payload = json.RawMessage(`{}`)
+			log.Payload = utils.EmptyJSON()
 		}
 		if log.Id == "" {
 			log.Id = utils.CreateUUID()
@@ -316,7 +315,7 @@ func (r *repo) mutateWalletTx(tx *gorm.DB, req walletMutation) (domainwallet.Wal
 		BalanceAfter:     money.FormatCents(next),
 		Reference:        strings.TrimSpace(req.Reference),
 		Description:      strings.TrimSpace(req.Description),
-		Metadata:         json.RawMessage(`{}`),
+		Metadata:         utils.EmptyJSON(),
 		CreatedBy:        req.CreatedBy,
 	}
 	if err := tx.Create(&walletTx).Error; err != nil {
@@ -359,7 +358,7 @@ func getPaged[T any](query *gorm.DB, params filter.BaseParams, allowedOrder map[
 	if !allowedOrder[orderBy] {
 		orderBy = strings.Fields(defaultOrder)[0]
 	}
-	dir := strings.ToUpper(strings.TrimSpace(params.OrderDirection))
+	dir := utils.NormalizeUpperKey(params.OrderDirection)
 	if dir != "ASC" && dir != "DESC" {
 		dir = "DESC"
 	}
@@ -374,14 +373,6 @@ func applyStringFilters(query *gorm.DB, filters map[string]interface{}) *gorm.DB
 		query = query.Where(key+" = ?", value)
 	}
 	return query
-}
-
-func normalizeAmount(value string) string {
-	normalized, err := money.Normalize(value)
-	if err != nil {
-		return strings.TrimSpace(value)
-	}
-	return normalized
 }
 
 var _ interfacewallet.RepoWalletInterface = (*repo)(nil)

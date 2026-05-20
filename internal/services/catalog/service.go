@@ -37,7 +37,7 @@ func (s *CatalogService) GetAll(ctx context.Context, params filter.BaseParams) (
 }
 
 func (s *CatalogService) Sync(ctx context.Context, productType string, req dto.SyncCatalogRequest) (dto.SyncCatalogResponse, error) {
-	productType = normalizeProductType(productType)
+	productType = utils.NormalizeKey(productType)
 	if !isSupportedProductType(productType) {
 		return dto.SyncCatalogResponse{}, ErrUnsupportedProductType
 	}
@@ -75,83 +75,6 @@ func (s *CatalogService) Sync(ctx context.Context, productType string, req dto.S
 		Total:       priceList.Total,
 		Synced:      len(services),
 	}, nil
-}
-
-func mapH2HService(productType string, item h2h.Service, syncedAt time.Time) domaincatalog.ProviderService {
-	minQuantity := int64(item.MinQuantity.Int())
-	maxQuantity := int64(item.MaxQuantity.Int())
-	rawResponse := item.Raw
-	if len(rawResponse) == 0 {
-		rawResponse = utils.MustJSON(item)
-	}
-
-	return domaincatalog.ProviderService{
-		Id:                utils.CreateUUID(),
-		Provider:          domaincatalog.ProviderH2H,
-		ProductType:       productType,
-		ProviderServiceID: item.ProviderServiceID(),
-		Name:              item.Name,
-		Category:          item.Category,
-		Brand:             item.Brand,
-		Platform:          firstNonEmpty(item.Platform, productType),
-		MinQuantity:       quantityPointer(minQuantity),
-		MaxQuantity:       quantityPointer(maxQuantity),
-		Price:             catalogPrice(item),
-		Metadata:          utils.MustJSON(map[string]string{"source": "h2h", "price_unit": priceUnit(productType)}),
-		RawResponse:       rawResponse,
-		IsActive:          serviceIsActive(item.Status.String()),
-		SyncedAt:          &syncedAt,
-		UpdatedAt:         &syncedAt,
-	}
-}
-
-func normalizeProductType(productType string) string {
-	return strings.ToLower(strings.TrimSpace(productType))
-}
-
-func isSupportedProductType(productType string) bool {
-	switch productType {
-	case domaincatalog.ProductTypeSMM,
-		domaincatalog.ProductTypePulsa,
-		domaincatalog.ProductTypePPOB,
-		domaincatalog.ProductTypeGame,
-		domaincatalog.ProductTypeEWallet:
-		return true
-	default:
-		return false
-	}
-}
-
-func quantityPointer(value int64) *int64 {
-	if value <= 0 {
-		return nil
-	}
-	return &value
-}
-
-func catalogPrice(item h2h.Service) string {
-	return firstNonEmpty(item.Price.String(), item.PricePer1K.String(), "0")
-}
-
-func priceUnit(productType string) string {
-	if productType == domaincatalog.ProductTypeSMM {
-		return "per_1000"
-	}
-	return "unit"
-}
-
-func serviceIsActive(status string) bool {
-	status = strings.ToLower(strings.TrimSpace(status))
-	return status == "" || status == "active" || status == "1" || status == "available" || status == "true"
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 var _ interfacecatalog.ServiceCatalogInterface = (*CatalogService)(nil)

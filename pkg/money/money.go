@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var ErrInvalidAmount = errors.New("invalid money amount")
+var ErrInvalidAmount = errors.New("invalid amount")
 
 func ParseCents(value string) (int64, error) {
 	value = strings.TrimSpace(value)
@@ -96,6 +96,14 @@ func NormalizeOrZero(value string) string {
 	normalized, err := Normalize(value)
 	if err != nil {
 		return "0.00"
+	}
+	return normalized
+}
+
+func NormalizeOrTrim(value string) string {
+	normalized, err := Normalize(value)
+	if err != nil {
+		return strings.TrimSpace(value)
 	}
 	return normalized
 }

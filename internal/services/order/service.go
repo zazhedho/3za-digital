@@ -79,7 +79,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 	if req.Target == "" || req.Quantity <= 0 || strings.TrimSpace(req.ServiceID) == "" || createdBy == "" {
 		return domainorder.Order{}, ErrInvalidOrderRequest
 	}
-	productType = strings.ToLower(strings.TrimSpace(productType))
+	productType = utils.NormalizeKey(productType)
 
 	service, err := s.Repo.GetServiceByID(ctx, req.ServiceID)
 	if err != nil {
@@ -107,7 +107,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 		ProviderCharge:    providerCharge,
 		Profit:            profit,
 		Metadata:          utils.MustJSON(map[string]string{"source": "api"}),
-		ProviderResponse:  json.RawMessage(`{}`),
+		ProviderResponse:  utils.EmptyJSON(),
 		CreatedBy:         utils.StringPtrIfNotEmpty(createdBy),
 		UpdatedAt:         new(time.Now()),
 	}
@@ -115,7 +115,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 	order, err = s.Repo.CreateWithStatusLogAndWalletDebit(ctx, order, domainorder.OrderStatusLog{
 		Id:               utils.CreateUUID(),
 		NewStatus:        domainorder.StatusPending,
-		ProviderResponse: json.RawMessage(`{}`),
+		ProviderResponse: utils.EmptyJSON(),
 	}, createdBy)
 	if err != nil {
 		return domainorder.Order{}, err
@@ -123,7 +123,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 
 	client, err := s.providerClient()
 	if err != nil {
-		_ = s.failAndRefund(ctx, order, err, json.RawMessage(`{}`))
+		_ = s.failAndRefund(ctx, order, err, utils.EmptyJSON())
 		return order, err
 	}
 
@@ -135,11 +135,11 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 		RefID:       order.RefID,
 	})
 	if err != nil {
-		_ = s.failAndRefund(ctx, order, err, json.RawMessage(`{}`))
+		_ = s.failAndRefund(ctx, order, err, utils.EmptyJSON())
 		return order, err
 	}
 	if providerResp == nil {
-		_ = s.failAndRefund(ctx, order, ErrProviderEmptyResponse, json.RawMessage(`{}`))
+		_ = s.failAndRefund(ctx, order, ErrProviderEmptyResponse, utils.EmptyJSON())
 		return order, ErrProviderEmptyResponse
 	}
 

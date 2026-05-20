@@ -2,10 +2,10 @@ package servicedashboard
 
 import (
 	"context"
-	"strings"
 
 	domaindashboard "3za-digital/internal/domain/dashboard"
 	interfacedashboard "3za-digital/internal/interfaces/dashboard"
+	"3za-digital/utils"
 )
 
 type DashboardService struct {
@@ -17,7 +17,7 @@ func NewDashboardService(repo interfacedashboard.RepoDashboardInterface) *Dashbo
 }
 
 func (s *DashboardService) GetSummary(ctx context.Context, productType string) (domaindashboard.Summary, error) {
-	return s.Repo.GetSummary(ctx, strings.ToLower(strings.TrimSpace(productType)))
+	return s.Repo.GetSummary(ctx, utils.NormalizeKey(productType))
 }
 
 var _ interfacedashboard.ServiceDashboardInterface = (*DashboardService)(nil)

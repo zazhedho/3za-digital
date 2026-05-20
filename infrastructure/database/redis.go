@@ -5,7 +5,6 @@ import (
 	"3za-digital/utils"
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -14,7 +13,7 @@ import (
 var RedisClient *redis.Client
 
 func InitRedis() (*redis.Client, error) {
-	opt, _ := redis.ParseURL(os.Getenv("REDIS_URL"))
+	opt, _ := redis.ParseURL(utils.GetEnv("REDIS_URL", ""))
 	if opt == nil {
 		opt = &redis.Options{
 			Addr:         fmt.Sprintf("%s:%s", utils.GetEnv("REDIS_HOST", "localhost"), utils.GetEnv("REDIS_PORT", "6379")),

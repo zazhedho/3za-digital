@@ -41,8 +41,52 @@ func StringOrDefault(value string, fallback string) string {
 	return value
 }
 
+func NormalizeKey(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func NormalizeUpperKey(value string) string {
+	return strings.ToUpper(strings.TrimSpace(value))
+}
+
+func FirstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func EnvKey(value string) string {
-	value = strings.ToUpper(strings.TrimSpace(value))
+	value = NormalizeUpperKey(value)
 	replacer := strings.NewReplacer("-", "_", ".", "_", " ", "_")
 	return replacer.Replace(value)
+}
+
+func HumanizeKey(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return value
+	}
+
+	value = strings.ReplaceAll(value, "_", " ")
+	value = strings.ReplaceAll(value, "-", " ")
+	return strings.Join(strings.Fields(value), " ")
+}
+
+func TitleHumanized(value string) string {
+	value = HumanizeKey(value)
+	if value == "" {
+		return value
+	}
+
+	words := strings.Fields(value)
+	for i, word := range words {
+		if word == "" {
+			continue
+		}
+		words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+	}
+	return strings.Join(words, " ")
 }

@@ -4,7 +4,6 @@ import (
 	domainuser "3za-digital/internal/domain/user"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -155,7 +154,7 @@ func JwtExpiresAt(tokenString string) (time.Time, error) {
 }
 
 func jwtSecret() ([]byte, error) {
-	secret := strings.TrimSpace(os.Getenv("JWT_KEY"))
+	secret := GetEnv("JWT_KEY", "")
 	if secret == "" {
 		return nil, ErrJWTKeyNotConfigured
 	}

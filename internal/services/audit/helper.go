@@ -3,20 +3,14 @@ package serviceaudit
 import (
 	domainaudit "3za-digital/internal/domain/audit"
 	"3za-digital/internal/dto"
+	"3za-digital/utils"
 	"encoding/json"
 	"fmt"
 	"strings"
 )
 
 func humanizeAuditValue(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return value
-	}
-
-	value = strings.ReplaceAll(value, "_", " ")
-	value = strings.ReplaceAll(value, "-", " ")
-	return strings.Join(strings.Fields(value), " ")
+	return utils.HumanizeKey(value)
 }
 
 func toAuditResponses(items []domainaudit.AuditTrail) []dto.AuditTrailResponse {
@@ -83,17 +77,5 @@ func decodeAuditJSON(value string) interface{} {
 }
 
 func titleAuditValue(value string) string {
-	value = humanizeAuditValue(value)
-	if value == "" {
-		return value
-	}
-
-	words := strings.Fields(value)
-	for i, word := range words {
-		if word == "" {
-			continue
-		}
-		words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
-	}
-	return strings.Join(words, " ")
+	return utils.TitleHumanized(value)
 }

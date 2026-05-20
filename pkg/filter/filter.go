@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"3za-digital/utils"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -41,7 +42,7 @@ func GetBaseParams(ctx *gin.Context, defOrderBy, defOrderDirection string, defLi
 		req.OrderBy = defOrderBy
 	}
 	validDirs := map[string]bool{"asc": true, "desc": true}
-	if !validDirs[strings.ToLower(req.OrderDirection)] {
+	if !validDirs[utils.NormalizeKey(req.OrderDirection)] {
 		req.OrderDirection = defOrderDirection
 	}
 

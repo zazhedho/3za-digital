@@ -2,6 +2,7 @@ package repositorygeneric
 
 import (
 	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 	"fmt"
 	"reflect"
 	"strings"
@@ -180,7 +181,7 @@ func isASCIIDigit(char byte) bool {
 }
 
 func normalizeOrderDirection(direction string) (string, error) {
-	normalized := strings.ToUpper(strings.TrimSpace(direction))
+	normalized := utils.NormalizeUpperKey(direction)
 	switch normalized {
 	case "ASC", "DESC":
 		return normalized, nil

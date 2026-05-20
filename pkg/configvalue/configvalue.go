@@ -1,6 +1,7 @@
 package configvalue
 
 import (
+	"3za-digital/utils"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -17,7 +18,7 @@ func String(raw string, fallback string) string {
 }
 
 func Bool(raw string, fallback bool) (bool, error) {
-	value := strings.ToLower(strings.TrimSpace(raw))
+	value := utils.NormalizeKey(raw)
 	if value == "" {
 		return fallback, nil
 	}

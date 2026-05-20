@@ -3,7 +3,6 @@ package servicewallet
 import (
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
-	"3za-digital/pkg/money"
 	"3za-digital/utils"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -15,7 +14,7 @@ import (
 )
 
 func verifyWebhookSignature(provider string, req dto.PaymentWebhookRequest) error {
-	secret := strings.TrimSpace(utils.GetEnv("PAYMENT_WEBHOOK_SECRET_"+utils.EnvKey(provider), ""))
+	secret := utils.GetEnv("PAYMENT_WEBHOOK_SECRET_"+utils.EnvKey(provider), "")
 	if secret == "" {
 		return nil
 	}
@@ -53,7 +52,7 @@ func isDepositWebhookStatus(status string) bool {
 }
 
 func normalizeGatewayStatus(status string) string {
-	status = strings.ToLower(strings.TrimSpace(status))
+	status = utils.NormalizeKey(status)
 	switch status {
 	case "paid", "success", "settlement", "capture":
 		return domainwallet.DepositStatusPaid
@@ -66,14 +65,6 @@ func normalizeGatewayStatus(status string) string {
 	default:
 		return status
 	}
-}
-
-func normalizePositiveAmount(value string) (string, error) {
-	amount, err := money.NormalizePositive(value)
-	if err != nil {
-		return "", domainwallet.ErrInvalidAmount
-	}
-	return amount, nil
 }
 
 func IsPublicError(err error) bool {

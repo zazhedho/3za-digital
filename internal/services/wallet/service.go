@@ -9,6 +9,7 @@ import (
 	"3za-digital/internal/dto"
 	interfacewallet "3za-digital/internal/interfaces/wallet"
 	"3za-digital/pkg/filter"
+	"3za-digital/pkg/money"
 	"3za-digital/utils"
 
 	"gorm.io/gorm"
@@ -39,7 +40,7 @@ func (s *WalletService) GetWallets(ctx context.Context, params filter.BaseParams
 }
 
 func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dto.CreateDepositRequest) (domainwallet.DepositRequest, error) {
-	amount, err := normalizePositiveAmount(req.Amount)
+	amount, err := money.NormalizePositive(req.Amount)
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
@@ -55,7 +56,7 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 		Status:    domainwallet.DepositStatusPending,
 		Method:    domainwallet.DepositMethodPaymentGateway,
 		Provider:  strings.TrimSpace(req.Provider),
-		Metadata:  json.RawMessage(`{}`),
+		Metadata:  utils.EmptyJSON(),
 		CreatedBy: &userID,
 	}
 	return s.Repo.CreatePaymentGatewayDeposit(ctx, deposit)
@@ -77,7 +78,7 @@ func (s *WalletService) GetMyDepositByID(ctx context.Context, userID, id string)
 }
 
 func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.AdminWalletTopupRequest, actorID string) (domainwallet.DepositRequest, error) {
-	amount, err := normalizePositiveAmount(req.Amount)
+	amount, err := money.NormalizePositive(req.Amount)
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
@@ -93,18 +94,18 @@ func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.A
 		Amount:    amount,
 		Status:    domainwallet.DepositStatusPaid,
 		Method:    domainwallet.DepositMethodManualAdmin,
-		Metadata:  json.RawMessage(`{}`),
+		Metadata:  utils.EmptyJSON(),
 		CreatedBy: &actorID,
 	}
 	return s.Repo.CreateManualTopup(ctx, deposit, strings.TrimSpace(req.Description))
 }
 
 func (s *WalletService) AdminAdjust(ctx context.Context, userID string, req dto.AdminWalletAdjustRequest, actorID string) (domainwallet.WalletTransaction, error) {
-	amount, err := normalizePositiveAmount(req.Amount)
+	amount, err := money.NormalizePositive(req.Amount)
 	if err != nil {
 		return domainwallet.WalletTransaction{}, err
 	}
-	direction := strings.ToLower(strings.TrimSpace(req.Direction))
+	direction := utils.NormalizeKey(req.Direction)
 	if direction != domainwallet.DirectionCredit && direction != domainwallet.DirectionDebit {
 		return domainwallet.WalletTransaction{}, domainwallet.ErrInvalidDirection
 	}

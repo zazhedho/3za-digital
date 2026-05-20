@@ -25,7 +25,7 @@ func validateService(service domaincatalog.ProviderService, productType string, 
 }
 
 func normalizeProviderStatus(status string) string {
-	status = strings.ToLower(strings.TrimSpace(status))
+	status = utils.NormalizeKey(status)
 	status = strings.ReplaceAll(status, " ", "_")
 	switch status {
 	case domainorder.StatusPending:

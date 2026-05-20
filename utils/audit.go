@@ -95,7 +95,7 @@ func RedactSensitiveValue(input interface{}) interface{} {
 }
 
 func IsSensitiveKey(key string) bool {
-	k := strings.ToLower(strings.TrimSpace(key))
+	k := NormalizeKey(key)
 	return strings.Contains(k, "password") ||
 		strings.Contains(k, "token") ||
 		strings.Contains(k, "secret") ||
