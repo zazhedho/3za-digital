@@ -3,6 +3,7 @@ package servicecatalog
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	domaincatalog "3za-digital/internal/domain/catalog"
@@ -77,7 +78,7 @@ func TestCatalogServiceSyncRejectsUnsupportedProductType(t *testing.T) {
 	})
 
 	_, err := service.Sync(context.Background(), "unknown", dto.SyncCatalogRequest{})
-	if err != ErrUnsupportedProductType {
+	if !errors.Is(err, ErrUnsupportedProductType) {
 		t.Fatalf("expected ErrUnsupportedProductType, got %v", err)
 	}
 }

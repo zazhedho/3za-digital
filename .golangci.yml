@@ -11,6 +11,12 @@ issues:
     - linters:
         - misspell
       text: "`thn` is a misspelling of `then`"
+    - linters:
+        - misspell
+      text: "`cancelled` is a misspelling of `canceled`"
+    - linters:
+        - misspell
+      text: "`cancelled_orders` is a misspelling of `canceled_orders`"
     - path: pkg/messages/message.go
       linters:
         - gosec

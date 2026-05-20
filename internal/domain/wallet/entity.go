@@ -20,7 +20,7 @@ const (
 	DepositStatusPaid      = "paid"
 	DepositStatusExpired   = "expired"
 	DepositStatusFailed    = "failed"
-	DepositStatusCancelled = "cancelled"
+	DepositStatusCancelled = "cancelled" //nolint:misspell
 
 	DepositMethodManualAdmin    = "manual_admin"
 	DepositMethodPaymentGateway = "payment_gateway"

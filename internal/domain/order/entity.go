@@ -13,7 +13,7 @@ const (
 	StatusCompleted  = "completed"
 	StatusPartial    = "partial"
 	StatusFailed     = "failed"
-	StatusCancelled  = "cancelled"
+	StatusCancelled  = "cancelled" //nolint:misspell
 )
 
 func (Order) TableName() string {

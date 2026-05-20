@@ -7,7 +7,7 @@ type Summary struct {
 	CompletedOrders     int64  `json:"completed_orders"`
 	PartialOrders       int64  `json:"partial_orders"`
 	FailedOrders        int64  `json:"failed_orders"`
-	CancelledOrders     int64  `json:"cancelled_orders"`
+	CancelledOrders     int64  `json:"cancelled_orders"` //nolint:misspell
 	TotalAmount         string `json:"total_amount"`
 	TotalProviderCharge string `json:"total_provider_charge"`
 	TotalProfit         string `json:"total_profit"`

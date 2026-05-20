@@ -19,9 +19,7 @@ func ParseCents(value string) (int64, error) {
 		sign = -1
 		value = strings.TrimPrefix(value, "-")
 	}
-	if strings.HasPrefix(value, "+") {
-		value = strings.TrimPrefix(value, "+")
-	}
+	value = strings.TrimPrefix(value, "+")
 	if value == "" {
 		return 0, ErrInvalidAmount
 	}
@@ -94,6 +92,22 @@ func Normalize(value string) (string, error) {
 	return FormatCents(cents), nil
 }
 
+func NormalizeOrZero(value string) string {
+	normalized, err := Normalize(value)
+	if err != nil {
+		return "0.00"
+	}
+	return normalized
+}
+
+func NormalizePositive(value string) (string, error) {
+	cents, err := ParseCents(value)
+	if err != nil || cents <= 0 {
+		return "", ErrInvalidAmount
+	}
+	return FormatCents(cents), nil
+}
+
 func Add(left string, right string) (string, error) {
 	leftCents, err := ParseCents(left)
 	if err != nil {
@@ -116,6 +130,14 @@ func Sub(left string, right string) (string, error) {
 		return "", err
 	}
 	return FormatCents(leftCents - rightCents), nil
+}
+
+func SubOrZero(left string, right string) string {
+	result, err := Sub(left, right)
+	if err != nil {
+		return "0.00"
+	}
+	return result
 }
 
 func MarkupAmount(providerCharge string, percent string) (string, string, string, error) {

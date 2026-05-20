@@ -2,7 +2,6 @@ package servicecatalog
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -83,7 +82,7 @@ func mapH2HService(productType string, item h2h.Service, syncedAt time.Time) dom
 	maxQuantity := int64(item.MaxQuantity.Int())
 	rawResponse := item.Raw
 	if len(rawResponse) == 0 {
-		rawResponse = mustJSON(item)
+		rawResponse = utils.MustJSON(item)
 	}
 
 	return domaincatalog.ProviderService{
@@ -98,7 +97,7 @@ func mapH2HService(productType string, item h2h.Service, syncedAt time.Time) dom
 		MinQuantity:       quantityPointer(minQuantity),
 		MaxQuantity:       quantityPointer(maxQuantity),
 		Price:             catalogPrice(item),
-		Metadata:          mustJSON(map[string]string{"source": "h2h", "price_unit": priceUnit(productType)}),
+		Metadata:          utils.MustJSON(map[string]string{"source": "h2h", "price_unit": priceUnit(productType)}),
 		RawResponse:       rawResponse,
 		IsActive:          serviceIsActive(item.Status.String()),
 		SyncedAt:          &syncedAt,
@@ -153,14 +152,6 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
-}
-
-func mustJSON(value interface{}) json.RawMessage {
-	body, err := json.Marshal(value)
-	if err != nil {
-		return json.RawMessage(`{}`)
-	}
-	return body
 }
 
 var _ interfacecatalog.ServiceCatalogInterface = (*CatalogService)(nil)

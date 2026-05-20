@@ -3,6 +3,7 @@ package serviceorder
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	domaincatalog "3za-digital/internal/domain/catalog"
@@ -94,7 +95,7 @@ func TestOrderServiceCreateOrderRejectsBelowMinimum(t *testing.T) {
 		Target:    "target",
 		Quantity:  1,
 	}, "user-id")
-	if err != ErrQuantityBelowMinimum {
+	if !errors.Is(err, ErrQuantityBelowMinimum) {
 		t.Fatalf("expected ErrQuantityBelowMinimum, got %v", err)
 	}
 }
@@ -183,6 +184,6 @@ func (m *mockOrderRepo) UpdateWithStatusLog(ctx context.Context, order domainord
 	return nil
 }
 
-func (m *mockOrderRepo) RefundWalletForOrder(ctx context.Context, order domainorder.Order, amount string, description string) error {
-	return nil
+func (m *mockOrderRepo) RefundWalletForOrder(ctx context.Context, order domainorder.Order, amount string, description string) (bool, error) {
+	return true, nil
 }

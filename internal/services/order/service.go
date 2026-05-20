@@ -4,17 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
+	domainaudit "3za-digital/internal/domain/audit"
 	domaincatalog "3za-digital/internal/domain/catalog"
 	domainorder "3za-digital/internal/domain/order"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
 	"3za-digital/internal/integrations/h2h"
 	interfaceappconfig "3za-digital/internal/interfaces/appconfig"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
 	interfaceorder "3za-digital/internal/interfaces/order"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
 	"3za-digital/pkg/filter"
@@ -39,6 +39,7 @@ type OrderService struct {
 	Repo            interfaceorder.RepoOrderInterface
 	ProviderFactory interfaceprovider.ClientFactory
 	ConfigService   interfaceappconfig.ServiceAppConfigInterface
+	AuditService    interfaceaudit.ServiceAuditInterface
 }
 
 func NewOrderService(repo interfaceorder.RepoOrderInterface, providerFactory interfaceprovider.ClientFactory, configServices ...interfaceappconfig.ServiceAppConfigInterface) *OrderService {
@@ -50,6 +51,11 @@ func NewOrderService(repo interfaceorder.RepoOrderInterface, providerFactory int
 		service.ConfigService = configServices[0]
 	}
 	return service
+}
+
+func (s *OrderService) WithAuditService(auditService interfaceaudit.ServiceAuditInterface) *OrderService {
+	s.AuditService = auditService
+	return s
 }
 
 func (s *OrderService) GetAll(ctx context.Context, params filter.BaseParams) ([]domainorder.Order, int64, error) {
@@ -100,9 +106,9 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 		Amount:            amount,
 		ProviderCharge:    providerCharge,
 		Profit:            profit,
-		Metadata:          mustJSON(map[string]string{"source": "api"}),
+		Metadata:          utils.MustJSON(map[string]string{"source": "api"}),
 		ProviderResponse:  json.RawMessage(`{}`),
-		CreatedBy:         normalizeOptionalString(createdBy),
+		CreatedBy:         utils.StringPtrIfNotEmpty(createdBy),
 		UpdatedAt:         new(time.Now()),
 	}
 
@@ -180,12 +186,12 @@ func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domai
 	}
 
 	order.Status = newStatus
-	if charge := defaultNumber(providerResp.Charge.String()); charge != "0" {
-		order.ProviderCharge = normalizeMoney(charge)
-		order.Profit = subtractMoney(order.Amount, order.ProviderCharge)
+	if charge := utils.StringOrDefault(providerResp.Charge.String(), "0"); charge != "0" {
+		order.ProviderCharge = money.NormalizeOrZero(charge)
+		order.Profit = money.SubOrZero(order.Amount, order.ProviderCharge)
 	}
-	order.StartCount = optionalInt64(providerResp.StartCount.String())
-	order.Remains = optionalInt64(providerResp.Remains.String())
+	order.StartCount = utils.Int64PtrFromString(providerResp.StartCount.String())
+	order.Remains = utils.Int64PtrFromString(providerResp.Remains.String())
 	order.ProviderResponse = providerResp.Raw
 	order.UpdatedAt = new(time.Now())
 
@@ -203,7 +209,7 @@ func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domai
 		return domainorder.Order{}, err
 	}
 	if order.Status == domainorder.StatusFailed {
-		_ = s.Repo.RefundWalletForOrder(ctx, order, order.Amount, "provider failed order "+order.RefID)
+		_ = s.refundWallet(ctx, order, "provider failed order "+order.RefID)
 	}
 
 	return order, nil
@@ -218,13 +224,13 @@ func (s *OrderService) applyStatusResponse(ctx context.Context, order domainorde
 
 	order.Status = newStatus
 	if providerResp.Charge.String() != "" {
-		order.ProviderCharge = normalizeMoney(providerResp.Charge.String())
-		order.Profit = subtractMoney(order.Amount, order.ProviderCharge)
+		order.ProviderCharge = money.NormalizeOrZero(providerResp.Charge.String())
+		order.Profit = money.SubOrZero(order.Amount, order.ProviderCharge)
 	}
-	if startCount := optionalInt64(providerResp.StartCount.String()); startCount != nil {
+	if startCount := utils.Int64PtrFromString(providerResp.StartCount.String()); startCount != nil {
 		order.StartCount = startCount
 	}
-	if remains := optionalInt64(providerResp.Remains.String()); remains != nil {
+	if remains := utils.Int64PtrFromString(providerResp.Remains.String()); remains != nil {
 		order.Remains = remains
 	}
 	order.ProviderResponse = providerResp.Raw
@@ -244,7 +250,7 @@ func (s *OrderService) applyStatusResponse(ctx context.Context, order domainorde
 		return domainorder.Order{}, err
 	}
 	if order.Status == domainorder.StatusFailed && oldStatus != domainorder.StatusFailed {
-		_ = s.Repo.RefundWalletForOrder(ctx, order, order.Amount, "provider failed order "+order.RefID)
+		_ = s.refundWallet(ctx, order, "provider failed order "+order.RefID)
 	}
 
 	return order, nil
@@ -254,13 +260,53 @@ func (s *OrderService) failAndRefund(ctx context.Context, order domainorder.Orde
 	if err := s.markOrderFailed(ctx, order, cause, providerResponse); err != nil {
 		return err
 	}
-	return s.Repo.RefundWalletForOrder(ctx, order, order.Amount, "provider create order failed "+order.RefID)
+	return s.refundWallet(ctx, order, "provider create order failed "+order.RefID)
+}
+
+func (s *OrderService) refundWallet(ctx context.Context, order domainorder.Order, description string) error {
+	refunded, err := s.Repo.RefundWalletForOrder(ctx, order, order.Amount, description)
+	if err != nil {
+		s.writeRefundAudit(ctx, order, domainaudit.StatusFailed, description, err)
+		return err
+	}
+	if refunded {
+		s.writeRefundAudit(ctx, order, domainaudit.StatusSuccess, description, nil)
+	}
+	return nil
+}
+
+func (s *OrderService) writeRefundAudit(ctx context.Context, order domainorder.Order, status string, message string, err error) {
+	if s.AuditService == nil {
+		return
+	}
+	actorID := ""
+	if order.CreatedBy != nil {
+		actorID = *order.CreatedBy
+	}
+	errMessage := ""
+	if err != nil {
+		errMessage = err.Error()
+	}
+	_ = s.AuditService.Store(ctx, domainaudit.AuditEvent{
+		ActorUserID:  actorID,
+		Action:       domainaudit.ActionCreate,
+		Resource:     "wallet_refund",
+		ResourceID:   order.Id,
+		Status:       status,
+		Message:      message,
+		ErrorMessage: errMessage,
+		AfterData: map[string]interface{}{
+			"order_id": order.Id,
+			"ref_id":   order.RefID,
+			"amount":   order.Amount,
+		},
+	})
 }
 
 func (s *OrderService) markOrderFailed(ctx context.Context, order domainorder.Order, cause error, providerResponse json.RawMessage) error {
 	oldStatus := order.Status
 	order.Status = domainorder.StatusFailed
-	order.Metadata = mustJSON(map[string]string{
+	order.Metadata = utils.MustJSON(map[string]string{
 		"source":        "api",
 		"error_message": cause.Error(),
 	})
@@ -273,85 +319,6 @@ func (s *OrderService) markOrderFailed(ctx context.Context, order domainorder.Or
 		ProviderStatus:   domainorder.StatusFailed,
 		ProviderResponse: providerResponse,
 	})
-}
-
-func validateService(service domaincatalog.ProviderService, productType string, quantity int64) error {
-	if service.Provider != domaincatalog.ProviderH2H || service.ProductType != productType {
-		return ErrUnsupportedService
-	}
-	if !service.IsActive {
-		return ErrInactiveService
-	}
-	if service.MinQuantity != nil && quantity < *service.MinQuantity {
-		return ErrQuantityBelowMinimum
-	}
-	if service.MaxQuantity != nil && quantity > *service.MaxQuantity {
-		return ErrQuantityAboveMaximum
-	}
-	return nil
-}
-
-func normalizeProviderStatus(status string) string {
-	status = strings.ToLower(strings.TrimSpace(status))
-	status = strings.ReplaceAll(status, " ", "_")
-	switch status {
-	case domainorder.StatusPending:
-		return domainorder.StatusPending
-	case "process", "in_progress", domainorder.StatusProcessing:
-		return domainorder.StatusProcessing
-	case "success", "done", domainorder.StatusCompleted:
-		return domainorder.StatusCompleted
-	case domainorder.StatusPartial:
-		return domainorder.StatusPartial
-	case "error", "reject", "rejected", domainorder.StatusFailed:
-		return domainorder.StatusFailed
-	case "cancel", domainorder.StatusCancelled:
-		return domainorder.StatusCancelled
-	default:
-		return ""
-	}
-}
-
-func isFinalStatus(status string) bool {
-	switch status {
-	case domainorder.StatusCompleted, domainorder.StatusPartial, domainorder.StatusFailed, domainorder.StatusCancelled:
-		return true
-	default:
-		return false
-	}
-}
-
-func generateRefID(productType string) string {
-	id := strings.ToUpper(strings.ReplaceAll(utils.CreateUUID(), "-", ""))
-	return fmt.Sprintf("%s-%s", strings.ToUpper(productType), id)
-}
-
-func normalizeOptionalString(value string) *string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return nil
-	}
-	return &value
-}
-
-func optionalInt64(value string) *int64 {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return nil
-	}
-	parsed, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return nil
-	}
-	return &parsed
-}
-
-func defaultNumber(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "0"
-	}
-	return value
 }
 
 func (s *OrderService) calculatePrice(ctx context.Context, productType string, providerPrice string) (string, string, string, error) {
@@ -370,30 +337,6 @@ func (s *OrderService) calculatePrice(ctx context.Context, productType string, p
 	}
 
 	return money.MarkupAmount(providerPrice, markupPercent)
-}
-
-func normalizeMoney(value string) string {
-	normalized, err := money.Normalize(value)
-	if err != nil {
-		return "0.00"
-	}
-	return normalized
-}
-
-func subtractMoney(left string, right string) string {
-	result, err := money.Sub(left, right)
-	if err != nil {
-		return "0.00"
-	}
-	return result
-}
-
-func mustJSON(value interface{}) json.RawMessage {
-	body, err := json.Marshal(value)
-	if err != nil {
-		return json.RawMessage(`{}`)
-	}
-	return body
 }
 
 func IsPublicError(err error) bool {

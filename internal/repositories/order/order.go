@@ -153,8 +153,9 @@ func (r *repo) UpdateWithStatusLog(ctx context.Context, order domainorder.Order,
 	})
 }
 
-func (r *repo) RefundWalletForOrder(ctx context.Context, order domainorder.Order, amount string, description string) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+func (r *repo) RefundWalletForOrder(ctx context.Context, order domainorder.Order, amount string, description string) (bool, error) {
+	refunded := false
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var count int64
 		reference := "refund_order:" + order.Id
 		if err := tx.Model(&domainwallet.WalletTransaction{}).Where("reference = ?", reference).Count(&count).Error; err != nil {
@@ -167,7 +168,7 @@ func (r *repo) RefundWalletForOrder(ctx context.Context, order domainorder.Order
 		if order.CreatedBy != nil {
 			userID = *order.CreatedBy
 		}
-		return mutateWallet(tx, walletMutation{
+		if err := mutateWallet(tx, walletMutation{
 			UserID:      userID,
 			OrderID:     &order.Id,
 			Type:        domainwallet.TransactionTypeRefundOrder,
@@ -176,8 +177,13 @@ func (r *repo) RefundWalletForOrder(ctx context.Context, order domainorder.Order
 			Reference:   reference,
 			Description: strings.TrimSpace(description),
 			CreatedBy:   order.CreatedBy,
-		})
+		}); err != nil {
+			return err
+		}
+		refunded = true
+		return nil
 	})
+	return refunded, err
 }
 
 type walletMutation struct {

@@ -346,24 +346,33 @@ func (r *Routes) SMMRoutes() {
 	repoOrder := orderRepo.NewOrderRepo(r.DB)
 	repoProvider := providerRepo.NewProviderRepo(r.DB)
 	repoAppConfig := appConfigRepo.NewAppConfigRepo(r.DB)
+	repoAudit := auditRepo.NewAuditRepo(r.DB)
 	svcAppConfig := appConfigSvc.NewAppConfigService(repoAppConfig)
+	svcAudit := auditSvc.NewAuditService(repoAudit)
 	providerFactory := func() (interfaceprovider.Client, error) {
 		return newObservedH2HClient(repoProvider)
 	}
 	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory)
-	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory, svcAppConfig)
+	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory, svcAppConfig).WithAuditService(svcAudit)
 	h := smmHandler.NewSMMHandler(svcCatalog, svcOrder)
 
 	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
 	pRepo := permissionRepo.NewPermissionRepo(r.DB)
 	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
+	redisClient := database.GetRedisClient()
+	orderLimiter := middlewares.IPRateLimitMiddleware(
+		redisClient,
+		"smm_order_create",
+		utils.GetEnv("SMM_ORDER_RATE_LIMIT", 20),
+		time.Duration(utils.GetEnv("SMM_ORDER_RATE_WINDOW_SECONDS", 60))*time.Second,
+	)
 
 	smm := r.App.Group("/api/smm").Use(mdw.AuthMiddleware())
 	{
 		smm.GET("/services", mdw.PermissionMiddleware("smm_services", "list"), h.GetServices)
 		smm.POST("/services/sync", mdw.PermissionMiddleware("smm_services", "sync"), h.SyncServices)
 		smm.GET("/orders", mdw.PermissionMiddleware("smm_orders", "list"), h.GetOrders)
-		smm.POST("/orders", mdw.PermissionMiddleware("smm_orders", "create"), h.CreateOrder)
+		smm.POST("/orders", orderLimiter, mdw.PermissionMiddleware("smm_orders", "create"), h.CreateOrder)
 		smm.GET("/orders/:id", mdw.PermissionMiddleware("smm_orders", "view"), h.GetOrderByID)
 		smm.GET("/orders/:id/status-logs", mdw.PermissionMiddleware("smm_orders", "view"), h.GetOrderStatusLogs)
 		smm.POST("/orders/:id/refresh-status", mdw.PermissionMiddleware("smm_orders", "refresh_status"), h.RefreshOrderStatus)
@@ -380,6 +389,19 @@ func (r *Routes) WalletRoutes() {
 	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
 	pRepo := permissionRepo.NewPermissionRepo(r.DB)
 	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
+	redisClient := database.GetRedisClient()
+	depositLimiter := middlewares.IPRateLimitMiddleware(
+		redisClient,
+		"deposit_create",
+		utils.GetEnv("DEPOSIT_CREATE_RATE_LIMIT", 10),
+		time.Duration(utils.GetEnv("DEPOSIT_CREATE_RATE_WINDOW_SECONDS", 60))*time.Second,
+	)
+	webhookLimiter := middlewares.IPRateLimitMiddleware(
+		redisClient,
+		"payment_webhook",
+		utils.GetEnv("PAYMENT_WEBHOOK_RATE_LIMIT", 120),
+		time.Duration(utils.GetEnv("PAYMENT_WEBHOOK_RATE_WINDOW_SECONDS", 60))*time.Second,
+	)
 
 	wallet := r.App.Group("/api/wallet").Use(mdw.AuthMiddleware())
 	{
@@ -396,12 +418,12 @@ func (r *Routes) WalletRoutes() {
 
 	deposits := r.App.Group("/api/deposits").Use(mdw.AuthMiddleware())
 	{
-		deposits.POST("", mdw.PermissionMiddleware("deposits", "create"), h.CreateDeposit)
+		deposits.POST("", depositLimiter, mdw.PermissionMiddleware("deposits", "create"), h.CreateDeposit)
 		deposits.GET("", mdw.PermissionMiddleware("deposits", "list"), h.GetMyDeposits)
 		deposits.GET("/:id", mdw.PermissionMiddleware("deposits", "view"), h.GetMyDepositByID)
 	}
 
-	r.App.POST("/api/webhooks/payments/:provider", h.PaymentWebhook)
+	r.App.POST("/api/webhooks/payments/:provider", webhookLimiter, h.PaymentWebhook)
 }
 
 func (r *Routes) ProviderRoutes() {

@@ -2,7 +2,6 @@ package serviceprovider
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	domainprovider "3za-digital/internal/domain/provider"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
 	"3za-digital/pkg/filter"
+	"3za-digital/pkg/money"
 	"3za-digital/utils"
 )
 
@@ -50,13 +50,13 @@ func (s *ProviderService) GetH2HBalance(ctx context.Context) (domainprovider.Bal
 
 	raw := balance.Raw
 	if len(raw) == 0 {
-		raw = mustJSON(balance)
+		raw = utils.MustJSON(balance)
 	}
 
 	snapshot := domainprovider.BalanceSnapshot{
 		Id:          utils.CreateUUID(),
 		Provider:    domaincatalog.ProviderH2H,
-		Balance:     defaultNumber(balance.Balance.String()),
+		Balance:     money.NormalizeOrZero(balance.Balance.String()),
 		RawResponse: raw,
 		CreatedAt:   time.Now(),
 	}
@@ -67,23 +67,8 @@ func (s *ProviderService) GetH2HBalance(ctx context.Context) (domainprovider.Bal
 	return snapshot, nil
 }
 
-func defaultNumber(value string) string {
-	if value == "" {
-		return "0"
-	}
-	return value
-}
-
 func (s *ProviderService) GetAPILogs(ctx context.Context, params filter.BaseParams) ([]domainprovider.APILog, int64, error) {
 	return s.Repo.GetAPILogs(ctx, params)
-}
-
-func mustJSON(value interface{}) json.RawMessage {
-	body, err := json.Marshal(value)
-	if err != nil {
-		return json.RawMessage(`{}`)
-	}
-	return body
 }
 
 var _ interfaceprovider.ServiceProviderInterface = (*ProviderService)(nil)

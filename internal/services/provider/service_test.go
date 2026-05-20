@@ -28,11 +28,11 @@ func TestProviderServiceGetH2HBalanceUsesNestedBalance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetH2HBalance returned error: %v", err)
 	}
-	if snapshot.Balance != "3409" {
-		t.Fatalf("expected balance 3409, got %s", snapshot.Balance)
+	if snapshot.Balance != "3409.00" {
+		t.Fatalf("expected balance 3409.00, got %s", snapshot.Balance)
 	}
-	if repo.snapshot.Balance != "3409" {
-		t.Fatalf("expected stored balance 3409, got %s", repo.snapshot.Balance)
+	if repo.snapshot.Balance != "3409.00" {
+		t.Fatalf("expected stored balance 3409.00, got %s", repo.snapshot.Balance)
 	}
 }
 

@@ -3,6 +3,7 @@ package h2h
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -196,8 +197,8 @@ func TestClientReturnsAPIErrorForFailedPayload(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	apiErr, ok := err.(*APIError)
-	if !ok {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
 		t.Fatalf("expected APIError, got %T", err)
 	}
 	if apiErr.Message != "invalid credential" {

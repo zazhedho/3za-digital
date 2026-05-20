@@ -143,6 +143,10 @@ Optional but recommended:
 - storage settings for file upload use cases. These stay optional; when storage connection env is set, provider and required storage credentials are validated.
 - `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_IDS` for Google login
 - SMTP settings for register OTP and password reset email flows. These stay optional; when SMTP connection env is set, `SMTP_HOST`, `SMTP_PASS`, `SMTP_FROM`, and `SMTP_PORT` format are validated.
+- Rate limit settings for sensitive routes when Redis is enabled:
+  - `SMM_ORDER_RATE_LIMIT`, `SMM_ORDER_RATE_WINDOW_SECONDS`
+  - `DEPOSIT_CREATE_RATE_LIMIT`, `DEPOSIT_CREATE_RATE_WINDOW_SECONDS`
+  - `PAYMENT_WEBHOOK_RATE_LIMIT`, `PAYMENT_WEBHOOK_RATE_WINDOW_SECONDS`
 
 H2H provider settings:
 - `H2H_BASE_URL`
@@ -152,6 +156,18 @@ H2H provider settings:
 - `H2H_TIMEOUT_SECONDS`
 
 H2H credentials must stay in backend environment variables only. Do not put them in frontend code, Postman shared variables, request logs, or provider API logs.
+
+Optional payment webhook signature guard:
+- `PAYMENT_WEBHOOK_SECRET_<PROVIDER>`
+- Example: `PAYMENT_WEBHOOK_SECRET_MIDTRANS`
+
+When this secret is set, `/api/webhooks/payments/:provider` requires `signature` in the request body. Current generic guard expects HMAC-SHA256 hex over:
+
+```text
+provider|payment_reference|amount|status
+```
+
+Real payment gateway adapters can replace this provider-specific verification later.
 
 ## Run Locally
 
@@ -314,6 +330,7 @@ Security notes:
 - Provider API logs must contain sanitized request/response context only.
 - Payment webhook payloads must be sanitized if provider sends secrets.
 - Refund and deposit credit operations must remain idempotent.
+- Rate limits apply to SMM order create, deposit create, and payment webhook when Redis is enabled.
 
 ## Module Seed Helper
 

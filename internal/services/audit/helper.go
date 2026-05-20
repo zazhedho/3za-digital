@@ -3,56 +3,10 @@ package serviceaudit
 import (
 	domainaudit "3za-digital/internal/domain/audit"
 	"3za-digital/internal/dto"
-	"3za-digital/utils"
 	"encoding/json"
 	"fmt"
 	"strings"
 )
-
-func sanitizePayload(input interface{}) interface{} {
-	normalized := utils.NormalizePayload(input)
-	return sanitizeValue(normalized)
-}
-
-func sanitizeValue(input interface{}) interface{} {
-	switch v := input.(type) {
-	case map[string]interface{}:
-		return sanitizeMap(v)
-	case []interface{}:
-		return sanitizeSlice(v)
-	default:
-		return v
-	}
-}
-
-func sanitizeMap(in map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{}, len(in))
-	for k, val := range in {
-		if isSensitiveKey(k) {
-			out[k] = "[REDACTED]"
-			continue
-		}
-
-		out[k] = sanitizeValue(val)
-	}
-	return out
-}
-
-func sanitizeSlice(values []interface{}) []interface{} {
-	out := make([]interface{}, 0, len(values))
-	for _, val := range values {
-		out = append(out, sanitizeValue(val))
-	}
-	return out
-}
-
-func isSensitiveKey(key string) bool {
-	k := strings.ToLower(strings.TrimSpace(key))
-	return strings.Contains(k, "password") ||
-		strings.Contains(k, "token") ||
-		strings.Contains(k, "secret") ||
-		strings.Contains(k, "otp")
-}
 
 func humanizeAuditValue(value string) string {
 	value = strings.TrimSpace(value)

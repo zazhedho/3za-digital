@@ -9,4 +9,5 @@ var (
 	ErrInvalidDirection      = errors.New("invalid wallet transaction direction")
 	ErrDepositAlreadyFinal   = errors.New("deposit already has final status")
 	ErrDepositAmountMismatch = errors.New("deposit amount mismatch")
+	ErrInvalidSignature      = errors.New("invalid payment webhook signature")
 )
