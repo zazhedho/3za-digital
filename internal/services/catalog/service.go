@@ -97,8 +97,8 @@ func mapH2HService(productType string, item h2h.Service, syncedAt time.Time) dom
 		Platform:          firstNonEmpty(item.Platform, productType),
 		MinQuantity:       quantityPointer(minQuantity),
 		MaxQuantity:       quantityPointer(maxQuantity),
-		Price:             firstNonEmpty(item.Price.String(), "0"),
-		Metadata:          mustJSON(map[string]string{"source": "h2h"}),
+		Price:             catalogPrice(item),
+		Metadata:          mustJSON(map[string]string{"source": "h2h", "price_unit": priceUnit(productType)}),
 		RawResponse:       rawResponse,
 		IsActive:          serviceIsActive(item.Status.String()),
 		SyncedAt:          &syncedAt,
@@ -128,6 +128,17 @@ func quantityPointer(value int64) *int64 {
 		return nil
 	}
 	return &value
+}
+
+func catalogPrice(item h2h.Service) string {
+	return firstNonEmpty(item.Price.String(), item.PricePer1K.String(), "0")
+}
+
+func priceUnit(productType string) string {
+	if productType == domaincatalog.ProductTypeSMM {
+		return "per_1000"
+	}
+	return "unit"
 }
 
 func serviceIsActive(status string) bool {

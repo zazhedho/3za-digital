@@ -56,7 +56,7 @@ func (s *ProviderService) GetH2HBalance(ctx context.Context) (domainprovider.Bal
 	snapshot := domainprovider.BalanceSnapshot{
 		Id:          utils.CreateUUID(),
 		Provider:    domaincatalog.ProviderH2H,
-		Balance:     balance.Balance.String(),
+		Balance:     defaultNumber(balance.Balance.String()),
 		RawResponse: raw,
 		CreatedAt:   time.Now(),
 	}
@@ -65,6 +65,13 @@ func (s *ProviderService) GetH2HBalance(ctx context.Context) (domainprovider.Bal
 	}
 
 	return snapshot, nil
+}
+
+func defaultNumber(value string) string {
+	if value == "" {
+		return "0"
+	}
+	return value
 }
 
 func (s *ProviderService) GetAPILogs(ctx context.Context, params filter.BaseParams) ([]domainprovider.APILog, int64, error) {

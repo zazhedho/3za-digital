@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS provider_services (
     platform VARCHAR(100),
     min_quantity BIGINT,
     max_quantity BIGINT,
-    price NUMERIC(18, 4) NOT NULL DEFAULT 0,
+    price NUMERIC(18, 2) NOT NULL DEFAULT 0,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     raw_response JSONB NOT NULL DEFAULT '{}'::jsonb,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -32,9 +32,9 @@ CREATE TABLE IF NOT EXISTS orders (
     customer_no VARCHAR(150),
     customer_name VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'pending',
-    amount NUMERIC(18, 4) NOT NULL DEFAULT 0,
-    provider_charge NUMERIC(18, 4) NOT NULL DEFAULT 0,
-    profit NUMERIC(18, 4) NOT NULL DEFAULT 0,
+    amount NUMERIC(18, 2) NOT NULL DEFAULT 0,
+    provider_charge NUMERIC(18, 2) NOT NULL DEFAULT 0,
+    profit NUMERIC(18, 2) NOT NULL DEFAULT 0,
     start_count BIGINT,
     remains BIGINT,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS order_status_logs (
 CREATE TABLE IF NOT EXISTS provider_balance_snapshots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     provider VARCHAR(50) NOT NULL,
-    balance NUMERIC(18, 4) NOT NULL DEFAULT 0,
+    balance NUMERIC(18, 2) NOT NULL DEFAULT 0,
     raw_response JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

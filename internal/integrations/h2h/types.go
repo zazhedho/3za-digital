@@ -26,10 +26,40 @@ type CreateOrderRequest struct {
 }
 
 type BalanceResponse struct {
-	Status  bool            `json:"status"`
-	Message string          `json:"message"`
-	Balance FlexibleNumber  `json:"balance"`
+	Status  bool   `json:"status"`
+	Message string `json:"message"`
+	Balance FlexibleNumber
+	Data    BalanceData     `json:"data"`
 	Raw     json.RawMessage `json:"-"`
+}
+
+func (r *BalanceResponse) UnmarshalJSON(data []byte) error {
+	type wireBalanceResponse struct {
+		Status  bool           `json:"status"`
+		Message string         `json:"message"`
+		Balance FlexibleNumber `json:"balance"`
+		Data    BalanceData    `json:"data"`
+	}
+
+	var wire wireBalanceResponse
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+
+	r.Status = wire.Status
+	r.Message = wire.Message
+	r.Data = wire.Data
+	if wire.Balance.String() != "" {
+		r.Balance = wire.Balance
+	} else {
+		r.Balance = wire.Data.Balance
+	}
+	return nil
+}
+
+type BalanceData struct {
+	Balance          FlexibleNumber `json:"balance"`
+	BalanceFormatted string         `json:"balance_formatted"`
 }
 
 type PriceListResponse struct {
@@ -50,6 +80,7 @@ type Service struct {
 	Platform    string          `json:"platform"`
 	Type        string          `json:"type"`
 	Price       FlexibleNumber  `json:"price"`
+	PricePer1K  FlexibleNumber  `json:"price_per_1k"`
 	MinQuantity FlexibleInt     `json:"min"`
 	MaxQuantity FlexibleInt     `json:"max"`
 	Status      FlexibleString  `json:"status"`

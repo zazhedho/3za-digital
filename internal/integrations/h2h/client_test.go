@@ -19,7 +19,10 @@ func TestClientGetBalance(t *testing.T) {
 		writeJSON(t, w, map[string]interface{}{
 			"status":  true,
 			"message": "success",
-			"balance": 125000,
+			"data": map[string]interface{}{
+				"balance":           125000,
+				"balance_formatted": "125.000",
+			},
 		})
 	})
 	defer server.Close()
@@ -61,14 +64,14 @@ func TestClientGetPriceListForSMM(t *testing.T) {
 			"total":    1,
 			"data": []map[string]interface{}{
 				{
-					"id":       1001,
-					"name":     "Instagram Followers",
-					"category": "Followers",
-					"platform": "instagram",
-					"price":    "1000",
-					"min":      "10",
-					"max":      "10000",
-					"status":   1,
+					"id":           1001,
+					"name":         "Instagram Followers",
+					"category":     "Followers",
+					"platform":     "instagram",
+					"price_per_1k": "1000",
+					"min":          "10",
+					"max":          "10000",
+					"status":       1,
 				},
 			},
 		})
@@ -89,6 +92,9 @@ func TestClientGetPriceListForSMM(t *testing.T) {
 	}
 	if got := response.Services[0].ProviderServiceID(); got != "1001" {
 		t.Fatalf("expected provider service id 1001, got %s", got)
+	}
+	if got := response.Services[0].PricePer1K.String(); got != "1000" {
+		t.Fatalf("expected price_per_1k 1000, got %s", got)
 	}
 }
 
