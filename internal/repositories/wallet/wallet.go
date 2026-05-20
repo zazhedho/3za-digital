@@ -242,9 +242,8 @@ func (r *repo) UpdateDepositStatusByPaymentReference(ctx context.Context, provid
 			return nil
 		}
 
-		now := time.Now()
 		deposit.Status = status
-		deposit.UpdatedAt = &now
+		deposit.UpdatedAt = new(time.Now())
 		return tx.Save(&deposit).Error
 	})
 	return deposit, err
@@ -285,7 +284,7 @@ func (r *repo) mutateWalletTx(tx *gorm.DB, req walletMutation) (domainwallet.Wal
 		return domainwallet.WalletTransaction{}, domainwallet.ErrInvalidAmount
 	}
 
-	next := current
+	var next int64
 	switch req.Direction {
 	case domainwallet.DirectionCredit:
 		next = current + amount
@@ -298,9 +297,8 @@ func (r *repo) mutateWalletTx(tx *gorm.DB, req walletMutation) (domainwallet.Wal
 		return domainwallet.WalletTransaction{}, domainwallet.ErrInvalidDirection
 	}
 
-	now := time.Now()
 	locked.Balance = money.FormatCents(next)
-	locked.UpdatedAt = &now
+	locked.UpdatedAt = new(time.Now())
 	if err := tx.Save(&locked).Error; err != nil {
 		return domainwallet.WalletTransaction{}, err
 	}
@@ -342,10 +340,13 @@ func (r *repo) ensureWalletTx(tx *gorm.DB, userID string) (domainwallet.Wallet, 
 	}).Create(&wallet).Error; err != nil {
 		return domainwallet.Wallet{}, err
 	}
-	if err := tx.Where("user_id = ?", userID).First(&wallet).Error; err != nil {
+	// Query into a fresh struct. The insert candidate has a generated primary key,
+	// and GORM would include it in First(&wallet), hiding existing rows after conflict.
+	var existing domainwallet.Wallet
+	if err := tx.Where("user_id = ?", userID).First(&existing).Error; err != nil {
 		return domainwallet.Wallet{}, err
 	}
-	return wallet, nil
+	return existing, nil
 }
 
 func getPaged[T any](query *gorm.DB, params filter.BaseParams, allowedOrder map[string]bool, defaultOrder string) ([]T, int64, error) {
