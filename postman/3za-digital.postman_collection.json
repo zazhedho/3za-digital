@@ -2471,7 +2471,7 @@
               "mode": "raw",
               "raw": "{\n  \"amount\": \"{{deposit_amount}}\",\n  \"provider\": \"{{payment_provider}}\"\n}"
             },
-            "description": "Creates pending self-topup deposit request. Payment gateway adapter can fill payment_reference/payment_url later."
+            "description": "Creates pending manual deposit request. Admin can approve it through Admin Topup Wallet using deposit_request_id."
           },
           "response": [],
           "event": [
@@ -2614,9 +2614,50 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": \"{{deposit_amount}}\",\n  \"description\": \"Manual admin topup\"\n}"
+              "raw": "{\n  \"deposit_request_id\": \"{{deposit_id}}\",\n  \"amount\": \"{{deposit_amount}}\",\n  \"description\": \"Manual admin topup\"\n}"
             },
-            "description": "Admin manual topup. Creates paid deposit_request and credits wallet ledger."
+            "description": "Admin manual topup. Approves a pending deposit_request when deposit_request_id is provided, or creates a direct paid topup. Total active wallet liability (balance + locked_balance) may not exceed live H2H main balance."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Approve Deposit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/deposits/{{deposit_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "deposits",
+                "{{deposit_id}}",
+                "approve"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"{{deposit_amount}}\",\n  \"description\": \"Approve manual deposit\"\n}"
+            },
+            "description": "Approves a pending manual deposit request. If H2H main balance is insufficient, deposit stays pending and admin must top up H2H main balance before approving again."
           },
           "response": []
         },

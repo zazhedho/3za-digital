@@ -9,6 +9,7 @@ import (
 
 	"3za-digital/internal/authscope"
 	domainaudit "3za-digital/internal/domain/audit"
+	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
 	handlercommon "3za-digital/internal/handlers/http/common"
 	interfaceaudit "3za-digital/internal/interfaces/audit"
@@ -111,6 +112,29 @@ func (h *WalletHandler) AdminTopup(ctx *gin.Context) {
 	}
 	h.writeWalletAudit(ctx, domainaudit.ActionCreate, "wallet_topup", data.Id, domainaudit.StatusSuccess, "Topup wallet", "", data)
 	ctx.JSON(http.StatusCreated, response.Response(http.StatusCreated, "Wallet topup successfully", logID, data))
+}
+
+func (h *WalletHandler) AdminApproveDeposit(ctx *gin.Context) {
+	logID := utils.GenerateLogId(ctx)
+	id, err := utils.ValidateUUID(ctx, logID)
+	if err != nil {
+		return
+	}
+
+	var req dto.AdminDepositApproveRequest
+	if err := ctx.BindJSON(&req); err != nil {
+		writeBindError(ctx, logID, req, err)
+		return
+	}
+	actorID, _ := utils.GetActorContext(ctx)
+	data, err := h.Service.AdminApproveDeposit(ctx.Request.Context(), id, req, actorID)
+	if err != nil {
+		h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", id, domainaudit.StatusFailed, "Failed to approve deposit request", err.Error(), nil)
+		writeWalletError(ctx, "[WalletHandler][AdminApproveDeposit]", logID, err)
+		return
+	}
+	h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", data.Id, domainaudit.StatusSuccess, "Approved deposit request", "", data)
+	ctx.JSON(http.StatusOK, response.Response(http.StatusOK, "Deposit request approved successfully", logID, data))
 }
 
 func (h *WalletHandler) AdminAdjust(ctx *gin.Context) {
@@ -241,12 +265,23 @@ func writeWalletError(ctx *gin.Context, logPrefix string, logID uuid.UUID, err e
 	}
 	if servicewallet.IsPublicError(err) {
 		res := response.Response(http.StatusBadRequest, messages.InvalidRequest, logID, nil)
-		res.Error = response.Errors{Code: http.StatusBadRequest, Message: err.Error()}
+		res.Error = response.Errors{Code: http.StatusBadRequest, Message: walletPublicErrorMessage(err)}
 		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}
 
 	ctx.JSON(http.StatusInternalServerError, response.InternalServerError(logID))
+}
+
+func walletPublicErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, domainwallet.ErrInsufficientMainBalance):
+		return "insufficient main provider balance; top up H2H main balance first, then approve this pending deposit again"
+	case errors.Is(err, domainwallet.ErrMainBalanceUnavailable):
+		return "main provider balance unavailable; check H2H credentials/connectivity before approving deposit"
+	default:
+		return err.Error()
+	}
 }
 
 func writeBadRequest(ctx *gin.Context, logID uuid.UUID, message string) {

@@ -6,7 +6,13 @@ type CreateDepositRequest struct {
 }
 
 type AdminWalletTopupRequest struct {
-	Amount      string `json:"amount" binding:"required"`
+	Amount           string `json:"amount"`
+	DepositRequestID string `json:"deposit_request_id"`
+	Description      string `json:"description"`
+}
+
+type AdminDepositApproveRequest struct {
+	Amount      string `json:"amount"`
 	Description string `json:"description"`
 }
 

@@ -381,7 +381,11 @@ func (r *Routes) SMMRoutes() {
 
 func (r *Routes) WalletRoutes() {
 	repoWallet := walletRepo.NewWalletRepo(r.DB)
-	svcWallet := walletSvc.NewWalletService(repoWallet)
+	repoProvider := providerRepo.NewProviderRepo(r.DB)
+	svcProvider := providerSvc.NewProviderService(repoProvider, func() (interfaceprovider.Client, error) {
+		return newObservedH2HClient(repoProvider)
+	})
+	svcWallet := walletSvc.NewWalletService(repoWallet, svcProvider)
 	repoAudit := auditRepo.NewAuditRepo(r.DB)
 	svcAudit := auditSvc.NewAuditService(repoAudit)
 	h := walletHandler.NewWalletHandler(svcWallet, svcAudit)
@@ -414,6 +418,11 @@ func (r *Routes) WalletRoutes() {
 		adminWallet.GET("", mdw.PermissionMiddleware("wallets", "list"), h.GetWallets)
 		adminWallet.POST("/:user_id/topup", mdw.PermissionMiddleware("wallets", "topup"), h.AdminTopup)
 		adminWallet.POST("/:user_id/adjust", mdw.PermissionMiddleware("wallets", "adjust"), h.AdminAdjust)
+	}
+
+	adminDeposits := r.App.Group("/api/admin/deposits").Use(mdw.AuthMiddleware())
+	{
+		adminDeposits.POST("/:id/approve", mdw.PermissionMiddleware("wallets", "topup"), h.AdminApproveDeposit)
 	}
 
 	deposits := r.App.Group("/api/deposits").Use(mdw.AuthMiddleware())

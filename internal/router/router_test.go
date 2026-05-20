@@ -95,6 +95,7 @@ func TestRouteGroupsRegisterWithDryRunDB(t *testing.T) {
 		"GET /api/admin/wallets",
 		"POST /api/admin/wallets/:user_id/topup",
 		"POST /api/admin/wallets/:user_id/adjust",
+		"POST /api/admin/deposits/:id/approve",
 		"POST /api/deposits",
 		"GET /api/deposits",
 		"GET /api/deposits/:id",

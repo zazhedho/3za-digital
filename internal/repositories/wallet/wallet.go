@@ -82,7 +82,7 @@ func (r *repo) GetDepositByID(ctx context.Context, id string) (domainwallet.Depo
 	return deposit, err
 }
 
-func (r *repo) CreatePaymentGatewayDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
+func (r *repo) CreateDepositRequest(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
 	if deposit.Id == "" {
 		deposit.Id = utils.CreateUUID()
 	}
@@ -90,7 +90,7 @@ func (r *repo) CreatePaymentGatewayDeposit(ctx context.Context, deposit domainwa
 		deposit.Status = domainwallet.DepositStatusPending
 	}
 	if deposit.Method == "" {
-		deposit.Method = domainwallet.DepositMethodPaymentGateway
+		deposit.Method = domainwallet.DepositMethodManualAdmin
 	}
 	if len(deposit.Metadata) == 0 {
 		deposit.Metadata = utils.EmptyJSON()
@@ -104,7 +104,7 @@ func (r *repo) CreatePaymentGatewayDeposit(ctx context.Context, deposit domainwa
 	return deposit, err
 }
 
-func (r *repo) CreateManualTopup(ctx context.Context, deposit domainwallet.DepositRequest, description string) (domainwallet.DepositRequest, error) {
+func (r *repo) CreateManualTopup(ctx context.Context, deposit domainwallet.DepositRequest, description string, mainBalanceLimit string) (domainwallet.DepositRequest, error) {
 	if deposit.Id == "" {
 		deposit.Id = utils.CreateUUID()
 	}
@@ -118,6 +118,12 @@ func (r *repo) CreateManualTopup(ctx context.Context, deposit domainwallet.Depos
 	}
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if _, err := r.ensureWalletTx(tx.WithContext(ctx), deposit.UserID); err != nil {
+			return err
+		}
+		if err := r.assertMainBalanceLimitTx(tx.WithContext(ctx), deposit.Amount, mainBalanceLimit); err != nil {
+			return err
+		}
 		if err := tx.Create(&deposit).Error; err != nil {
 			return err
 		}
@@ -136,12 +142,67 @@ func (r *repo) CreateManualTopup(ctx context.Context, deposit domainwallet.Depos
 	return deposit, err
 }
 
-func (r *repo) AdjustWallet(ctx context.Context, userID, direction, amount, description, createdBy string) (domainwallet.WalletTransaction, error) {
+func (r *repo) ApproveManualTopup(ctx context.Context, deposit domainwallet.DepositRequest, description string, mainBalanceLimit string) (domainwallet.DepositRequest, error) {
+	now := time.Now()
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var existing domainwallet.DepositRequest
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", deposit.Id).First(&existing).Error; err != nil {
+			return err
+		}
+		if existing.UserID != deposit.UserID || money.NormalizeOrTrim(existing.Amount) != money.NormalizeOrTrim(deposit.Amount) {
+			return domainwallet.ErrDepositAmountMismatch
+		}
+		if existing.Status != domainwallet.DepositStatusPending {
+			return domainwallet.ErrDepositAlreadyFinal
+		}
+		if _, err := r.ensureWalletTx(tx.WithContext(ctx), existing.UserID); err != nil {
+			return err
+		}
+		if err := r.assertMainBalanceLimitTx(tx.WithContext(ctx), existing.Amount, mainBalanceLimit); err != nil {
+			return err
+		}
+
+		existing.Status = domainwallet.DepositStatusPaid
+		existing.Method = domainwallet.DepositMethodManualAdmin
+		existing.PaidAt = &now
+		existing.UpdatedAt = &now
+		existing.CreatedBy = deposit.CreatedBy
+		if len(existing.Metadata) == 0 {
+			existing.Metadata = utils.EmptyJSON()
+		}
+		if err := tx.Save(&existing).Error; err != nil {
+			return err
+		}
+		deposit = existing
+		_, err := r.mutateWalletTx(tx.WithContext(ctx), walletMutation{
+			UserID:           deposit.UserID,
+			DepositRequestID: &deposit.Id,
+			Type:             domainwallet.TransactionTypeDeposit,
+			Direction:        domainwallet.DirectionCredit,
+			Amount:           deposit.Amount,
+			Reference:        "deposit:" + deposit.Id,
+			Description:      description,
+			CreatedBy:        deposit.CreatedBy,
+		})
+		return err
+	})
+	return deposit, err
+}
+
+func (r *repo) AdjustWallet(ctx context.Context, userID, direction, amount, description, createdBy string, mainBalanceLimit string) (domainwallet.WalletTransaction, error) {
 	var ret domainwallet.WalletTransaction
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var createdByPtr *string
 		if strings.TrimSpace(createdBy) != "" {
 			createdByPtr = &createdBy
+		}
+		if direction == domainwallet.DirectionCredit {
+			if _, err := r.ensureWalletTx(tx.WithContext(ctx), userID); err != nil {
+				return err
+			}
+			if err := r.assertMainBalanceLimitTx(tx.WithContext(ctx), amount, mainBalanceLimit); err != nil {
+				return err
+			}
 		}
 		var err error
 		ret, err = r.mutateWalletTx(tx.WithContext(ctx), walletMutation{
@@ -346,6 +407,41 @@ func (r *repo) ensureWalletTx(tx *gorm.DB, userID string) (domainwallet.Wallet, 
 		return domainwallet.Wallet{}, err
 	}
 	return existing, nil
+}
+
+func (r *repo) assertMainBalanceLimitTx(tx *gorm.DB, creditAmount string, mainBalanceLimit string) error {
+	if strings.TrimSpace(mainBalanceLimit) == "" {
+		return nil
+	}
+	amountCents, err := money.ParseCents(creditAmount)
+	if err != nil || amountCents <= 0 {
+		return domainwallet.ErrInvalidAmount
+	}
+	limitCents, err := money.ParseCents(mainBalanceLimit)
+	if err != nil || limitCents < 0 {
+		return domainwallet.ErrMainBalanceUnavailable
+	}
+
+	var wallets []domainwallet.Wallet
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("is_active = ?", true).Find(&wallets).Error; err != nil {
+		return err
+	}
+	totalCents := int64(0)
+	for _, wallet := range wallets {
+		walletCents, err := money.ParseCents(wallet.Balance)
+		if err != nil {
+			return err
+		}
+		lockedCents, err := money.ParseCents(wallet.LockedBalance)
+		if err != nil {
+			return err
+		}
+		totalCents += walletCents + lockedCents
+	}
+	if totalCents+amountCents > limitCents {
+		return domainwallet.ErrInsufficientMainBalance
+	}
+	return nil
 }
 
 func getPaged[T any](query *gorm.DB, params filter.BaseParams, allowedOrder map[string]bool, defaultOrder string) ([]T, int64, error) {

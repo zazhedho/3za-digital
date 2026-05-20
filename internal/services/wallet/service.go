@@ -16,11 +16,16 @@ import (
 )
 
 type WalletService struct {
-	Repo interfacewallet.RepoWalletInterface
+	Repo                interfacewallet.RepoWalletInterface
+	MainBalanceProvider interfacewallet.MainBalanceProvider
 }
 
-func NewWalletService(repo interfacewallet.RepoWalletInterface) *WalletService {
-	return &WalletService{Repo: repo}
+func NewWalletService(repo interfacewallet.RepoWalletInterface, mainBalanceProviders ...interfacewallet.MainBalanceProvider) *WalletService {
+	service := &WalletService{Repo: repo}
+	if len(mainBalanceProviders) > 0 {
+		service.MainBalanceProvider = mainBalanceProviders[0]
+	}
+	return service
 }
 
 func (s *WalletService) GetMyWallet(ctx context.Context, userID string) (domainwallet.Wallet, error) {
@@ -54,12 +59,12 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 		UserID:    userID,
 		Amount:    amount,
 		Status:    domainwallet.DepositStatusPending,
-		Method:    domainwallet.DepositMethodPaymentGateway,
+		Method:    domainwallet.DepositMethodManualAdmin,
 		Provider:  strings.TrimSpace(req.Provider),
 		Metadata:  utils.EmptyJSON(),
 		CreatedBy: &userID,
 	}
-	return s.Repo.CreatePaymentGatewayDeposit(ctx, deposit)
+	return s.Repo.CreateDepositRequest(ctx, deposit)
 }
 
 func (s *WalletService) GetMyDeposits(ctx context.Context, userID string, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
@@ -78,26 +83,82 @@ func (s *WalletService) GetMyDepositByID(ctx context.Context, userID, id string)
 }
 
 func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.AdminWalletTopupRequest, actorID string) (domainwallet.DepositRequest, error) {
-	amount, err := money.NormalizePositive(req.Amount)
-	if err != nil {
-		return domainwallet.DepositRequest{}, err
-	}
 	userID = strings.TrimSpace(userID)
 	actorID = strings.TrimSpace(actorID)
 	if userID == "" || actorID == "" {
 		return domainwallet.DepositRequest{}, domainwallet.ErrInvalidAmount
 	}
 
+	depositID := strings.TrimSpace(req.DepositRequestID)
 	deposit := domainwallet.DepositRequest{
 		Id:        utils.CreateUUID(),
 		UserID:    userID,
-		Amount:    amount,
 		Status:    domainwallet.DepositStatusPaid,
 		Method:    domainwallet.DepositMethodManualAdmin,
 		Metadata:  utils.EmptyJSON(),
 		CreatedBy: &actorID,
 	}
-	return s.Repo.CreateManualTopup(ctx, deposit, strings.TrimSpace(req.Description))
+	if depositID != "" {
+		existingDeposit, err := s.Repo.GetDepositByID(ctx, depositID)
+		if err != nil {
+			return domainwallet.DepositRequest{}, err
+		}
+		if strings.TrimSpace(existingDeposit.UserID) != userID {
+			return domainwallet.DepositRequest{}, gorm.ErrRecordNotFound
+		}
+		if existingDeposit.Status != domainwallet.DepositStatusPending {
+			return domainwallet.DepositRequest{}, domainwallet.ErrDepositAlreadyFinal
+		}
+		if strings.TrimSpace(req.Amount) != "" && money.NormalizeOrTrim(req.Amount) != money.NormalizeOrTrim(existingDeposit.Amount) {
+			return domainwallet.DepositRequest{}, domainwallet.ErrDepositAmountMismatch
+		}
+		deposit = existingDeposit
+		deposit.Amount = money.NormalizeOrTrim(existingDeposit.Amount)
+		deposit.Method = domainwallet.DepositMethodManualAdmin
+		deposit.CreatedBy = &actorID
+	} else {
+		normalizedAmount, err := money.NormalizePositive(req.Amount)
+		if err != nil {
+			return domainwallet.DepositRequest{}, err
+		}
+		deposit.Amount = normalizedAmount
+	}
+
+	mainBalance, err := s.currentMainBalance(ctx)
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+	if depositID != "" {
+		return s.Repo.ApproveManualTopup(ctx, deposit, strings.TrimSpace(req.Description), mainBalance)
+	}
+	return s.Repo.CreateManualTopup(ctx, deposit, strings.TrimSpace(req.Description), mainBalance)
+}
+
+func (s *WalletService) AdminApproveDeposit(ctx context.Context, depositID string, req dto.AdminDepositApproveRequest, actorID string) (domainwallet.DepositRequest, error) {
+	actorID = strings.TrimSpace(actorID)
+	if strings.TrimSpace(depositID) == "" || actorID == "" {
+		return domainwallet.DepositRequest{}, domainwallet.ErrInvalidAmount
+	}
+
+	deposit, err := s.Repo.GetDepositByID(ctx, strings.TrimSpace(depositID))
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+	if deposit.Status != domainwallet.DepositStatusPending {
+		return domainwallet.DepositRequest{}, domainwallet.ErrDepositAlreadyFinal
+	}
+	if strings.TrimSpace(req.Amount) != "" && money.NormalizeOrTrim(req.Amount) != money.NormalizeOrTrim(deposit.Amount) {
+		return domainwallet.DepositRequest{}, domainwallet.ErrDepositAmountMismatch
+	}
+	deposit.Amount = money.NormalizeOrTrim(deposit.Amount)
+	deposit.Method = domainwallet.DepositMethodManualAdmin
+	deposit.CreatedBy = &actorID
+
+	mainBalance, err := s.currentMainBalance(ctx)
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+	return s.Repo.ApproveManualTopup(ctx, deposit, strings.TrimSpace(req.Description), mainBalance)
 }
 
 func (s *WalletService) AdminAdjust(ctx context.Context, userID string, req dto.AdminWalletAdjustRequest, actorID string) (domainwallet.WalletTransaction, error) {
@@ -112,7 +173,15 @@ func (s *WalletService) AdminAdjust(ctx context.Context, userID string, req dto.
 	if strings.TrimSpace(userID) == "" || strings.TrimSpace(actorID) == "" {
 		return domainwallet.WalletTransaction{}, domainwallet.ErrInvalidAmount
 	}
-	return s.Repo.AdjustWallet(ctx, userID, direction, amount, strings.TrimSpace(req.Description), strings.TrimSpace(actorID))
+	mainBalance := ""
+	if direction == domainwallet.DirectionCredit {
+		var err error
+		mainBalance, err = s.currentMainBalance(ctx)
+		if err != nil {
+			return domainwallet.WalletTransaction{}, err
+		}
+	}
+	return s.Repo.AdjustWallet(ctx, userID, direction, amount, strings.TrimSpace(req.Description), strings.TrimSpace(actorID), mainBalance)
 }
 
 func (s *WalletService) HandlePaymentWebhook(ctx context.Context, provider string, req dto.PaymentWebhookRequest) (domainwallet.DepositRequest, error) {
@@ -148,3 +217,22 @@ func (s *WalletService) HandlePaymentWebhook(ctx context.Context, provider strin
 }
 
 var _ interfacewallet.ServiceWalletInterface = (*WalletService)(nil)
+
+func (s *WalletService) currentMainBalance(ctx context.Context) (string, error) {
+	if s.MainBalanceProvider == nil {
+		return "", domainwallet.ErrMainBalanceUnavailable
+	}
+	snapshot, err := s.MainBalanceProvider.GetH2HBalance(ctx)
+	if err != nil {
+		return "", err
+	}
+	balance, err := money.Normalize(snapshot.Balance)
+	if err != nil {
+		return "", domainwallet.ErrMainBalanceUnavailable
+	}
+	cents, err := money.ParseCents(balance)
+	if err != nil || cents < 0 {
+		return "", domainwallet.ErrMainBalanceUnavailable
+	}
+	return balance, nil
+}

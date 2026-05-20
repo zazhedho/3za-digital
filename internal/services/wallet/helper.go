@@ -74,7 +74,9 @@ func IsPublicError(err error) bool {
 		errors.Is(err, domainwallet.ErrInvalidDirection) ||
 		errors.Is(err, domainwallet.ErrDepositAlreadyFinal) ||
 		errors.Is(err, domainwallet.ErrDepositAmountMismatch) ||
-		errors.Is(err, domainwallet.ErrInvalidSignature)
+		errors.Is(err, domainwallet.ErrInvalidSignature) ||
+		errors.Is(err, domainwallet.ErrInsufficientMainBalance) ||
+		errors.Is(err, domainwallet.ErrMainBalanceUnavailable)
 }
 
 func IsNotFound(err error) bool {

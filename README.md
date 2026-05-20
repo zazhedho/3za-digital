@@ -259,6 +259,7 @@ Wallet and deposit routes:
 - `GET /api/admin/wallets`
 - `POST /api/admin/wallets/:user_id/topup`
 - `POST /api/admin/wallets/:user_id/adjust`
+- `POST /api/admin/deposits/:id/approve`
 - `POST /api/deposits`
 - `GET /api/deposits`
 - `GET /api/deposits/:id`
@@ -319,8 +320,10 @@ Wallet rules:
 - Admin topup, wallet adjustment, deposit creation, and payment webhook processing write `audit_trails`.
 
 Deposit and payment gateway readiness:
-- Admin manual topup creates a paid `deposit_requests` row and credits wallet.
-- Self-topup creates a pending `deposit_requests` row.
+- Member deposit request creates a pending `deposit_requests` row with `manual_admin` method.
+- Admin manual topup can approve an existing pending deposit request or create a direct paid topup.
+- Admin topup and credit adjustment are blocked when resulting total active wallet liability would exceed live H2H main balance. Liability is active wallet `balance + locked_balance`.
+- If main balance is insufficient, the deposit stays `pending`; admin must top up H2H main balance first, then approve the deposit again.
 - `payment_gateway_logs` stores future gateway callback/invoice logs.
 - `POST /api/webhooks/payments/:provider` is prepared for future gateway callbacks.
 - Production payment gateway integration must verify callback signature and amount before crediting wallet.
