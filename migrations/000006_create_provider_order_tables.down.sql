@@ -1,3 +1,9 @@
+DROP TRIGGER IF EXISTS trg_create_wallet_for_new_user ON users;
+DROP FUNCTION IF EXISTS create_wallet_for_new_user;
+DROP TABLE IF EXISTS payment_gateway_logs;
+DROP TABLE IF EXISTS wallet_transactions;
+DROP TABLE IF EXISTS deposit_requests;
+DROP TABLE IF EXISTS wallets;
 DROP TABLE IF EXISTS provider_api_logs;
 DROP TABLE IF EXISTS provider_balance_snapshots;
 DROP TABLE IF EXISTS order_status_logs;

@@ -23,6 +23,7 @@ func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 			ProductType:       domaincatalog.ProductTypeSMM,
 			ProviderServiceID: "1001",
 			Name:              "Instagram Followers",
+			Price:             "1200",
 			MinQuantity:       &minQty,
 			MaxQuantity:       &maxQty,
 			IsActive:          true,
@@ -61,8 +62,8 @@ func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 	if order.Status != domainorder.StatusProcessing {
 		t.Fatalf("expected processing status, got %s", order.Status)
 	}
-	if order.ProviderCharge != "1200" {
-		t.Fatalf("expected provider charge 1200, got %s", order.ProviderCharge)
+	if order.ProviderCharge != "1200.00" {
+		t.Fatalf("expected provider charge 1200.00, got %s", order.ProviderCharge)
 	}
 	if repo.created.Status != domainorder.StatusPending {
 		t.Fatalf("expected initial pending order, got %s", repo.created.Status)
@@ -168,10 +169,20 @@ func (m *mockOrderRepo) CreateWithStatusLog(ctx context.Context, order domainord
 	return order, nil
 }
 
+func (m *mockOrderRepo) CreateWithStatusLogAndWalletDebit(ctx context.Context, order domainorder.Order, log domainorder.OrderStatusLog, userID string) (domainorder.Order, error) {
+	m.created = order
+	m.logs = append(m.logs, log)
+	return order, nil
+}
+
 func (m *mockOrderRepo) UpdateWithStatusLog(ctx context.Context, order domainorder.Order, log domainorder.OrderStatusLog) error {
 	m.updated = order
 	if log.NewStatus != "" {
 		m.logs = append(m.logs, log)
 	}
+	return nil
+}
+
+func (m *mockOrderRepo) RefundWalletForOrder(ctx context.Context, order domainorder.Order, amount string, description string) error {
 	return nil
 }

@@ -100,6 +100,7 @@ func main() {
 	routes.AuditRoutes()
 	routes.LocationRoutes()
 	routes.SMMRoutes()
+	routes.WalletRoutes()
 	routes.ProviderRoutes()
 	routes.DashboardRoutes()
 

@@ -1,11 +1,13 @@
 package handlersmm
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
 
+	"3za-digital/internal/authscope"
 	domaincatalog "3za-digital/internal/domain/catalog"
 	"3za-digital/internal/dto"
 	serviceorder "3za-digital/internal/services/order"
@@ -41,6 +43,10 @@ func (h *SMMHandler) GetOrders(ctx *gin.Context) {
 	})
 	params.Filters["provider"] = domaincatalog.ProviderH2H
 	params.Filters["product_type"] = domaincatalog.ProductTypeSMM
+	scope := authscope.FromContext(reqCtx)
+	if !isSMMAdmin(scope.Role) {
+		params.Filters["created_by"] = scope.UserID
+	}
 
 	data, total, err := h.OrderService.GetAll(reqCtx, params)
 	if err != nil {
@@ -75,6 +81,12 @@ func (h *SMMHandler) GetOrderByID(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, res)
 		return
 	}
+	if !canAccessSMMOrder(reqCtx, data.CreatedBy) {
+		res := response.Response(http.StatusNotFound, messages.MsgNotFound, logID, nil)
+		res.Error = response.Errors{Code: http.StatusNotFound, Message: "SMM order not found"}
+		ctx.JSON(http.StatusNotFound, res)
+		return
+	}
 
 	res := response.Response(http.StatusOK, "Get SMM order successfully", logID, data)
 	ctx.JSON(http.StatusOK, res)
@@ -94,7 +106,7 @@ func (h *SMMHandler) CreateOrder(ctx *gin.Context) {
 		return
 	}
 
-	createdBy, _ := utils.GetActorContext(ctx)
+	createdBy := authscope.FromContext(reqCtx).UserID
 	data, err := h.OrderService.CreateOrder(reqCtx, domaincatalog.ProductTypeSMM, req, createdBy)
 	if err != nil {
 		writeOrderError(ctx, logPrefix, logID, err)
@@ -121,6 +133,12 @@ func (h *SMMHandler) RefreshOrderStatus(ctx *gin.Context) {
 		return
 	}
 	if existing.ProductType != domaincatalog.ProductTypeSMM {
+		res := response.Response(http.StatusNotFound, messages.MsgNotFound, logID, nil)
+		res.Error = response.Errors{Code: http.StatusNotFound, Message: "SMM order not found"}
+		ctx.JSON(http.StatusNotFound, res)
+		return
+	}
+	if !canAccessSMMOrder(reqCtx, existing.CreatedBy) {
 		res := response.Response(http.StatusNotFound, messages.MsgNotFound, logID, nil)
 		res.Error = response.Errors{Code: http.StatusNotFound, Message: "SMM order not found"}
 		ctx.JSON(http.StatusNotFound, res)
@@ -158,6 +176,12 @@ func (h *SMMHandler) GetOrderStatusLogs(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, res)
 		return
 	}
+	if !canAccessSMMOrder(reqCtx, order.CreatedBy) {
+		res := response.Response(http.StatusNotFound, messages.MsgNotFound, logID, nil)
+		res.Error = response.Errors{Code: http.StatusNotFound, Message: "SMM order not found"}
+		ctx.JSON(http.StatusNotFound, res)
+		return
+	}
 
 	data, err := h.OrderService.GetStatusLogs(reqCtx, id)
 	if err != nil {
@@ -167,6 +191,21 @@ func (h *SMMHandler) GetOrderStatusLogs(ctx *gin.Context) {
 
 	res := response.Response(http.StatusOK, "Get SMM order status logs successfully", logID, data)
 	ctx.JSON(http.StatusOK, res)
+}
+
+func canAccessSMMOrder(ctx context.Context, createdBy *string) bool {
+	scope := authscope.FromContext(ctx)
+	if isSMMAdmin(scope.Role) {
+		return true
+	}
+	if createdBy == nil {
+		return false
+	}
+	return *createdBy == scope.UserID
+}
+
+func isSMMAdmin(role string) bool {
+	return role == utils.RoleAdmin || role == utils.RoleSuperAdmin
 }
 
 func writeOrderError(ctx *gin.Context, logPrefix string, logID uuid.UUID, err error) {

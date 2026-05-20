@@ -2,15 +2,21 @@ package repositoryorder
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
+	"time"
 
 	domaincatalog "3za-digital/internal/domain/catalog"
 	domainorder "3za-digital/internal/domain/order"
+	domainwallet "3za-digital/internal/domain/wallet"
 	interfaceorder "3za-digital/internal/interfaces/order"
 	repositorygeneric "3za-digital/internal/repositories/generic"
 	"3za-digital/pkg/filter"
+	"3za-digital/pkg/money"
 	"3za-digital/utils"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type repo struct {
@@ -92,6 +98,41 @@ func (r *repo) CreateWithStatusLog(ctx context.Context, order domainorder.Order,
 	return order, nil
 }
 
+func (r *repo) CreateWithStatusLogAndWalletDebit(ctx context.Context, order domainorder.Order, log domainorder.OrderStatusLog, userID string) (domainorder.Order, error) {
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if order.Id == "" {
+			order.Id = utils.CreateUUID()
+		}
+		if err := tx.Create(&order).Error; err != nil {
+			return err
+		}
+
+		if log.Id == "" {
+			log.Id = utils.CreateUUID()
+		}
+		log.OrderID = order.Id
+		if err := tx.Create(&log).Error; err != nil {
+			return err
+		}
+
+		return mutateWallet(tx, walletMutation{
+			UserID:      userID,
+			OrderID:     &order.Id,
+			Type:        domainwallet.TransactionTypeDebitOrder,
+			Direction:   domainwallet.DirectionDebit,
+			Amount:      order.Amount,
+			Reference:   "debit_order:" + order.Id,
+			Description: "order debit " + order.RefID,
+			CreatedBy:   order.CreatedBy,
+		})
+	})
+	if err != nil {
+		return domainorder.Order{}, err
+	}
+
+	return order, nil
+}
+
 func (r *repo) UpdateWithStatusLog(ctx context.Context, order domainorder.Order, log domainorder.OrderStatusLog) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(&order).Error; err != nil {
@@ -110,4 +151,127 @@ func (r *repo) UpdateWithStatusLog(ctx context.Context, order domainorder.Order,
 
 		return nil
 	})
+}
+
+func (r *repo) RefundWalletForOrder(ctx context.Context, order domainorder.Order, amount string, description string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var count int64
+		reference := "refund_order:" + order.Id
+		if err := tx.Model(&domainwallet.WalletTransaction{}).Where("reference = ?", reference).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			return nil
+		}
+		userID := ""
+		if order.CreatedBy != nil {
+			userID = *order.CreatedBy
+		}
+		return mutateWallet(tx, walletMutation{
+			UserID:      userID,
+			OrderID:     &order.Id,
+			Type:        domainwallet.TransactionTypeRefundOrder,
+			Direction:   domainwallet.DirectionCredit,
+			Amount:      amount,
+			Reference:   reference,
+			Description: strings.TrimSpace(description),
+			CreatedBy:   order.CreatedBy,
+		})
+	})
+}
+
+type walletMutation struct {
+	UserID      string
+	OrderID     *string
+	Type        string
+	Direction   string
+	Amount      string
+	Reference   string
+	Description string
+	CreatedBy   *string
+}
+
+func mutateWallet(tx *gorm.DB, req walletMutation) error {
+	if strings.TrimSpace(req.UserID) == "" {
+		return domainwallet.ErrInvalidAmount
+	}
+	wallet, err := ensureWallet(tx, req.UserID)
+	if err != nil {
+		return err
+	}
+	if !wallet.IsActive {
+		return domainwallet.ErrInactiveWallet
+	}
+
+	var locked domainwallet.Wallet
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", wallet.Id).First(&locked).Error; err != nil {
+		return err
+	}
+
+	current, err := money.ParseCents(locked.Balance)
+	if err != nil {
+		return err
+	}
+	amount, err := money.ParseCents(req.Amount)
+	if err != nil || amount <= 0 {
+		return domainwallet.ErrInvalidAmount
+	}
+
+	next := current
+	switch req.Direction {
+	case domainwallet.DirectionCredit:
+		next = current + amount
+	case domainwallet.DirectionDebit:
+		if current < amount {
+			return domainwallet.ErrInsufficientBalance
+		}
+		next = current - amount
+	default:
+		return domainwallet.ErrInvalidDirection
+	}
+
+	now := time.Now()
+	locked.Balance = money.FormatCents(next)
+	locked.UpdatedAt = &now
+	if err := tx.Save(&locked).Error; err != nil {
+		return err
+	}
+
+	walletTx := domainwallet.WalletTransaction{
+		Id:            utils.CreateUUID(),
+		WalletID:      locked.Id,
+		UserID:        locked.UserID,
+		OrderID:       req.OrderID,
+		Type:          req.Type,
+		Direction:     req.Direction,
+		Amount:        money.FormatCents(amount),
+		BalanceBefore: money.FormatCents(current),
+		BalanceAfter:  money.FormatCents(next),
+		Reference:     strings.TrimSpace(req.Reference),
+		Description:   strings.TrimSpace(req.Description),
+		Metadata:      json.RawMessage(`{}`),
+		CreatedBy:     req.CreatedBy,
+	}
+	return tx.Create(&walletTx).Error
+}
+
+func ensureWallet(tx *gorm.DB, userID string) (domainwallet.Wallet, error) {
+	wallet := domainwallet.Wallet{
+		Id:            utils.CreateUUID(),
+		UserID:        userID,
+		Balance:       "0",
+		LockedBalance: "0",
+		Currency:      "IDR",
+		IsActive:      true,
+	}
+	if err := tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}},
+		DoNothing: true,
+	}).Create(&wallet).Error; err != nil {
+		return domainwallet.Wallet{}, err
+	}
+	if err := tx.Where("user_id = ?", userID).First(&wallet).Error; err != nil {
+		return domainwallet.Wallet{}, err
+	}
+	return wallet, nil
 }

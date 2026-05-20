@@ -1,6 +1,9 @@
 INSERT INTO menu_items (id, name, display_name, path, icon, order_index) VALUES
     (gen_random_uuid(), 'smm_services', 'SMM Services', '/smm/services', 'bi-megaphone', 100),
-    (gen_random_uuid(), 'smm_orders', 'SMM Orders', '/smm/orders', 'bi-receipt', 101)
+    (gen_random_uuid(), 'smm_orders', 'SMM Orders', '/smm/orders', 'bi-receipt', 101),
+    (gen_random_uuid(), 'wallet', 'Wallet', '/wallet', 'bi-wallet2', 102),
+    (gen_random_uuid(), 'deposits', 'Deposits', '/deposits', 'bi-cash-coin', 103),
+    (gen_random_uuid(), 'admin_wallets', 'Admin Wallets', '/admin/wallets', 'bi-safe', 905)
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO permissions (id, name, display_name, resource, action) VALUES
@@ -11,7 +14,16 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'create_smm_orders', 'Create SMM Orders', 'smm_orders', 'create'),
     (gen_random_uuid(), 'refresh_status_smm_orders', 'Refresh SMM Order Status', 'smm_orders', 'refresh_status'),
     (gen_random_uuid(), 'view_provider_balance', 'View Provider Balance', 'provider_balance', 'view'),
-    (gen_random_uuid(), 'list_provider_api_logs', 'List Provider API Logs', 'provider_api_logs', 'list')
+    (gen_random_uuid(), 'list_provider_api_logs', 'List Provider API Logs', 'provider_api_logs', 'list'),
+    (gen_random_uuid(), 'view_wallet', 'View Wallet', 'wallet', 'view'),
+    (gen_random_uuid(), 'list_wallet_transactions', 'List Wallet Transactions', 'wallet_transactions', 'list'),
+    (gen_random_uuid(), 'list_wallets', 'List Wallets', 'wallets', 'list'),
+    (gen_random_uuid(), 'topup_wallets', 'Topup Wallets', 'wallets', 'topup'),
+    (gen_random_uuid(), 'adjust_wallets', 'Adjust Wallets', 'wallets', 'adjust'),
+    (gen_random_uuid(), 'create_deposits', 'Create Deposits', 'deposits', 'create'),
+    (gen_random_uuid(), 'list_deposits', 'List Deposits', 'deposits', 'list'),
+    (gen_random_uuid(), 'view_deposits', 'View Deposit Detail', 'deposits', 'view'),
+    (gen_random_uuid(), 'receive_payment_webhooks', 'Receive Payment Webhooks', 'payment_webhooks', 'receive')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
@@ -19,7 +31,7 @@ SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
 WHERE r.name IN ('superadmin', 'admin')
-AND p.resource IN ('smm_services', 'smm_orders', 'provider_balance', 'provider_api_logs')
+AND p.resource IN ('smm_services', 'smm_orders', 'provider_balance', 'provider_api_logs', 'wallet', 'wallet_transactions', 'wallets', 'deposits', 'payment_webhooks')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
@@ -27,5 +39,17 @@ SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
 WHERE r.name = 'member'
-AND p.name IN ('list_smm_services', 'list_smm_orders', 'view_smm_orders', 'create_smm_orders', 'refresh_status_smm_orders', 'view_dashboard')
+AND p.name IN (
+    'list_smm_services',
+    'list_smm_orders',
+    'view_smm_orders',
+    'create_smm_orders',
+    'refresh_status_smm_orders',
+    'view_dashboard',
+    'view_wallet',
+    'list_wallet_transactions',
+    'create_deposits',
+    'list_deposits',
+    'view_deposits'
+)
 ON CONFLICT DO NOTHING;

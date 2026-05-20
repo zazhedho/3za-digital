@@ -78,6 +78,12 @@ System modules currently included:
 - Configurations
 - Locations
 - Sessions when Redis is enabled
+- SMM catalog and orders through H2H.id
+- Provider balance and API logs
+- Wallet, wallet ledger, deposit requests, and admin topup/adjustment
+- Dashboard summary
+
+Business modules are designed to stay generic internally. SMM is the first product surface, but the same `provider_services`, `orders`, wallet, deposit, pricing, and provider-client foundation is intended to support pulsa, PPOB, game, and e-wallet later.
 
 ## Project Structure
 
@@ -137,6 +143,15 @@ Optional but recommended:
 - storage settings for file upload use cases. These stay optional; when storage connection env is set, provider and required storage credentials are validated.
 - `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_IDS` for Google login
 - SMTP settings for register OTP and password reset email flows. These stay optional; when SMTP connection env is set, `SMTP_HOST`, `SMTP_PASS`, `SMTP_FROM`, and `SMTP_PORT` format are validated.
+
+H2H provider settings:
+- `H2H_BASE_URL`
+- `H2H_MEMBER_ID`
+- `H2H_PIN`
+- `H2H_PASSWORD`
+- `H2H_TIMEOUT_SECONDS`
+
+H2H credentials must stay in backend environment variables only. Do not put them in frontend code, Postman shared variables, request logs, or provider API logs.
 
 ## Run Locally
 
@@ -213,12 +228,92 @@ Additional session routes are registered only when Redis is available:
 - `DELETE /api/user/session/:session_id`
 - `POST /api/user/sessions/revoke-others`
 
+SMM routes:
+- `GET /api/smm/services`
+- `POST /api/smm/services/sync`
+- `GET /api/smm/orders`
+- `POST /api/smm/orders`
+- `GET /api/smm/orders/:id`
+- `GET /api/smm/orders/:id/status-logs`
+- `POST /api/smm/orders/:id/refresh-status`
+
+Wallet and deposit routes:
+- `GET /api/wallet/me`
+- `GET /api/wallet/transactions`
+- `GET /api/admin/wallets`
+- `POST /api/admin/wallets/:user_id/topup`
+- `POST /api/admin/wallets/:user_id/adjust`
+- `POST /api/deposits`
+- `GET /api/deposits`
+- `GET /api/deposits/:id`
+- `POST /api/webhooks/payments/:provider`
+
+Provider and dashboard routes:
+- `GET /api/provider/h2h/balance`
+- `GET /api/provider/api-logs`
+- `GET /api/dashboard/summary`
+
 Location architecture:
 - PostgreSQL is the source of truth for provinces, cities, districts, and villages
 - Redis is used only as runtime cache
 - shared Location Service is used only for sync/import to the database
 - location sync runs asynchronously; start the job with `POST /api/location/sync` and poll its status via `GET /api/location/sync/:id`
 - use scoped sync for regular updates; `level=all` is intended for initial bootstrap because it performs a full hierarchical import
+
+## SMM, Wallet, And Provider Flow
+
+Provider balance and user balance are separate:
+- Provider balance is the main balance in H2H and is visible only to internal/admin users.
+- User balance is stored in 3ZA Digital wallet tables and is used by reseller/enduser order flow.
+- H2H balance is stored only as snapshots for audit/history, not as user spendable balance.
+
+SMM service sync:
+1. Admin/superadmin with `smm_services:sync` calls `POST /api/smm/services/sync`.
+2. Backend calls H2H pricelist.
+3. Services are upserted into `provider_services` for `product_type = smm`.
+4. Sync updates existing provider service rows instead of duplicating by provider/type/provider service id.
+
+Order flow:
+1. User creates order through backend, never directly to H2H.
+2. Backend validates service and quantity.
+3. Backend computes user price from provider price plus markup config.
+4. Backend debits wallet and creates internal order in one database transaction.
+5. Backend calls H2H using provider balance.
+6. If provider create fails, wallet refund is created automatically and idempotently.
+7. If final provider status is `failed`, wallet refund is created automatically and idempotently.
+
+Pricing config is stored in `app_configs`:
+- `pricing.default_markup_percent`
+- `pricing.product_markup_percent.smm`
+
+Formula:
+
+```text
+markup_amount = provider_charge * markup_percent / 100
+amount        = provider_charge + markup_amount
+profit        = amount - provider_charge
+```
+
+Wallet rules:
+- Every balance mutation must create `wallet_transactions`.
+- Wallet balance may not go negative.
+- Money calculation uses integer cents internally and formats to 2 decimal places before storing to `NUMERIC(18,2)`.
+- Member can access only their own wallet, deposits, and SMM orders.
+- Admin/superadmin can list wallets and perform topup/adjustment using permissions.
+- Admin topup, wallet adjustment, deposit creation, and payment webhook processing write `audit_trails`.
+
+Deposit and payment gateway readiness:
+- Admin manual topup creates a paid `deposit_requests` row and credits wallet.
+- Self-topup creates a pending `deposit_requests` row.
+- `payment_gateway_logs` stores future gateway callback/invoice logs.
+- `POST /api/webhooks/payments/:provider` is prepared for future gateway callbacks.
+- Production payment gateway integration must verify callback signature and amount before crediting wallet.
+
+Security notes:
+- Do not log H2H credentials, payment gateway secrets, API keys, PINs, passwords, or bearer tokens.
+- Provider API logs must contain sanitized request/response context only.
+- Payment webhook payloads must be sanitized if provider sends secrets.
+- Refund and deposit credit operations must remain idempotent.
 
 ## Module Seed Helper
 

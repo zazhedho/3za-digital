@@ -16,5 +16,7 @@ type RepoOrderInterface interface {
 	GetServiceByID(ctx context.Context, id string) (domaincatalog.ProviderService, error)
 	GetStatusLogs(ctx context.Context, orderID string) ([]domainorder.OrderStatusLog, error)
 	CreateWithStatusLog(ctx context.Context, order domainorder.Order, log domainorder.OrderStatusLog) (domainorder.Order, error)
+	CreateWithStatusLogAndWalletDebit(ctx context.Context, order domainorder.Order, log domainorder.OrderStatusLog, userID string) (domainorder.Order, error)
 	UpdateWithStatusLog(ctx context.Context, order domainorder.Order, log domainorder.OrderStatusLog) error
+	RefundWalletForOrder(ctx context.Context, order domainorder.Order, amount string, description string) error
 }

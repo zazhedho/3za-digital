@@ -115,6 +115,38 @@
     {
       "key": "product_type",
       "value": "smm"
+    },
+    {
+      "key": "wallet_user_id",
+      "value": ""
+    },
+    {
+      "key": "deposit_id",
+      "value": ""
+    },
+    {
+      "key": "deposit_amount",
+      "value": "10000"
+    },
+    {
+      "key": "adjustment_amount",
+      "value": "1000"
+    },
+    {
+      "key": "payment_provider",
+      "value": "midtrans"
+    },
+    {
+      "key": "payment_reference",
+      "value": ""
+    },
+    {
+      "key": "payment_request_id",
+      "value": ""
+    },
+    {
+      "key": "payment_signature",
+      "value": ""
     }
   ],
   "item": [
@@ -2337,6 +2369,325 @@
                 }
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        {
+          "name": "Get My Wallet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wallet/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Returns authenticated user wallet."
+          },
+          "response": []
+        },
+        {
+          "name": "List My Wallet Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wallet/transactions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wallet",
+                "transactions"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Returns authenticated user wallet ledger."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Deposit Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/deposits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "deposits"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"{{deposit_amount}}\",\n  \"provider\": \"{{payment_provider}}\"\n}"
+            },
+            "description": "Creates pending self-topup deposit request. Payment gateway adapter can fill payment_reference/payment_url later."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "  pm.collectionVariables.set('deposit_id', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Deposits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/deposits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "deposits"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Lists authenticated user deposit requests."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Deposit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/deposits/{{deposit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "deposits",
+                "{{deposit_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Gets authenticated user deposit request detail."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin List Wallets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/wallets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "wallets"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Admin/superadmin wallet list."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Topup Wallet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/wallets/{{wallet_user_id}}/topup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "wallets",
+                "{{wallet_user_id}}",
+                "topup"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"{{deposit_amount}}\",\n  \"description\": \"Manual admin topup\"\n}"
+            },
+            "description": "Admin manual topup. Creates paid deposit_request and credits wallet ledger."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Adjust Wallet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/wallets/{{wallet_user_id}}/adjust",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "wallets",
+                "{{wallet_user_id}}",
+                "adjust"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"{{adjustment_amount}}\",\n  \"direction\": \"credit\",\n  \"description\": \"Manual adjustment\"\n}"
+            },
+            "description": "Admin wallet adjustment with ledger."
+          },
+          "response": []
+        },
+        {
+          "name": "Payment Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/payments/{{payment_provider}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "payments",
+                "{{payment_provider}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_type\": \"payment.paid\",\n  \"request_id\": \"{{payment_request_id}}\",\n  \"payment_reference\": \"{{payment_reference}}\",\n  \"amount\": \"{{deposit_amount}}\",\n  \"status\": \"paid\",\n  \"signature\": \"{{payment_signature}}\",\n  \"payload\": {}\n}"
+            },
+            "description": "Future payment gateway callback endpoint. Signature verification adapter can be plugged before wallet credit."
           },
           "response": []
         }

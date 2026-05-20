@@ -65,6 +65,7 @@ func TestRouteGroupsRegisterWithDryRunDB(t *testing.T) {
 	routes.AuditRoutes()
 	routes.LocationRoutes()
 	routes.SMMRoutes()
+	routes.WalletRoutes()
 	routes.ProviderRoutes()
 	routes.DashboardRoutes()
 
@@ -89,6 +90,15 @@ func TestRouteGroupsRegisterWithDryRunDB(t *testing.T) {
 		"POST /api/smm/orders",
 		"GET /api/smm/orders/:id",
 		"POST /api/smm/orders/:id/refresh-status",
+		"GET /api/wallet/me",
+		"GET /api/wallet/transactions",
+		"GET /api/admin/wallets",
+		"POST /api/admin/wallets/:user_id/topup",
+		"POST /api/admin/wallets/:user_id/adjust",
+		"POST /api/deposits",
+		"GET /api/deposits",
+		"GET /api/deposits/:id",
+		"POST /api/webhooks/payments/:provider",
 		"GET /api/provider/h2h/balance",
 		"GET /api/provider/api-logs",
 		"GET /api/dashboard/summary",

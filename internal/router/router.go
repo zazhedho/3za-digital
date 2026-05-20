@@ -23,6 +23,7 @@ import (
 	sessionHandler "3za-digital/internal/handlers/http/session"
 	smmHandler "3za-digital/internal/handlers/http/smm"
 	userHandler "3za-digital/internal/handlers/http/user"
+	walletHandler "3za-digital/internal/handlers/http/wallet"
 	"3za-digital/internal/integrations/h2h"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
 	interfacesession "3za-digital/internal/interfaces/session"
@@ -41,6 +42,7 @@ import (
 	roleRepo "3za-digital/internal/repositories/role"
 	sessionRepo "3za-digital/internal/repositories/session"
 	userRepo "3za-digital/internal/repositories/user"
+	walletRepo "3za-digital/internal/repositories/wallet"
 	appConfigSvc "3za-digital/internal/services/appconfig"
 	auditSvc "3za-digital/internal/services/audit"
 	catalogSvc "3za-digital/internal/services/catalog"
@@ -55,6 +57,7 @@ import (
 	roleSvc "3za-digital/internal/services/role"
 	sessionSvc "3za-digital/internal/services/session"
 	userSvc "3za-digital/internal/services/user"
+	walletSvc "3za-digital/internal/services/wallet"
 	"3za-digital/middlewares"
 	"3za-digital/pkg/config"
 	"3za-digital/pkg/logger"
@@ -342,11 +345,13 @@ func (r *Routes) SMMRoutes() {
 	repoCatalog := catalogRepo.NewCatalogRepo(r.DB)
 	repoOrder := orderRepo.NewOrderRepo(r.DB)
 	repoProvider := providerRepo.NewProviderRepo(r.DB)
+	repoAppConfig := appConfigRepo.NewAppConfigRepo(r.DB)
+	svcAppConfig := appConfigSvc.NewAppConfigService(repoAppConfig)
 	providerFactory := func() (interfaceprovider.Client, error) {
 		return newObservedH2HClient(repoProvider)
 	}
 	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory)
-	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory)
+	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory, svcAppConfig)
 	h := smmHandler.NewSMMHandler(svcCatalog, svcOrder)
 
 	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
@@ -363,6 +368,40 @@ func (r *Routes) SMMRoutes() {
 		smm.GET("/orders/:id/status-logs", mdw.PermissionMiddleware("smm_orders", "view"), h.GetOrderStatusLogs)
 		smm.POST("/orders/:id/refresh-status", mdw.PermissionMiddleware("smm_orders", "refresh_status"), h.RefreshOrderStatus)
 	}
+}
+
+func (r *Routes) WalletRoutes() {
+	repoWallet := walletRepo.NewWalletRepo(r.DB)
+	svcWallet := walletSvc.NewWalletService(repoWallet)
+	repoAudit := auditRepo.NewAuditRepo(r.DB)
+	svcAudit := auditSvc.NewAuditService(repoAudit)
+	h := walletHandler.NewWalletHandler(svcWallet, svcAudit)
+
+	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
+	pRepo := permissionRepo.NewPermissionRepo(r.DB)
+	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
+
+	wallet := r.App.Group("/api/wallet").Use(mdw.AuthMiddleware())
+	{
+		wallet.GET("/me", mdw.PermissionMiddleware("wallet", "view"), h.GetMyWallet)
+		wallet.GET("/transactions", mdw.PermissionMiddleware("wallet_transactions", "list"), h.GetMyTransactions)
+	}
+
+	adminWallet := r.App.Group("/api/admin/wallets").Use(mdw.AuthMiddleware())
+	{
+		adminWallet.GET("", mdw.PermissionMiddleware("wallets", "list"), h.GetWallets)
+		adminWallet.POST("/:user_id/topup", mdw.PermissionMiddleware("wallets", "topup"), h.AdminTopup)
+		adminWallet.POST("/:user_id/adjust", mdw.PermissionMiddleware("wallets", "adjust"), h.AdminAdjust)
+	}
+
+	deposits := r.App.Group("/api/deposits").Use(mdw.AuthMiddleware())
+	{
+		deposits.POST("", mdw.PermissionMiddleware("deposits", "create"), h.CreateDeposit)
+		deposits.GET("", mdw.PermissionMiddleware("deposits", "list"), h.GetMyDeposits)
+		deposits.GET("/:id", mdw.PermissionMiddleware("deposits", "view"), h.GetMyDepositByID)
+	}
+
+	r.App.POST("/api/webhooks/payments/:provider", h.PaymentWebhook)
 }
 
 func (r *Routes) ProviderRoutes() {
