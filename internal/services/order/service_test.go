@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"3za-digital/internal/authscope"
 	domaincatalog "3za-digital/internal/domain/catalog"
 	domainorder "3za-digital/internal/domain/order"
 	"3za-digital/internal/dto"
@@ -45,11 +46,11 @@ func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 		return provider, nil
 	})
 
-	order, err := service.CreateOrder(context.Background(), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
+	order, err := service.CreateOrder(orderTestActorContext("user-id"), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
 		ServiceID: "service-id",
 		Target:    "https://instagram.com/3zadigital",
 		Quantity:  100,
-	}, "user-id")
+	})
 	if err != nil {
 		t.Fatalf("CreateOrder returned error: %v", err)
 	}
@@ -90,14 +91,18 @@ func TestOrderServiceCreateOrderRejectsBelowMinimum(t *testing.T) {
 		return &mockOrderProvider{}, nil
 	})
 
-	_, err := service.CreateOrder(context.Background(), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
+	_, err := service.CreateOrder(orderTestActorContext("user-id"), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
 		ServiceID: "service-id",
 		Target:    "target",
 		Quantity:  1,
-	}, "user-id")
+	})
 	if !errors.Is(err, ErrQuantityBelowMinimum) {
 		t.Fatalf("expected ErrQuantityBelowMinimum, got %v", err)
 	}
+}
+
+func orderTestActorContext(userID string) context.Context {
+	return authscope.WithContext(context.Background(), authscope.New(userID, "member", "member", nil))
 }
 
 type mockOrderProvider struct {

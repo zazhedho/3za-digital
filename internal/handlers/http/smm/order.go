@@ -106,8 +106,7 @@ func (h *SMMHandler) CreateOrder(ctx *gin.Context) {
 		return
 	}
 
-	createdBy := authscope.FromContext(reqCtx).UserID
-	data, err := h.OrderService.CreateOrder(reqCtx, domaincatalog.ProductTypeSMM, req, createdBy)
+	data, err := h.OrderService.CreateOrder(reqCtx, domaincatalog.ProductTypeSMM, req)
 	if err != nil {
 		writeOrderError(ctx, logPrefix, logID, err)
 		return

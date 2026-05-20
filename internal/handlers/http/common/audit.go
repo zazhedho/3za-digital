@@ -1,11 +1,13 @@
 package handlercommon
 
 import (
+	"fmt"
+
+	"3za-digital/internal/authscope"
 	domainaudit "3za-digital/internal/domain/audit"
 	interfaceaudit "3za-digital/internal/interfaces/audit"
 	"3za-digital/pkg/logger"
 	"3za-digital/utils"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,12 +17,12 @@ func WriteAudit(ctx *gin.Context, auditService interfaceaudit.ServiceAuditInterf
 		return
 	}
 
-	actorUserID, actorRole := utils.GetActorContext(ctx)
-	if event.ActorUserID == "" && actorUserID != "" {
-		event.ActorUserID = actorUserID
+	scopeData := authscope.FromContext(ctx.Request.Context())
+	if event.ActorUserID == "" && scopeData.ActorUserID() != "" {
+		event.ActorUserID = scopeData.ActorUserID()
 	}
-	if event.ActorRole == "" && actorRole != "" {
-		event.ActorRole = actorRole
+	if event.ActorRole == "" && scopeData.ActorRole() != "" {
+		event.ActorRole = scopeData.ActorRole()
 	}
 	event.RequestID = utils.GetRequestID(ctx)
 	event.IPAddress = ctx.ClientIP()

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"3za-digital/internal/authscope"
 	domainprovider "3za-digital/internal/domain/provider"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
@@ -107,7 +108,7 @@ func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 func TestAdminTopupRequiresMainBalanceProvider(t *testing.T) {
 	service := NewWalletService(&walletRepoStub{})
 
-	_, err := service.AdminTopup(context.Background(), "user-1", dto.AdminWalletTopupRequest{Amount: "10000"}, "admin-1")
+	_, err := service.AdminTopup(testActorContext("admin-1"), "user-1", dto.AdminWalletTopupRequest{Amount: "10000"})
 	if !errors.Is(err, domainwallet.ErrMainBalanceUnavailable) {
 		t.Fatalf("expected ErrMainBalanceUnavailable, got %v", err)
 	}
@@ -123,10 +124,10 @@ func TestAdminTopupApprovesPendingDepositWithMainBalanceLimit(t *testing.T) {
 	}}
 	service := NewWalletService(repo, mainBalanceProviderStub{balance: "50000"})
 
-	_, err := service.AdminTopup(context.Background(), "user-1", dto.AdminWalletTopupRequest{
+	_, err := service.AdminTopup(testActorContext("admin-1"), "user-1", dto.AdminWalletTopupRequest{
 		DepositRequestID: "deposit-1",
 		Amount:           "10000.00",
-	}, "admin-1")
+	})
 	if err != nil {
 		t.Fatalf("AdminTopup returned error: %v", err)
 	}
@@ -148,10 +149,10 @@ func TestAdminApproveDepositUsesPendingDepositAndMainBalanceLimit(t *testing.T) 
 	}}
 	service := NewWalletService(repo, mainBalanceProviderStub{balance: "200000"})
 
-	_, err := service.AdminApproveDeposit(context.Background(), "deposit-1", dto.AdminDepositApproveRequest{
+	_, err := service.AdminApproveDeposit(testActorContext("admin-1"), "deposit-1", dto.AdminDepositApproveRequest{
 		Amount:      "150000.00",
 		Description: "paid by transfer",
-	}, "admin-1")
+	})
 	if err != nil {
 		t.Fatalf("AdminApproveDeposit returned error: %v", err)
 	}
@@ -173,10 +174,10 @@ func TestAdminTopupRejectsDepositAmountMismatch(t *testing.T) {
 	}}
 	service := NewWalletService(repo, mainBalanceProviderStub{balance: "50000"})
 
-	_, err := service.AdminTopup(context.Background(), "user-1", dto.AdminWalletTopupRequest{
+	_, err := service.AdminTopup(testActorContext("admin-1"), "user-1", dto.AdminWalletTopupRequest{
 		DepositRequestID: "deposit-1",
 		Amount:           "9000",
-	}, "admin-1")
+	})
 	if !errors.Is(err, domainwallet.ErrDepositAmountMismatch) {
 		t.Fatalf("expected ErrDepositAmountMismatch, got %v", err)
 	}
@@ -186,7 +187,7 @@ func TestAdminTopupAllowsZeroMainBalanceToReachInsufficientMainBalanceCheck(t *t
 	repo := &walletRepoStub{createManualTopupErr: domainwallet.ErrInsufficientMainBalance}
 	service := NewWalletService(repo, mainBalanceProviderStub{balance: "0"})
 
-	_, err := service.AdminTopup(context.Background(), "user-1", dto.AdminWalletTopupRequest{Amount: "10000"}, "admin-1")
+	_, err := service.AdminTopup(testActorContext("admin-1"), "user-1", dto.AdminWalletTopupRequest{Amount: "10000"})
 	if !errors.Is(err, domainwallet.ErrInsufficientMainBalance) {
 		t.Fatalf("expected ErrInsufficientMainBalance, got %v", err)
 	}
@@ -199,15 +200,19 @@ func TestAdminCreditAdjustmentUsesMainBalanceLimit(t *testing.T) {
 	repo := &walletRepoStub{}
 	service := NewWalletService(repo, mainBalanceProviderStub{balance: "75000"})
 
-	_, err := service.AdminAdjust(context.Background(), "user-1", dto.AdminWalletAdjustRequest{
+	_, err := service.AdminAdjust(testActorContext("admin-1"), "user-1", dto.AdminWalletAdjustRequest{
 		Amount:      "5000",
 		Direction:   domainwallet.DirectionCredit,
 		Description: "manual correction",
-	}, "admin-1")
+	})
 	if err != nil {
 		t.Fatalf("AdminAdjust returned error: %v", err)
 	}
 	if repo.adjustLimit != "75000.00" {
 		t.Fatalf("expected H2H balance limit 75000.00, got %q", repo.adjustLimit)
 	}
+}
+
+func testActorContext(userID string) context.Context {
+	return authscope.WithContext(context.Background(), authscope.New(userID, "admin", "admin", nil))
 }

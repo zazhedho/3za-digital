@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"3za-digital/internal/authscope"
 	domainaudit "3za-digital/internal/domain/audit"
 	domaincatalog "3za-digital/internal/domain/catalog"
 	domainorder "3za-digital/internal/domain/order"
@@ -73,9 +74,9 @@ func (s *OrderService) GetStatusLogs(ctx context.Context, orderID string) ([]dom
 	return s.Repo.GetStatusLogs(ctx, orderID)
 }
 
-func (s *OrderService) CreateOrder(ctx context.Context, productType string, req dto.CreateOrderRequest, createdBy string) (domainorder.Order, error) {
+func (s *OrderService) CreateOrder(ctx context.Context, productType string, req dto.CreateOrderRequest) (domainorder.Order, error) {
 	req.Target = strings.TrimSpace(req.Target)
-	createdBy = strings.TrimSpace(createdBy)
+	createdBy := authscope.FromContext(ctx).ActorUserID()
 	if req.Target == "" || req.Quantity <= 0 || strings.TrimSpace(req.ServiceID) == "" || createdBy == "" {
 		return domainorder.Order{}, ErrInvalidOrderRequest
 	}

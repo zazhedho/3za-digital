@@ -1,13 +1,15 @@
 package servicelocation
 
 import (
+	"context"
+
+	"3za-digital/internal/authscope"
 	locationcache "3za-digital/internal/cache/location"
 	domainlocation "3za-digital/internal/domain/location"
 	"3za-digital/internal/dto"
 	interfacelocation "3za-digital/internal/interfaces/location"
 	"3za-digital/pkg/logger"
 	"3za-digital/utils"
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -180,11 +182,12 @@ func (s *LocationService) GetVillage(ctx context.Context, districtCode string) (
 	return locations, nil
 }
 
-func (s *LocationService) StartSync(ctx context.Context, req dto.SyncLocationRequest, requestedByUserID string) (dto.LocationSyncJob, error) {
+func (s *LocationService) StartSync(ctx context.Context, req dto.SyncLocationRequest) (dto.LocationSyncJob, error) {
 	normalizedReq, err := s.normalizeAndValidateRequest(req)
 	if err != nil {
 		return dto.LocationSyncJob{}, err
 	}
+	requestedByUserID := authscope.FromContext(ctx).ActorUserID()
 
 	activeJob, err := s.Repo.GetActiveSyncJob(ctx)
 	switch {

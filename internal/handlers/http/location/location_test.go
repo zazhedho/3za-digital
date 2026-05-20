@@ -1,9 +1,6 @@
 package handlerlocation
 
 import (
-	"3za-digital/internal/dto"
-	servicelocation "3za-digital/internal/services/location"
-	"3za-digital/utils"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,6 +8,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"3za-digital/internal/authscope"
+	"3za-digital/internal/dto"
+	servicelocation "3za-digital/internal/services/location"
+	"3za-digital/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -36,9 +38,9 @@ func (m *locationServiceTestDouble) GetDistrict(ctx context.Context, cityCode st
 func (m *locationServiceTestDouble) GetVillage(ctx context.Context, districtCode string) ([]dto.Location, error) {
 	return m.locations, m.err
 }
-func (m *locationServiceTestDouble) StartSync(ctx context.Context, req dto.SyncLocationRequest, requestedByUserID string) (dto.LocationSyncJob, error) {
+func (m *locationServiceTestDouble) StartSync(ctx context.Context, req dto.SyncLocationRequest) (dto.LocationSyncJob, error) {
 	m.startReq = req
-	m.requested = requestedByUserID
+	m.requested = authscope.FromContext(ctx).ActorUserID()
 	return m.job, m.err
 }
 func (m *locationServiceTestDouble) GetSyncJob(ctx context.Context, id string) (dto.LocationSyncJob, error) {
@@ -51,6 +53,7 @@ func performLocationRequest(method, routePath, requestPath string, body interfac
 	router.Handle(method, routePath, func(ctx *gin.Context) {
 		if authData != nil {
 			ctx.Set(utils.CtxKeyAuthData, authData)
+			ctx.Request = ctx.Request.WithContext(authscope.WithContext(ctx.Request.Context(), authscope.NewFromClaims(authData, nil)))
 		}
 		handler(ctx)
 	})

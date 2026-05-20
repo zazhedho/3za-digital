@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"3za-digital/internal/authscope"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
 	interfacewallet "3za-digital/internal/interfaces/wallet"
@@ -82,9 +83,9 @@ func (s *WalletService) GetMyDepositByID(ctx context.Context, userID, id string)
 	return deposit, nil
 }
 
-func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.AdminWalletTopupRequest, actorID string) (domainwallet.DepositRequest, error) {
+func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.AdminWalletTopupRequest) (domainwallet.DepositRequest, error) {
 	userID = strings.TrimSpace(userID)
-	actorID = strings.TrimSpace(actorID)
+	actorID := authscope.FromContext(ctx).ActorUserID()
 	if userID == "" || actorID == "" {
 		return domainwallet.DepositRequest{}, domainwallet.ErrInvalidAmount
 	}
@@ -134,8 +135,8 @@ func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.A
 	return s.Repo.CreateManualTopup(ctx, deposit, strings.TrimSpace(req.Description), mainBalance)
 }
 
-func (s *WalletService) AdminApproveDeposit(ctx context.Context, depositID string, req dto.AdminDepositApproveRequest, actorID string) (domainwallet.DepositRequest, error) {
-	actorID = strings.TrimSpace(actorID)
+func (s *WalletService) AdminApproveDeposit(ctx context.Context, depositID string, req dto.AdminDepositApproveRequest) (domainwallet.DepositRequest, error) {
+	actorID := authscope.FromContext(ctx).ActorUserID()
 	if strings.TrimSpace(depositID) == "" || actorID == "" {
 		return domainwallet.DepositRequest{}, domainwallet.ErrInvalidAmount
 	}
@@ -161,7 +162,7 @@ func (s *WalletService) AdminApproveDeposit(ctx context.Context, depositID strin
 	return s.Repo.ApproveManualTopup(ctx, deposit, strings.TrimSpace(req.Description), mainBalance)
 }
 
-func (s *WalletService) AdminAdjust(ctx context.Context, userID string, req dto.AdminWalletAdjustRequest, actorID string) (domainwallet.WalletTransaction, error) {
+func (s *WalletService) AdminAdjust(ctx context.Context, userID string, req dto.AdminWalletAdjustRequest) (domainwallet.WalletTransaction, error) {
 	amount, err := money.NormalizePositive(req.Amount)
 	if err != nil {
 		return domainwallet.WalletTransaction{}, err
@@ -170,6 +171,7 @@ func (s *WalletService) AdminAdjust(ctx context.Context, userID string, req dto.
 	if direction != domainwallet.DirectionCredit && direction != domainwallet.DirectionDebit {
 		return domainwallet.WalletTransaction{}, domainwallet.ErrInvalidDirection
 	}
+	actorID := authscope.FromContext(ctx).ActorUserID()
 	if strings.TrimSpace(userID) == "" || strings.TrimSpace(actorID) == "" {
 		return domainwallet.WalletTransaction{}, domainwallet.ErrInvalidAmount
 	}

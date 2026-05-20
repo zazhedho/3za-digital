@@ -103,8 +103,7 @@ func (h *WalletHandler) AdminTopup(ctx *gin.Context) {
 		writeBindError(ctx, logID, req, err)
 		return
 	}
-	actorID, _ := utils.GetActorContext(ctx)
-	data, err := h.Service.AdminTopup(ctx.Request.Context(), userID, req, actorID)
+	data, err := h.Service.AdminTopup(ctx.Request.Context(), userID, req)
 	if err != nil {
 		h.writeWalletAudit(ctx, domainaudit.ActionCreate, "wallet_topup", userID, domainaudit.StatusFailed, "Failed to topup wallet", err.Error(), nil)
 		writeWalletError(ctx, "[WalletHandler][AdminTopup]", logID, err)
@@ -126,8 +125,7 @@ func (h *WalletHandler) AdminApproveDeposit(ctx *gin.Context) {
 		writeBindError(ctx, logID, req, err)
 		return
 	}
-	actorID, _ := utils.GetActorContext(ctx)
-	data, err := h.Service.AdminApproveDeposit(ctx.Request.Context(), id, req, actorID)
+	data, err := h.Service.AdminApproveDeposit(ctx.Request.Context(), id, req)
 	if err != nil {
 		h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", id, domainaudit.StatusFailed, "Failed to approve deposit request", err.Error(), nil)
 		writeWalletError(ctx, "[WalletHandler][AdminApproveDeposit]", logID, err)
@@ -150,8 +148,7 @@ func (h *WalletHandler) AdminAdjust(ctx *gin.Context) {
 		writeBindError(ctx, logID, req, err)
 		return
 	}
-	actorID, _ := utils.GetActorContext(ctx)
-	data, err := h.Service.AdminAdjust(ctx.Request.Context(), userID, req, actorID)
+	data, err := h.Service.AdminAdjust(ctx.Request.Context(), userID, req)
 	if err != nil {
 		h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "wallet_adjustment", userID, domainaudit.StatusFailed, "Failed to adjust wallet", err.Error(), nil)
 		writeWalletError(ctx, "[WalletHandler][AdminAdjust]", logID, err)
