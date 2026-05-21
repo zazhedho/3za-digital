@@ -67,7 +67,7 @@ func (r *repo) GetDeposits(ctx context.Context, userID string, params filter.Bas
 	if strings.TrimSpace(userID) != "" {
 		query = query.Where("user_id = ?", userID)
 	}
-	query = applyStringFilters(query, filter.WhitelistStringFilter(params.Filters, []string{"status", "method", "provider", "payment_reference"}))
+	query = applyStringFilters(query, filter.WhitelistStringFilter(params.Filters, []string{"user_id", "status", "method", "provider", "payment_reference"}))
 	return getPaged[domainwallet.DepositRequest](query, params, map[string]bool{
 		"created_at": true,
 		"updated_at": true,

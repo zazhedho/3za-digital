@@ -2621,6 +2621,42 @@
           "response": []
         },
         {
+          "name": "Admin List Deposits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/deposits?filters[status]=%22pending%22",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "deposits"
+              ],
+              "query": [
+                {
+                  "key": "filters[status]",
+                  "value": "\"pending\""
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Admin/superadmin list all deposit requests. Use filters[status]=\"pending\" to find manual deposits waiting for H2H main balance and admin approval."
+          },
+          "response": []
+        },
+        {
           "name": "Admin Approve Deposit",
           "request": {
             "method": "POST",
@@ -2728,7 +2764,7 @@
               "mode": "raw",
               "raw": "{\n  \"event_type\": \"payment.paid\",\n  \"request_id\": \"{{payment_request_id}}\",\n  \"payment_reference\": \"{{payment_reference}}\",\n  \"amount\": \"{{deposit_amount}}\",\n  \"status\": \"paid\",\n  \"signature\": \"{{payment_signature}}\",\n  \"payload\": {}\n}"
             },
-            "description": "Future payment gateway callback endpoint. Signature verification adapter can be plugged before wallet credit."
+            "description": "Future payment gateway callback endpoint. Disabled by default unless PAYMENT_WEBHOOK_ENABLED=true. When enabled, PAYMENT_WEBHOOK_SECRET_<PROVIDER> is required and signature must be valid before wallet credit."
           },
           "response": []
         }

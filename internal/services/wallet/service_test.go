@@ -14,6 +14,7 @@ import (
 
 type walletRepoStub struct {
 	deposit              domainwallet.DepositRequest
+	depositsUserID       string
 	createdDeposit       domainwallet.DepositRequest
 	manualTopupLimit     string
 	adjustLimit          string
@@ -37,6 +38,7 @@ func (r *walletRepoStub) GetWallets(ctx context.Context, params filter.BaseParam
 }
 
 func (r *walletRepoStub) GetDeposits(ctx context.Context, userID string, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
+	r.depositsUserID = userID
 	return nil, 0, nil
 }
 
@@ -102,6 +104,47 @@ func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 	}
 	if repo.createdDeposit.Method != domainwallet.DepositMethodManualAdmin {
 		t.Fatalf("expected manual_admin method, got %q", repo.createdDeposit.Method)
+	}
+}
+
+func TestGetDepositsUsesEmptyUserFilterForAdminList(t *testing.T) {
+	repo := &walletRepoStub{}
+	service := NewWalletService(repo)
+
+	_, _, err := service.GetDeposits(context.Background(), filter.BaseParams{})
+	if err != nil {
+		t.Fatalf("GetDeposits returned error: %v", err)
+	}
+	if repo.depositsUserID != "" {
+		t.Fatalf("expected empty user filter for admin list, got %q", repo.depositsUserID)
+	}
+}
+
+func TestHandlePaymentWebhookDisabledByDefault(t *testing.T) {
+	service := NewWalletService(&walletRepoStub{})
+
+	_, err := service.HandlePaymentWebhook(context.Background(), "h2h", dto.PaymentWebhookRequest{
+		PaymentReference: "ref-1",
+		Amount:           "10000",
+		Status:           "paid",
+	})
+	if !errors.Is(err, domainwallet.ErrPaymentWebhookDisabled) {
+		t.Fatalf("expected ErrPaymentWebhookDisabled, got %v", err)
+	}
+}
+
+func TestHandlePaymentWebhookRequiresSecretWhenEnabled(t *testing.T) {
+	t.Setenv("PAYMENT_WEBHOOK_ENABLED", "true")
+	service := NewWalletService(&walletRepoStub{})
+
+	_, err := service.HandlePaymentWebhook(context.Background(), "midtrans", dto.PaymentWebhookRequest{
+		PaymentReference: "ref-1",
+		Amount:           "10000",
+		Status:           "paid",
+		Signature:        "signature",
+	})
+	if !errors.Is(err, domainwallet.ErrInvalidSignature) {
+		t.Fatalf("expected ErrInvalidSignature, got %v", err)
 	}
 }
 

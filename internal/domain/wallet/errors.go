@@ -13,6 +13,7 @@ var (
 	ErrDepositAlreadyFinal     = errors.New("deposit already has final status")
 	ErrDepositAmountMismatch   = errors.New("deposit amount mismatch")
 	ErrInvalidSignature        = errors.New("invalid payment webhook signature")
+	ErrPaymentWebhookDisabled  = errors.New("payment webhook is disabled")
 	ErrInsufficientMainBalance = errors.New("insufficient main provider balance")
 	ErrMainBalanceUnavailable  = errors.New("main provider balance unavailable")
 )

@@ -72,6 +72,10 @@ func (s *WalletService) GetMyDeposits(ctx context.Context, userID string, params
 	return s.Repo.GetDeposits(ctx, strings.TrimSpace(userID), params)
 }
 
+func (s *WalletService) GetDeposits(ctx context.Context, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
+	return s.Repo.GetDeposits(ctx, "", params)
+}
+
 func (s *WalletService) GetMyDepositByID(ctx context.Context, userID, id string) (domainwallet.DepositRequest, error) {
 	deposit, err := s.Repo.GetDepositByID(ctx, id)
 	if err != nil {
@@ -187,6 +191,9 @@ func (s *WalletService) AdminAdjust(ctx context.Context, userID string, req dto.
 }
 
 func (s *WalletService) HandlePaymentWebhook(ctx context.Context, provider string, req dto.PaymentWebhookRequest) (domainwallet.DepositRequest, error) {
+	if !utils.GetEnv("PAYMENT_WEBHOOK_ENABLED", false) {
+		return domainwallet.DepositRequest{}, domainwallet.ErrPaymentWebhookDisabled
+	}
 	provider = strings.TrimSpace(provider)
 	if err := verifyWebhookSignature(provider, req); err != nil {
 		return domainwallet.DepositRequest{}, err

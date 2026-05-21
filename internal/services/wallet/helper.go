@@ -16,7 +16,7 @@ import (
 func verifyWebhookSignature(provider string, req dto.PaymentWebhookRequest) error {
 	secret := utils.GetEnv("PAYMENT_WEBHOOK_SECRET_"+utils.EnvKey(provider), "")
 	if secret == "" {
-		return nil
+		return domainwallet.ErrInvalidSignature
 	}
 
 	signature := strings.TrimSpace(req.Signature)
@@ -75,6 +75,7 @@ func IsPublicError(err error) bool {
 		errors.Is(err, domainwallet.ErrDepositAlreadyFinal) ||
 		errors.Is(err, domainwallet.ErrDepositAmountMismatch) ||
 		errors.Is(err, domainwallet.ErrInvalidSignature) ||
+		errors.Is(err, domainwallet.ErrPaymentWebhookDisabled) ||
 		errors.Is(err, domainwallet.ErrInsufficientMainBalance) ||
 		errors.Is(err, domainwallet.ErrMainBalanceUnavailable)
 }

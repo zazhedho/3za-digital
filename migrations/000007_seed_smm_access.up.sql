@@ -20,6 +20,8 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'list_wallets', 'List Wallets', 'wallets', 'list'),
     (gen_random_uuid(), 'topup_wallets', 'Topup Wallets', 'wallets', 'topup'),
     (gen_random_uuid(), 'adjust_wallets', 'Adjust Wallets', 'wallets', 'adjust'),
+    (gen_random_uuid(), 'list_admin_deposits', 'List Admin Deposits', 'admin_deposits', 'list'),
+    (gen_random_uuid(), 'approve_admin_deposits', 'Approve Admin Deposits', 'admin_deposits', 'approve'),
     (gen_random_uuid(), 'create_deposits', 'Create Deposits', 'deposits', 'create'),
     (gen_random_uuid(), 'list_deposits', 'List Deposits', 'deposits', 'list'),
     (gen_random_uuid(), 'view_deposits', 'View Deposit Detail', 'deposits', 'view'),
@@ -31,7 +33,7 @@ SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
 WHERE r.name IN ('superadmin', 'admin')
-AND p.resource IN ('smm_services', 'smm_orders', 'provider_balance', 'provider_api_logs', 'wallet', 'wallet_transactions', 'wallets', 'deposits', 'payment_webhooks')
+AND p.resource IN ('smm_services', 'smm_orders', 'provider_balance', 'provider_api_logs', 'wallet', 'wallet_transactions', 'wallets', 'admin_deposits', 'deposits', 'payment_webhooks')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)

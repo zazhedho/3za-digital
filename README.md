@@ -146,7 +146,7 @@ Optional but recommended:
 - Rate limit settings for sensitive routes when Redis is enabled:
   - `SMM_ORDER_RATE_LIMIT`, `SMM_ORDER_RATE_WINDOW_SECONDS`
   - `DEPOSIT_CREATE_RATE_LIMIT`, `DEPOSIT_CREATE_RATE_WINDOW_SECONDS`
-  - `PAYMENT_WEBHOOK_RATE_LIMIT`, `PAYMENT_WEBHOOK_RATE_WINDOW_SECONDS`
+- `PAYMENT_WEBHOOK_RATE_LIMIT`, `PAYMENT_WEBHOOK_RATE_WINDOW_SECONDS`
 
 H2H provider settings:
 - `H2H_BASE_URL`
@@ -158,10 +158,11 @@ H2H provider settings:
 H2H credentials must stay in backend environment variables only. Do not put them in frontend code, Postman shared variables, request logs, or provider API logs.
 
 Optional payment webhook signature guard:
+- `PAYMENT_WEBHOOK_ENABLED` (default `false`)
 - `PAYMENT_WEBHOOK_SECRET_<PROVIDER>`
 - Example: `PAYMENT_WEBHOOK_SECRET_MIDTRANS`
 
-When this secret is set, `/api/webhooks/payments/:provider` requires `signature` in the request body. Current generic guard expects HMAC-SHA256 hex over:
+Payment webhooks are disabled by default because manual deposit is the active flow. When `PAYMENT_WEBHOOK_ENABLED=true`, `/api/webhooks/payments/:provider` requires `PAYMENT_WEBHOOK_SECRET_<PROVIDER>` and `signature` in the request body. Current generic guard expects HMAC-SHA256 hex over:
 
 ```text
 provider|payment_reference|amount|status
@@ -259,6 +260,7 @@ Wallet and deposit routes:
 - `GET /api/admin/wallets`
 - `POST /api/admin/wallets/:user_id/topup`
 - `POST /api/admin/wallets/:user_id/adjust`
+- `GET /api/admin/deposits`
 - `POST /api/admin/deposits/:id/approve`
 - `POST /api/deposits`
 - `GET /api/deposits`
@@ -321,11 +323,12 @@ Wallet rules:
 
 Deposit and payment gateway readiness:
 - Member deposit request creates a pending `deposit_requests` row with `manual_admin` method.
+- Admin/superadmin can list all deposit requests through `GET /api/admin/deposits`.
 - Admin manual topup can approve an existing pending deposit request or create a direct paid topup.
 - Admin topup and credit adjustment are blocked when resulting total active wallet liability would exceed live H2H main balance. Liability is active wallet `balance + locked_balance`.
 - If main balance is insufficient, the deposit stays `pending`; admin must top up H2H main balance first, then approve the deposit again.
 - `payment_gateway_logs` stores future gateway callback/invoice logs.
-- `POST /api/webhooks/payments/:provider` is prepared for future gateway callbacks.
+- `POST /api/webhooks/payments/:provider` is prepared for future gateway callbacks but disabled unless `PAYMENT_WEBHOOK_ENABLED=true`.
 - Production payment gateway integration must verify callback signature and amount before crediting wallet.
 
 Security notes:

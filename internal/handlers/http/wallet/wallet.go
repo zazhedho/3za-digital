@@ -90,6 +90,23 @@ func (h *WalletHandler) GetWallets(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.PaginationResponse(http.StatusOK, int(total), params.Page, params.Limit, logID, data))
 }
 
+func (h *WalletHandler) GetDeposits(ctx *gin.Context) {
+	logID := utils.GenerateLogId(ctx)
+	params, err := filter.GetBaseParams(ctx, "created_at", "desc", 50)
+	if err != nil {
+		writeBadRequest(ctx, logID, "invalid query parameters")
+		return
+	}
+	params.Filters = filter.WhitelistStringFilter(params.Filters, []string{"user_id", "status", "method", "provider", "payment_reference"})
+
+	data, total, err := h.Service.GetDeposits(ctx.Request.Context(), params)
+	if err != nil {
+		writeWalletError(ctx, "[WalletHandler][GetDeposits]", logID, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, response.PaginationResponse(http.StatusOK, int(total), params.Page, params.Limit, logID, data))
+}
+
 func (h *WalletHandler) AdminTopup(ctx *gin.Context) {
 	logID := utils.GenerateLogId(ctx)
 	userID := strings.TrimSpace(ctx.Param("user_id"))
