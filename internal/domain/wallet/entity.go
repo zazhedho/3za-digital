@@ -33,6 +33,7 @@ func (Wallet) TableName() string {
 type Wallet struct {
 	Id            string         `json:"id" gorm:"column:id;primaryKey"`
 	UserID        string         `json:"user_id" gorm:"column:user_id"`
+	User          *UserSummary   `json:"user,omitempty" gorm:"foreignKey:UserID;references:Id"`
 	Balance       string         `json:"balance" gorm:"column:balance"`
 	LockedBalance string         `json:"locked_balance" gorm:"column:locked_balance"`
 	Currency      string         `json:"currency" gorm:"column:currency"`
@@ -71,7 +72,7 @@ func (DepositRequest) TableName() string {
 type DepositRequest struct {
 	Id               string          `json:"id" gorm:"column:id;primaryKey"`
 	UserID           string          `json:"user_id" gorm:"column:user_id"`
-	User             *DepositUser    `json:"user,omitempty" gorm:"foreignKey:UserID;references:Id"`
+	User             *UserSummary    `json:"user,omitempty" gorm:"foreignKey:UserID;references:Id"`
 	Amount           string          `json:"amount" gorm:"column:amount"`
 	Status           string          `json:"status" gorm:"column:status"`
 	Method           string          `json:"method" gorm:"column:method"`
@@ -87,11 +88,11 @@ type DepositRequest struct {
 	DeletedAt        gorm.DeletedAt  `json:"-" gorm:"column:deleted_at"`
 }
 
-func (DepositUser) TableName() string {
+func (UserSummary) TableName() string {
 	return "users"
 }
 
-type DepositUser struct {
+type UserSummary struct {
 	Id        string `json:"id" gorm:"column:id;primaryKey"`
 	Name      string `json:"name" gorm:"column:name"`
 	Email     string `json:"email,omitempty" gorm:"column:email"`

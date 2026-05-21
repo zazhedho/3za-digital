@@ -138,6 +138,44 @@ func TestGetDepositsDoesNotPreloadUserForScopedMemberList(t *testing.T) {
 	}
 }
 
+func TestGetWalletsPreloadsUserSummaryForAdminList(t *testing.T) {
+	db, mock := newWalletMockDB(t)
+	repo := &repo{db: db}
+	now := time.Now()
+
+	mock.ExpectQuery(`SELECT count\(\*\) FROM "wallets" WHERE is_active = \$1 AND "wallets"\."deleted_at" IS NULL`).
+		WithArgs("true").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	mock.ExpectQuery(`SELECT \* FROM "wallets" WHERE is_active = \$1 AND "wallets"\."deleted_at" IS NULL ORDER BY created_at DESC LIMIT \$2`).
+		WithArgs("true", 50).
+		WillReturnRows(walletRows().
+			AddRow("wallet-1", "user-1", "150000.00", "0.00", "IDR", true, now, nil, nil))
+	mock.ExpectQuery(`SELECT "id","name","email","phone","role","avatar_url" FROM "users" WHERE "users"\."id" = \$1`).
+		WithArgs("user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email", "phone", "role", "avatar_url"}).
+			AddRow("user-1", "Member One", "member@example.com", "08123456789", "member", ""))
+
+	wallets, total, err := repo.GetWallets(context.Background(), filter.BaseParams{
+		Filters:        map[string]interface{}{"is_active": "true"},
+		OrderBy:        "created_at",
+		OrderDirection: "desc",
+		Page:           1,
+		Limit:          50,
+	})
+	if err != nil {
+		t.Fatalf("GetWallets returned error: %v", err)
+	}
+	if total != 1 || len(wallets) != 1 {
+		t.Fatalf("unexpected wallets total=%d len=%d", total, len(wallets))
+	}
+	if wallets[0].User == nil || wallets[0].User.Name != "Member One" || wallets[0].User.Email != "member@example.com" {
+		t.Fatalf("expected user summary, got %#v", wallets[0].User)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
 func TestGetDepositWithUserByIDPreloadsUserSummary(t *testing.T) {
 	db, mock := newWalletMockDB(t)
 	repo := &repo{db: db}

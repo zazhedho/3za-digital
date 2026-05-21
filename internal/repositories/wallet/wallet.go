@@ -21,6 +21,8 @@ type repo struct {
 	db *gorm.DB
 }
 
+var userSummaryColumns = []string{"id", "name", "email", "phone", "role", "avatar_url"}
+
 func NewWalletRepo(db *gorm.DB) interfacewallet.RepoWalletInterface {
 	return &repo{db: db}
 }
@@ -55,6 +57,11 @@ func (r *repo) GetTransactions(ctx context.Context, userID string, params filter
 
 func (r *repo) GetWallets(ctx context.Context, params filter.BaseParams) ([]domainwallet.Wallet, int64, error) {
 	return repositorygeneric.New[domainwallet.Wallet](r.db).GetAll(ctx, params, repositorygeneric.QueryOptions{
+		BaseQuery: func(query *gorm.DB) *gorm.DB {
+			return query.Preload("User", func(db *gorm.DB) *gorm.DB {
+				return db.Select(userSummaryColumns)
+			})
+		},
 		AllowedFilters:      []string{"user_id", "currency", "is_active"},
 		FilterSanitizer:     filter.WhitelistStringFilter,
 		AllowedOrderColumns: []string{"created_at", "updated_at", "balance", "user_id"},
@@ -69,7 +76,7 @@ func (r *repo) GetDeposits(ctx context.Context, userID string, params filter.Bas
 				return query.Where("user_id = ?", userID)
 			}
 			return query.Preload("User", func(db *gorm.DB) *gorm.DB {
-				return db.Select("id", "name", "email", "phone", "role", "avatar_url")
+				return db.Select(userSummaryColumns)
 			})
 		},
 		AllowedFilters:      []string{"user_id", "status", "method", "provider", "payment_reference"},
@@ -89,7 +96,7 @@ func (r *repo) GetDepositWithUserByID(ctx context.Context, id string) (domainwal
 	var deposit domainwallet.DepositRequest
 	err := r.db.WithContext(ctx).
 		Preload("User", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id", "name", "email", "phone", "role", "avatar_url")
+			return db.Select(userSummaryColumns)
 		}).
 		Where("id = ?", id).
 		First(&deposit).Error
