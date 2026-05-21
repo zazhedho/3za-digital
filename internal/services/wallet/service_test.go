@@ -10,6 +10,8 @@ import (
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
 	"3za-digital/pkg/filter"
+
+	"gorm.io/gorm"
 )
 
 type walletRepoStub struct {
@@ -117,6 +119,72 @@ func TestGetDepositsUsesEmptyUserFilterForAdminList(t *testing.T) {
 	}
 	if repo.depositsUserID != "" {
 		t.Fatalf("expected empty user filter for admin list, got %q", repo.depositsUserID)
+	}
+}
+
+func TestGetMyDepositsUsesUserIDFromContext(t *testing.T) {
+	repo := &walletRepoStub{}
+	service := NewWalletService(repo)
+
+	_, _, err := service.GetMyDeposits(testUserContext("member-1"), filter.BaseParams{})
+	if err != nil {
+		t.Fatalf("GetMyDeposits returned error: %v", err)
+	}
+	if repo.depositsUserID != "member-1" {
+		t.Fatalf("expected user filter from context, got %q", repo.depositsUserID)
+	}
+}
+
+func TestGetMyDepositsRejectsMissingUserContext(t *testing.T) {
+	repo := &walletRepoStub{}
+	service := NewWalletService(repo)
+
+	_, _, err := service.GetMyDeposits(context.Background(), filter.BaseParams{})
+	if !errors.Is(err, domainwallet.ErrInvalidAmount) {
+		t.Fatalf("expected ErrInvalidAmount, got %v", err)
+	}
+}
+
+func TestGetMyDepositByIDUsesUserIDFromContext(t *testing.T) {
+	repo := &walletRepoStub{deposit: domainwallet.DepositRequest{
+		Id:     "deposit-1",
+		UserID: "member-1",
+		Amount: "10000.00",
+		Status: domainwallet.DepositStatusPending,
+	}}
+	service := NewWalletService(repo)
+
+	deposit, err := service.GetMyDepositByID(testUserContext("member-1"), "deposit-1")
+	if err != nil {
+		t.Fatalf("GetMyDepositByID returned error: %v", err)
+	}
+	if deposit.Id != "deposit-1" {
+		t.Fatalf("expected deposit-1, got %q", deposit.Id)
+	}
+}
+
+func TestGetMyDepositByIDRejectsOtherUser(t *testing.T) {
+	repo := &walletRepoStub{deposit: domainwallet.DepositRequest{
+		Id:     "deposit-1",
+		UserID: "member-1",
+		Amount: "10000.00",
+		Status: domainwallet.DepositStatusPending,
+	}}
+	service := NewWalletService(repo)
+
+	_, err := service.GetMyDepositByID(testUserContext("member-2"), "deposit-1")
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("expected ErrRecordNotFound, got %v", err)
+	}
+}
+
+func TestGetMyDepositByIDRejectsMissingUserContext(t *testing.T) {
+	repo := &walletRepoStub{}
+	service := NewWalletService(repo)
+
+	_, err := service.GetMyDepositByID(context.Background(), "deposit-1")
+	if !errors.Is(err, domainwallet.ErrInvalidAmount) {
+		t.Fatalf("expected ErrInvalidAmount, got %v", err)
 	}
 }
 
@@ -258,4 +326,8 @@ func TestAdminCreditAdjustmentUsesMainBalanceLimit(t *testing.T) {
 
 func testActorContext(userID string) context.Context {
 	return authscope.WithContext(context.Background(), authscope.New(userID, "admin", "admin", nil))
+}
+
+func testUserContext(userID string) context.Context {
+	return authscope.WithContext(context.Background(), authscope.New(userID, "member", "member", nil))
 }

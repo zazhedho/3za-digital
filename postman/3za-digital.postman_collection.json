@@ -2652,7 +2652,7 @@
                 }
               ]
             },
-            "description": "Admin/superadmin list all deposit requests. Use filters[status]=\"pending\" to find manual deposits waiting for H2H main balance and admin approval."
+            "description": "Admin/superadmin list all deposit requests. Use filters[status]=\"pending\" to find manual deposits waiting for H2H main balance and admin approval. Response includes safe user summary for frontend tables."
           },
           "response": []
         },

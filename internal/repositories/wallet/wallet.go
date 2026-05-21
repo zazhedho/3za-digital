@@ -66,6 +66,10 @@ func (r *repo) GetDeposits(ctx context.Context, userID string, params filter.Bas
 	query := r.db.WithContext(ctx).Model(&domainwallet.DepositRequest{})
 	if strings.TrimSpace(userID) != "" {
 		query = query.Where("user_id = ?", userID)
+	} else {
+		query = query.Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "email", "phone", "role", "avatar_url")
+		})
 	}
 	query = applyStringFilters(query, filter.WhitelistStringFilter(params.Filters, []string{"user_id", "status", "method", "provider", "payment_reference"}))
 	return getPaged[domainwallet.DepositRequest](query, params, map[string]bool{

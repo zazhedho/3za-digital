@@ -196,7 +196,6 @@ func (h *WalletHandler) CreateDeposit(ctx *gin.Context) {
 
 func (h *WalletHandler) GetMyDeposits(ctx *gin.Context) {
 	logID := utils.GenerateLogId(ctx)
-	scope := authscope.FromContext(ctx.Request.Context())
 	params, err := filter.GetBaseParams(ctx, "created_at", "desc", 50)
 	if err != nil {
 		writeBadRequest(ctx, logID, "invalid query parameters")
@@ -204,7 +203,7 @@ func (h *WalletHandler) GetMyDeposits(ctx *gin.Context) {
 	}
 	params.Filters = filter.WhitelistStringFilter(params.Filters, []string{"status", "method", "provider", "payment_reference"})
 
-	data, total, err := h.Service.GetMyDeposits(ctx.Request.Context(), scope.UserID, params)
+	data, total, err := h.Service.GetMyDeposits(ctx.Request.Context(), params)
 	if err != nil {
 		writeWalletError(ctx, "[WalletHandler][GetMyDeposits]", logID, err)
 		return
@@ -214,13 +213,12 @@ func (h *WalletHandler) GetMyDeposits(ctx *gin.Context) {
 
 func (h *WalletHandler) GetMyDepositByID(ctx *gin.Context) {
 	logID := utils.GenerateLogId(ctx)
-	scope := authscope.FromContext(ctx.Request.Context())
 	id, err := utils.ValidateUUID(ctx, logID)
 	if err != nil {
 		return
 	}
 
-	data, err := h.Service.GetMyDepositByID(ctx.Request.Context(), scope.UserID, id)
+	data, err := h.Service.GetMyDepositByID(ctx.Request.Context(), id)
 	if err != nil {
 		writeWalletError(ctx, "[WalletHandler][GetMyDepositByID]", logID, err)
 		return

@@ -68,20 +68,28 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 	return s.Repo.CreateDepositRequest(ctx, deposit)
 }
 
-func (s *WalletService) GetMyDeposits(ctx context.Context, userID string, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
-	return s.Repo.GetDeposits(ctx, strings.TrimSpace(userID), params)
+func (s *WalletService) GetMyDeposits(ctx context.Context, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
+	userID := strings.TrimSpace(authscope.FromContext(ctx).UserID)
+	if userID == "" {
+		return nil, 0, domainwallet.ErrInvalidAmount
+	}
+	return s.Repo.GetDeposits(ctx, userID, params)
 }
 
 func (s *WalletService) GetDeposits(ctx context.Context, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
 	return s.Repo.GetDeposits(ctx, "", params)
 }
 
-func (s *WalletService) GetMyDepositByID(ctx context.Context, userID, id string) (domainwallet.DepositRequest, error) {
+func (s *WalletService) GetMyDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
+	userID := strings.TrimSpace(authscope.FromContext(ctx).UserID)
+	if userID == "" {
+		return domainwallet.DepositRequest{}, domainwallet.ErrInvalidAmount
+	}
 	deposit, err := s.Repo.GetDepositByID(ctx, id)
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
-	if deposit.UserID != strings.TrimSpace(userID) {
+	if deposit.UserID != userID {
 		return domainwallet.DepositRequest{}, gorm.ErrRecordNotFound
 	}
 	return deposit, nil

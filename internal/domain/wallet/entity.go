@@ -71,6 +71,7 @@ func (DepositRequest) TableName() string {
 type DepositRequest struct {
 	Id               string          `json:"id" gorm:"column:id;primaryKey"`
 	UserID           string          `json:"user_id" gorm:"column:user_id"`
+	User             *DepositUser    `json:"user,omitempty" gorm:"foreignKey:UserID;references:Id"`
 	Amount           string          `json:"amount" gorm:"column:amount"`
 	Status           string          `json:"status" gorm:"column:status"`
 	Method           string          `json:"method" gorm:"column:method"`
@@ -84,6 +85,19 @@ type DepositRequest struct {
 	CreatedAt        time.Time       `json:"created_at" gorm:"column:created_at"`
 	UpdatedAt        *time.Time      `json:"updated_at,omitempty" gorm:"column:updated_at"`
 	DeletedAt        gorm.DeletedAt  `json:"-" gorm:"column:deleted_at"`
+}
+
+func (DepositUser) TableName() string {
+	return "users"
+}
+
+type DepositUser struct {
+	Id        string `json:"id" gorm:"column:id;primaryKey"`
+	Name      string `json:"name" gorm:"column:name"`
+	Email     string `json:"email,omitempty" gorm:"column:email"`
+	Phone     string `json:"phone,omitempty" gorm:"column:phone"`
+	Role      string `json:"role,omitempty" gorm:"column:role"`
+	AvatarURL string `json:"avatar_url,omitempty" gorm:"column:avatar_url"`
 }
 
 func (PaymentGatewayLog) TableName() string {
