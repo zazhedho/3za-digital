@@ -8,6 +8,7 @@ import (
 
 	domainwallet "3za-digital/internal/domain/wallet"
 	interfacewallet "3za-digital/internal/interfaces/wallet"
+	repositorygeneric "3za-digital/internal/repositories/generic"
 	"3za-digital/pkg/filter"
 	"3za-digital/pkg/money"
 	"3za-digital/utils"
@@ -41,43 +42,41 @@ func (r *repo) EnsureWallet(ctx context.Context, userID string) (domainwallet.Wa
 }
 
 func (r *repo) GetTransactions(ctx context.Context, userID string, params filter.BaseParams) ([]domainwallet.WalletTransaction, int64, error) {
-	query := r.db.WithContext(ctx).Model(&domainwallet.WalletTransaction{}).Where("user_id = ?", userID)
-	query = applyStringFilters(query, filter.WhitelistStringFilter(params.Filters, []string{"type", "direction", "reference"}))
-	return getPaged[domainwallet.WalletTransaction](query, params, map[string]bool{
-		"created_at": true,
-		"amount":     true,
-		"type":       true,
-		"direction":  true,
-	}, "created_at DESC")
+	return repositorygeneric.New[domainwallet.WalletTransaction](r.db).GetAll(ctx, params, repositorygeneric.QueryOptions{
+		BaseQuery: func(query *gorm.DB) *gorm.DB {
+			return query.Where("user_id = ?", userID)
+		},
+		AllowedFilters:      []string{"type", "direction", "reference"},
+		FilterSanitizer:     filter.WhitelistStringFilter,
+		AllowedOrderColumns: []string{"created_at", "amount", "type", "direction"},
+		DefaultOrders:       []string{"created_at DESC"},
+	})
 }
 
 func (r *repo) GetWallets(ctx context.Context, params filter.BaseParams) ([]domainwallet.Wallet, int64, error) {
-	query := r.db.WithContext(ctx).Model(&domainwallet.Wallet{})
-	query = applyStringFilters(query, filter.WhitelistStringFilter(params.Filters, []string{"user_id", "currency", "is_active"}))
-	return getPaged[domainwallet.Wallet](query, params, map[string]bool{
-		"created_at": true,
-		"updated_at": true,
-		"balance":    true,
-		"user_id":    true,
-	}, "created_at DESC")
+	return repositorygeneric.New[domainwallet.Wallet](r.db).GetAll(ctx, params, repositorygeneric.QueryOptions{
+		AllowedFilters:      []string{"user_id", "currency", "is_active"},
+		FilterSanitizer:     filter.WhitelistStringFilter,
+		AllowedOrderColumns: []string{"created_at", "updated_at", "balance", "user_id"},
+		DefaultOrders:       []string{"created_at DESC"},
+	})
 }
 
 func (r *repo) GetDeposits(ctx context.Context, userID string, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
-	query := r.db.WithContext(ctx).Model(&domainwallet.DepositRequest{})
-	if strings.TrimSpace(userID) != "" {
-		query = query.Where("user_id = ?", userID)
-	} else {
-		query = query.Preload("User", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id", "name", "email", "phone", "role", "avatar_url")
-		})
-	}
-	query = applyStringFilters(query, filter.WhitelistStringFilter(params.Filters, []string{"user_id", "status", "method", "provider", "payment_reference"}))
-	return getPaged[domainwallet.DepositRequest](query, params, map[string]bool{
-		"created_at": true,
-		"updated_at": true,
-		"amount":     true,
-		"status":     true,
-	}, "created_at DESC")
+	return repositorygeneric.New[domainwallet.DepositRequest](r.db).GetAll(ctx, params, repositorygeneric.QueryOptions{
+		BaseQuery: func(query *gorm.DB) *gorm.DB {
+			if strings.TrimSpace(userID) != "" {
+				return query.Where("user_id = ?", userID)
+			}
+			return query.Preload("User", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "name", "email", "phone", "role", "avatar_url")
+			})
+		},
+		AllowedFilters:      []string{"user_id", "status", "method", "provider", "payment_reference"},
+		FilterSanitizer:     filter.WhitelistStringFilter,
+		AllowedOrderColumns: []string{"created_at", "updated_at", "amount", "status"},
+		DefaultOrders:       []string{"created_at DESC"},
+	})
 }
 
 func (r *repo) GetDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
@@ -457,33 +456,6 @@ func (r *repo) assertMainBalanceLimitTx(tx *gorm.DB, creditAmount string, mainBa
 		return domainwallet.ErrInsufficientMainBalance
 	}
 	return nil
-}
-
-func getPaged[T any](query *gorm.DB, params filter.BaseParams, allowedOrder map[string]bool, defaultOrder string) ([]T, int64, error) {
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	orderBy := strings.TrimSpace(params.OrderBy)
-	if !allowedOrder[orderBy] {
-		orderBy = strings.Fields(defaultOrder)[0]
-	}
-	dir := utils.NormalizeUpperKey(params.OrderDirection)
-	if dir != "ASC" && dir != "DESC" {
-		dir = "DESC"
-	}
-
-	var ret []T
-	err := query.Order(orderBy + " " + dir).Offset(params.Offset).Limit(params.Limit).Find(&ret).Error
-	return ret, total, err
-}
-
-func applyStringFilters(query *gorm.DB, filters map[string]interface{}) *gorm.DB {
-	for key, value := range filters {
-		query = query.Where(key+" = ?", value)
-	}
-	return query
 }
 
 var _ interfacewallet.RepoWalletInterface = (*repo)(nil)
