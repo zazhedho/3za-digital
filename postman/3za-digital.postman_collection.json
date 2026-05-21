@@ -2657,6 +2657,37 @@
           "response": []
         },
         {
+          "name": "Admin Get Deposit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/deposits/{{deposit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "deposits",
+                "{{deposit_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Admin/superadmin deposit detail. Response includes safe user summary for frontend detail views."
+          },
+          "response": []
+        },
+        {
           "name": "Admin Approve Deposit",
           "request": {
             "method": "POST",

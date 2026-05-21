@@ -138,6 +138,32 @@ func TestGetDepositsDoesNotPreloadUserForScopedMemberList(t *testing.T) {
 	}
 }
 
+func TestGetDepositWithUserByIDPreloadsUserSummary(t *testing.T) {
+	db, mock := newWalletMockDB(t)
+	repo := &repo{db: db}
+	now := time.Now()
+
+	mock.ExpectQuery(`SELECT \* FROM "deposit_requests" WHERE id = \$1 AND "deposit_requests"\."deleted_at" IS NULL ORDER BY "deposit_requests"\."id" LIMIT \$2`).
+		WithArgs("deposit-1", 1).
+		WillReturnRows(depositRows().
+			AddRow("deposit-1", "user-1", "150000.00", domainwallet.DepositStatusPending, domainwallet.DepositMethodManualAdmin, "", "", "", nil, nil, []byte("{}"), nil, now, nil, nil))
+	mock.ExpectQuery(`SELECT "id","name","email","phone","role","avatar_url" FROM "users" WHERE "users"\."id" = \$1`).
+		WithArgs("user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email", "phone", "role", "avatar_url"}).
+			AddRow("user-1", "Member One", "member@example.com", "08123456789", "member", ""))
+
+	deposit, err := repo.GetDepositWithUserByID(context.Background(), "deposit-1")
+	if err != nil {
+		t.Fatalf("GetDepositWithUserByID returned error: %v", err)
+	}
+	if deposit.User == nil || deposit.User.Name != "Member One" {
+		t.Fatalf("expected user summary, got %#v", deposit.User)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
 func walletRows() *sqlmock.Rows {
 	return sqlmock.NewRows([]string{
 		"id",

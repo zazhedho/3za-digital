@@ -21,6 +21,7 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'topup_wallets', 'Topup Wallets', 'wallets', 'topup'),
     (gen_random_uuid(), 'adjust_wallets', 'Adjust Wallets', 'wallets', 'adjust'),
     (gen_random_uuid(), 'list_admin_deposits', 'List Admin Deposits', 'admin_deposits', 'list'),
+    (gen_random_uuid(), 'view_admin_deposits', 'View Admin Deposit Detail', 'admin_deposits', 'view'),
     (gen_random_uuid(), 'approve_admin_deposits', 'Approve Admin Deposits', 'admin_deposits', 'approve'),
     (gen_random_uuid(), 'create_deposits', 'Create Deposits', 'deposits', 'create'),
     (gen_random_uuid(), 'list_deposits', 'List Deposits', 'deposits', 'list'),

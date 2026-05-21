@@ -107,6 +107,21 @@ func (h *WalletHandler) GetDeposits(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.PaginationResponse(http.StatusOK, int(total), params.Page, params.Limit, logID, data))
 }
 
+func (h *WalletHandler) GetDepositByID(ctx *gin.Context) {
+	logID := utils.GenerateLogId(ctx)
+	id, err := utils.ValidateUUID(ctx, logID)
+	if err != nil {
+		return
+	}
+
+	data, err := h.Service.GetDepositByID(ctx.Request.Context(), id)
+	if err != nil {
+		writeWalletError(ctx, "[WalletHandler][GetDepositByID]", logID, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, response.Response(http.StatusOK, "Get deposit successfully", logID, data))
+}
+
 func (h *WalletHandler) AdminTopup(ctx *gin.Context) {
 	logID := utils.GenerateLogId(ctx)
 	userID := strings.TrimSpace(ctx.Param("user_id"))

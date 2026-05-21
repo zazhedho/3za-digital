@@ -51,6 +51,10 @@ func (r *walletRepoStub) GetDepositByID(ctx context.Context, id string) (domainw
 	return domainwallet.DepositRequest{}, errors.New("not found")
 }
 
+func (r *walletRepoStub) GetDepositWithUserByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
+	return r.GetDepositByID(ctx, id)
+}
+
 func (r *walletRepoStub) CreateDepositRequest(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
 	r.createdDeposit = deposit
 	return deposit, nil
@@ -119,6 +123,24 @@ func TestGetDepositsUsesEmptyUserFilterForAdminList(t *testing.T) {
 	}
 	if repo.depositsUserID != "" {
 		t.Fatalf("expected empty user filter for admin list, got %q", repo.depositsUserID)
+	}
+}
+
+func TestGetDepositByIDUsesAdminDetailRepo(t *testing.T) {
+	repo := &walletRepoStub{deposit: domainwallet.DepositRequest{
+		Id:     "deposit-1",
+		UserID: "member-1",
+		Amount: "10000.00",
+		Status: domainwallet.DepositStatusPending,
+	}}
+	service := NewWalletService(repo)
+
+	deposit, err := service.GetDepositByID(context.Background(), "deposit-1")
+	if err != nil {
+		t.Fatalf("GetDepositByID returned error: %v", err)
+	}
+	if deposit.Id != "deposit-1" {
+		t.Fatalf("expected deposit-1, got %q", deposit.Id)
 	}
 }
 

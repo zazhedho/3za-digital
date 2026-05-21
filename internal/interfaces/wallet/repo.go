@@ -14,6 +14,7 @@ type RepoWalletInterface interface {
 	GetWallets(ctx context.Context, params filter.BaseParams) ([]domainwallet.Wallet, int64, error)
 	GetDeposits(ctx context.Context, userID string, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error)
 	GetDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error)
+	GetDepositWithUserByID(ctx context.Context, id string) (domainwallet.DepositRequest, error)
 	CreateDepositRequest(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error)
 	CreateManualTopup(ctx context.Context, deposit domainwallet.DepositRequest, description string, mainBalanceLimit string) (domainwallet.DepositRequest, error)
 	ApproveManualTopup(ctx context.Context, deposit domainwallet.DepositRequest, description string, mainBalanceLimit string) (domainwallet.DepositRequest, error)

@@ -15,6 +15,7 @@ type ServiceWalletInterface interface {
 	CreateDeposit(ctx context.Context, userID string, req dto.CreateDepositRequest) (domainwallet.DepositRequest, error)
 	GetMyDeposits(ctx context.Context, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error)
 	GetDeposits(ctx context.Context, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error)
+	GetDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error)
 	GetMyDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error)
 	AdminTopup(ctx context.Context, userID string, req dto.AdminWalletTopupRequest) (domainwallet.DepositRequest, error)
 	AdminApproveDeposit(ctx context.Context, depositID string, req dto.AdminDepositApproveRequest) (domainwallet.DepositRequest, error)

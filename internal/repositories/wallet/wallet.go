@@ -86,6 +86,17 @@ func (r *repo) GetDepositByID(ctx context.Context, id string) (domainwallet.Depo
 	return deposit, err
 }
 
+func (r *repo) GetDepositWithUserByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
+	var deposit domainwallet.DepositRequest
+	err := r.db.WithContext(ctx).
+		Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Select("id", "name", "email", "phone", "role", "avatar_url")
+		}).
+		Where("id = ?", id).
+		First(&deposit).Error
+	return deposit, err
+}
+
 func (r *repo) CreateDepositRequest(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
 	if deposit.Id == "" {
 		deposit.Id = utils.CreateUUID()

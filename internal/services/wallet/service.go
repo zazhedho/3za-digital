@@ -80,6 +80,10 @@ func (s *WalletService) GetDeposits(ctx context.Context, params filter.BaseParam
 	return s.Repo.GetDeposits(ctx, "", params)
 }
 
+func (s *WalletService) GetDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
+	return s.Repo.GetDepositWithUserByID(ctx, strings.TrimSpace(id))
+}
+
 func (s *WalletService) GetMyDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
 	userID := strings.TrimSpace(authscope.FromContext(ctx).UserID)
 	if userID == "" {

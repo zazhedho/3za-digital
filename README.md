@@ -261,6 +261,7 @@ Wallet and deposit routes:
 - `POST /api/admin/wallets/:user_id/topup`
 - `POST /api/admin/wallets/:user_id/adjust`
 - `GET /api/admin/deposits`
+- `GET /api/admin/deposits/:id`
 - `POST /api/admin/deposits/:id/approve`
 - `POST /api/deposits`
 - `GET /api/deposits`
@@ -323,7 +324,7 @@ Wallet rules:
 
 Deposit and payment gateway readiness:
 - Member deposit request creates a pending `deposit_requests` row with `manual_admin` method.
-- Admin/superadmin can list all deposit requests through `GET /api/admin/deposits`; list response includes safe user summary (`id`, `name`, `email`, `phone`, `role`, `avatar_url`) for frontend tables.
+- Admin/superadmin can list and view all deposit requests through `GET /api/admin/deposits` and `GET /api/admin/deposits/:id`; admin responses include safe user summary (`id`, `name`, `email`, `phone`, `role`, `avatar_url`) for frontend tables/detail views.
 - Admin manual topup can approve an existing pending deposit request or create a direct paid topup.
 - Admin topup and credit adjustment are blocked when resulting total active wallet liability would exceed live H2H main balance. Liability is active wallet `balance + locked_balance`.
 - If main balance is insufficient, the deposit stays `pending`; admin must top up H2H main balance first, then approve the deposit again.
