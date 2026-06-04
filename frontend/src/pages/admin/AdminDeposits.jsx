@@ -4,6 +4,12 @@ import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 
+const methodLabel = (method) => {
+  if (method === 'manual_admin') return 'Manual deposit'
+  if (method === 'payment_gateway') return 'Payment gateway'
+  return method || 'Deposit request'
+}
+
 const AdminDeposits = () => {
   const [rows, setRows] = useState([])
 
@@ -48,8 +54,11 @@ const AdminDeposits = () => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.user?.name || row.user_id}</td>
-                <td>{row.payment_reference || row.id}</td>
+                <td>{row.user?.name || row.user?.email || 'User'}</td>
+                <td>
+                  <strong>{methodLabel(row.method)}</strong>
+                  <div className="text-muted small">{row.payment_reference ? `Ref ${row.payment_reference}` : 'Waiting for reference'}</div>
+                </td>
                 <td>{row.amount}</td>
                 <td><span className="badge rounded-pill text-bg-light text-capitalize">{row.status}</span></td>
                 <td className="text-end">

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage } from '../../services/api'
+import BackButton from '../../components/common/BackButton'
 
 const SMMOrderDetail = () => {
   const { id } = useParams()
@@ -36,7 +37,10 @@ const SMMOrderDetail = () => {
     <div>
       <div className="page-toolbar">
         <div><h1>SMM Order Detail</h1><p>{order?.ref_id || id}</p></div>
-        <button className="btn btn-primary" onClick={refresh}>Refresh status</button>
+        <div className="toolbar-actions">
+          <BackButton fallback="/smm/orders" />
+          <button className="btn btn-primary" onClick={refresh}>Refresh status</button>
+        </div>
       </div>
       <div className="content-grid two">
         <section className="panel">

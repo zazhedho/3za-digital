@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
 import appConfigService from '../../services/appConfigService'
 import { getErrorMessage } from '../../services/api'
+import BackButton from '../../components/common/BackButton'
 
 const ConfigDetail = () => {
   const { id } = useParams()
@@ -20,7 +21,10 @@ const ConfigDetail = () => {
     <div>
       <div className="page-toolbar">
         <div><h1>Config Detail</h1><p>{config?.display_name || id}</p></div>
-        {hasPermission('configs', 'update') && <Link to={`/configs/${id}/edit`} className="btn btn-primary">Edit</Link>}
+        <div className="toolbar-actions">
+          <BackButton fallback="/configs" />
+          {hasPermission('configs', 'update') && <Link to={`/configs/${id}/edit`} className="btn btn-primary">Edit</Link>}
+        </div>
       </div>
       <section className="panel">
         <div className="detail-grid">

@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
 import userService from '../../services/userService'
 import { getErrorMessage } from '../../services/api'
+import BackButton from '../../components/common/BackButton'
 
 const UserDetail = () => {
   const { id } = useParams()
@@ -23,7 +24,10 @@ const UserDetail = () => {
           <h1>User Detail</h1>
           <p>{user?.email || id}</p>
         </div>
-        {hasPermission('users', 'update') && <Link to={`/users/${id}/edit`} className="btn btn-primary">Edit</Link>}
+        <div className="toolbar-actions">
+          <BackButton fallback="/users" />
+          {hasPermission('users', 'update') && <Link to={`/users/${id}/edit`} className="btn btn-primary">Edit</Link>}
+        </div>
       </div>
 
       <section className="panel">

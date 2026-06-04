@@ -632,6 +632,13 @@ body {
   gap: 10px;
 }
 
+.toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .metric-grid {
   display: grid;
   gap: 16px;
@@ -976,6 +983,42 @@ body {
   max-width: 420px;
   padding: 24px;
   width: 100%;
+}
+
+.modal-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-heading h5 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.modal-heading p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.modal-close {
+  align-items: center;
+  background: var(--surface-strong);
+  border: 0;
+  border-radius: 9999px;
+  color: var(--ink);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.deposit-modal {
+  max-width: 480px;
 }
 
 @media (max-width: 1100px) {

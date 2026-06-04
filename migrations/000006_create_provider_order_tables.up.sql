@@ -238,7 +238,8 @@ CREATE INDEX IF NOT EXISTS idx_deposit_requests_status ON deposit_requests(statu
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_method ON deposit_requests(method);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_deposit_requests_provider_reference_unique
     ON deposit_requests(provider, payment_reference)
-    WHERE provider IS NOT NULL AND payment_reference IS NOT NULL;
+    WHERE provider IS NOT NULL AND provider <> ''
+      AND payment_reference IS NOT NULL AND payment_reference <> '';
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_created_at ON deposit_requests(created_at);
 CREATE INDEX IF NOT EXISTS idx_deposit_requests_deleted_at ON deposit_requests(deleted_at);
 

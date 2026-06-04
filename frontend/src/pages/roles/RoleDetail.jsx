@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
 import roleService from '../../services/roleService'
 import { getErrorMessage } from '../../services/api'
+import BackButton from '../../components/common/BackButton'
 
 const RoleDetail = () => {
   const { id } = useParams()
@@ -23,7 +24,10 @@ const RoleDetail = () => {
           <h1>Role Detail</h1>
           <p>{role?.display_name || id}</p>
         </div>
-        {hasPermission('roles', 'update') && <Link to={`/roles/${id}/edit`} className="btn btn-primary">Edit</Link>}
+        <div className="toolbar-actions">
+          <BackButton fallback="/roles" />
+          {hasPermission('roles', 'update') && <Link to={`/roles/${id}/edit`} className="btn btn-primary">Edit</Link>}
+        </div>
       </div>
       <section className="panel">
         <div className="detail-grid">

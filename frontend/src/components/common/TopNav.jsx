@@ -15,7 +15,31 @@ const titleMap = {
   roles: 'Roles',
   configs: 'Configs',
   profile: 'Profile',
+  edit: 'Edit',
 }
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const getRouteTitle = (parts) => {
+  const path = `/${parts.join('/')}`
+  if (uuidPattern.test(parts.at(-1) || '')) {
+    if (path.startsWith('/admin/deposits/')) return 'Admin Deposit Detail'
+    if (path.startsWith('/smm/orders/')) return 'SMM Order Detail'
+    if (path.startsWith('/deposits/')) return 'Deposit Detail'
+    if (path.startsWith('/users/')) return 'User Detail'
+    if (path.startsWith('/roles/')) return 'Role Detail'
+    if (path.startsWith('/configs/')) return 'Config Detail'
+    if (path.startsWith('/menus/')) return 'Menu Detail'
+    return 'Detail'
+  }
+  if (parts.at(-1) === 'edit') {
+    const resource = titleMap[parts.at(-3)] || titleMap[parts.at(-2)] || 'Record'
+    return `Edit ${resource.replace(/s$/, '')}`
+  }
+  return parts.length ? titleMap[parts.at(-1)] || parts.at(-1) : 'Dashboard'
+}
+
+const getCrumbLabel = (crumb) => (uuidPattern.test(crumb) ? 'Detail' : (titleMap[crumb] || crumb))
 
 const TopNav = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
   const { user, logout } = useAuth()
@@ -24,7 +48,7 @@ const TopNav = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
   const [search, setSearch] = useState('')
 
   const parts = location.pathname.split('/').filter(Boolean)
-  const title = parts.length ? titleMap[parts.at(-1)] || parts.at(-1) : 'Dashboard'
+  const title = getRouteTitle(parts)
 
   useEffect(() => {
     const query = new URLSearchParams(location.search)
@@ -65,9 +89,9 @@ const TopNav = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
             {crumbs.map((crumb, index) => (
               <li className={`breadcrumb-item ${index === crumbs.length - 1 ? 'active' : ''}`} key={`${crumb}-${index}`}>
                 {index === crumbs.length - 1 ? (
-                  <span>{titleMap[crumb] || crumb}</span>
+                  <span>{getCrumbLabel(crumb)}</span>
                 ) : (
-                  <Link to="/dashboard">{titleMap[crumb] || crumb}</Link>
+                  <Link to="/dashboard">{getCrumbLabel(crumb)}</Link>
                 )}
               </li>
             ))}

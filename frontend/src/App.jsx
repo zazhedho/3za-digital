@@ -16,7 +16,7 @@ const SMMOrders = lazy(() => import('./pages/smm/SMMOrders'))
 const SMMOrderDetail = lazy(() => import('./pages/smm/SMMOrderDetail'))
 const SMMOrderForm = lazy(() => import('./pages/smm/SMMOrderForm'))
 const Wallet = lazy(() => import('./pages/wallet/Wallet'))
-const Deposits = lazy(() => import('./pages/wallet/Deposits'))
+const DepositList = lazy(() => import('./pages/wallet/DepositList'))
 const DepositDetail = lazy(() => import('./pages/wallet/DepositDetail'))
 const AdminWallets = lazy(() => import('./pages/admin/AdminWallets'))
 const AdminDeposits = lazy(() => import('./pages/admin/AdminDeposits'))
@@ -66,7 +66,7 @@ function App() {
               <Route path="/smm/orders/new" element={<Guard resource="smm_orders" action="create"><SMMOrderForm /></Guard>} />
               <Route path="/smm/orders/:id" element={<Guard resource="smm_orders" action="view"><SMMOrderDetail /></Guard>} />
               <Route path="/wallet" element={<Guard resource="wallet" action="view"><Wallet /></Guard>} />
-              <Route path="/deposits" element={<Guard resource="deposits" action="list"><Deposits /></Guard>} />
+              <Route path="/deposits" element={<Guard resource="deposits" action="list"><DepositList /></Guard>} />
               <Route path="/deposits/:id" element={<Guard resource="deposits" action="view"><DepositDetail /></Guard>} />
               <Route path="/admin/wallets" element={<Guard resource="wallets" action="list"><AdminWallets /></Guard>} />
               <Route path="/admin/deposits" element={<Guard resource="admin_deposits" action="list"><AdminDeposits /></Guard>} />

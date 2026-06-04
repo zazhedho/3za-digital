@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import DepositForm from './DepositForm'
 
 const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -10,10 +11,15 @@ const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 }).format(Number(value || 0))
 
-const Deposits = () => {
+const methodLabel = (method) => {
+  if (method === 'manual_admin') return 'Manual deposit'
+  if (method === 'payment_gateway') return 'Payment gateway'
+  return method || 'Deposit request'
+}
+
+const DepositList = () => {
   const [rows, setRows] = useState([])
-  const [form, setForm] = useState({ amount: '', provider: '' })
-  const [loading, setLoading] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
 
   const load = async () => {
     const response = await walletService.getMyDeposits({ limit: 30 })
@@ -24,19 +30,9 @@ const Deposits = () => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposits')))
   }, [])
 
-  const submit = async (event) => {
-    event.preventDefault()
-    setLoading(true)
-    try {
-      await walletService.createDeposit(form)
-      toast.success('Deposit request created')
-      setForm({ amount: '', provider: '' })
-      await load()
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to create deposit'))
-    } finally {
-      setLoading(false)
-    }
+  const handleCreated = async () => {
+    setShowCreate(false)
+    await load()
   }
 
   return (
@@ -46,15 +42,14 @@ const Deposits = () => {
           <h1>Deposits</h1>
           <p>Create deposit requests and track status.</p>
         </div>
+        <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
+          <i className="bi bi-plus-lg me-2"></i>Create deposit
+        </button>
       </div>
 
-      <section className="form-panel mb-4">
-        <form onSubmit={submit} className="inline-form">
-          <input className="form-control" placeholder="Amount" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required />
-          <input className="form-control" placeholder="Provider optional" value={form.provider} onChange={(event) => setForm({ ...form, provider: event.target.value })} />
-          <button className="btn btn-primary" disabled={loading}>{loading ? 'Creating...' : 'Create deposit'}</button>
-        </form>
-      </section>
+      {showCreate && (
+        <DepositForm onClose={() => setShowCreate(false)} onCreated={handleCreated} />
+      )}
 
       <section className="table-panel">
         <table className="table align-middle">
@@ -71,7 +66,10 @@ const Deposits = () => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.payment_reference || row.id}</td>
+                <td>
+                  <strong>{methodLabel(row.method)}</strong>
+                  <div className="text-muted small">{row.payment_reference ? `Ref ${row.payment_reference}` : 'Waiting for reference'}</div>
+                </td>
                 <td>{formatMoney(row.amount)}</td>
                 <td>{row.provider || '-'}</td>
                 <td><span className="badge rounded-pill text-bg-light text-capitalize">{row.status}</span></td>
@@ -87,4 +85,4 @@ const Deposits = () => {
   )
 }
 
-export default Deposits
+export default DepositList
