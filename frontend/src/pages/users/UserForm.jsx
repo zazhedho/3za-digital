@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import roleService from '../../services/roleService'
 import userService from '../../services/userService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import SearchableSelect from '../../components/common/SearchableSelect'
 
 const UserForm = () => {
   const { id } = useParams()
@@ -29,6 +30,10 @@ const UserForm = () => {
 
   const submit = async (event) => {
     event.preventDefault()
+    if (!form.role) {
+      toast.error('Role is required')
+      return
+    }
     try {
       const payload = { ...form }
       if (isEdit) delete payload.password
@@ -65,10 +70,17 @@ const UserForm = () => {
             </>
           )}
           <label className="form-label mt-3">Role</label>
-          <select className="form-select" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} required>
-            <option value="">Select role</option>
-            {roles.map((role) => <option key={role.id} value={role.name}>{role.display_name || role.name}</option>)}
-          </select>
+          <SearchableSelect
+            value={form.role}
+            onChange={(roleName) => setForm({ ...form, role: roleName })}
+            placeholder="Select role"
+            searchPlaceholder="Search role"
+            options={roles.map((role) => ({
+              value: role.name,
+              label: role.display_name || role.name,
+              description: role.name,
+            }))}
+          />
           <div className="d-flex gap-2 mt-4">
             <button className="btn btn-primary">Save</button>
             <button className="btn btn-outline-secondary" type="button" onClick={() => navigate(-1)}>Cancel</button>

@@ -73,6 +73,159 @@ body {
   box-shadow: 0 0 0 4px rgba(255, 56, 92, 0.12);
 }
 
+.searchable-select {
+  position: relative;
+  width: 100%;
+  margin-right: 8px;
+}
+
+.searchable-select-trigger {
+  align-items: center;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--ink);
+  display: flex;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 8px 12px 8px 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.searchable-select-trigger.active,
+.searchable-select-trigger:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(255, 56, 92, 0.12);
+  outline: 0;
+}
+
+.searchable-select-trigger span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.searchable-select-arrow {
+  align-items: center;
+  background: var(--surface-soft);
+  border-radius: 9999px;
+  color: var(--muted);
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  margin-left: 16px;
+  margin-right: 2px;
+  width: 34px;
+}
+
+.searchable-select-trigger.active .searchable-select-arrow {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.searchable-select-arrow i {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.searchable-select-trigger small,
+.searchable-select-option small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.searchable-select-meta {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.searchable-select-meta em {
+  background: var(--surface-soft);
+  border-radius: 9999px;
+  color: var(--body);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 4px 8px;
+}
+
+.searchable-select-menu {
+  background: var(--canvas);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+  left: 0;
+  max-height: 320px;
+  overflow: hidden;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 1500;
+}
+
+.searchable-select-input {
+  align-items: center;
+  background: var(--surface-soft);
+  border-radius: 9999px;
+  display: flex;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.searchable-select-input input {
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  outline: 0;
+  width: 100%;
+}
+
+.searchable-select-options {
+  max-height: 248px;
+  overflow-y: auto;
+  padding-top: 8px;
+}
+
+.searchable-select-option {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.searchable-select-option:hover,
+.searchable-select-option.selected {
+  background: var(--surface-soft);
+}
+
+.searchable-select-option.selected span {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.searchable-select-option.selected .searchable-select-meta em {
+  background: #fff0f3;
+  color: var(--primary-active);
+}
+
+.searchable-select-empty {
+  color: var(--muted);
+  padding: 16px 12px;
+  text-align: center;
+}
+
 .loading-screen,
 .empty-screen {
   align-items: center;
@@ -379,6 +532,20 @@ body {
   width: 100%;
 }
 
+.topnav-search-button {
+  align-items: center;
+  background: var(--primary);
+  border: 0;
+  border-radius: 9999px;
+  color: #ffffff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 34px;
+  justify-content: center;
+  margin-right: -10px;
+  width: 34px;
+}
+
 .topnav-user {
   align-items: center;
   display: flex;
@@ -633,25 +800,94 @@ body {
   border-radius: 9999px;
   box-shadow: var(--shadow-sm);
   display: flex;
-  gap: 12px;
+  gap: 0;
   margin-bottom: 20px;
   min-height: 64px;
-  padding: 8px 10px 8px 22px;
+  padding: 8px;
+  width: min(100%, 820px);
+}
+
+.filter-pill > i {
+  color: var(--muted);
+  flex: 0 0 auto;
+  margin-left: 14px;
+  margin-right: 8px;
 }
 
 .filter-pill input,
 .filter-pill select {
+  background: transparent;
   border: 0;
+  color: var(--ink);
+  min-height: 48px;
   min-width: 0;
   outline: 0;
+  padding: 0 18px;
 }
 
 .filter-pill input {
   flex: 1;
 }
 
+.filter-pill select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  border-left: 1px solid var(--hairline-soft);
+  flex: 0 0 180px;
+  margin-right: 10px;
+  padding-right: 42px;
+}
+
+.filter-pill .btn {
+  border-radius: 9999px;
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+.filter-pill .btn-dark {
+  --bs-btn-bg: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary-active);
+  --bs-btn-hover-border-color: var(--primary-active);
+}
+
 .filter-pill.compact {
   max-width: 640px;
+}
+
+.filter-pill.status-filter {
+  max-width: 720px;
+  min-height: 56px;
+  padding: 6px;
+}
+
+.filter-pill.status-filter select {
+  border-left: 0;
+  flex: 0 0 170px;
+  min-height: 44px;
+  margin-right: 10px;
+  padding-left: 10px;
+  padding-right: 42px;
+}
+
+.filter-pill.status-filter input {
+  flex: 1;
+  min-height: 44px;
+}
+
+.filter-pill.status-filter .btn {
+  min-height: 44px;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .table-panel {
@@ -676,6 +912,43 @@ body {
 .table tbody td {
   border-color: var(--hairline-soft);
   padding: 16px 18px;
+}
+
+.pagination-bar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 4px 0;
+}
+
+.pagination-summary {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.pagination-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.pagination-actions span {
+  color: var(--muted);
+  font-size: 14px;
+  min-width: 92px;
+  text-align: center;
+}
+
+.pagination-actions .btn {
+  align-items: center;
+  border-radius: 9999px;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0;
+  width: 36px;
 }
 
 .inline-form {
@@ -830,13 +1103,34 @@ body {
     align-items: stretch;
     border-radius: 20px;
     flex-direction: column;
+    gap: 10px;
     padding: 16px;
+  }
+
+  .filter-pill > i {
+    display: none;
   }
 
   .filter-pill .btn,
   .filter-pill select,
   .filter-pill input {
+    border: 1px solid var(--hairline-soft);
+    border-radius: 9999px;
+    min-height: 46px;
     width: 100%;
+  }
+
+  .filter-pill select {
+    flex-basis: auto;
+    margin-right: 0;
+  }
+
+  .filter-pill.status-filter {
+    max-width: none;
+  }
+
+  .filter-pill.status-filter select {
+    flex-basis: auto;
   }
 
   .page-hero h1,

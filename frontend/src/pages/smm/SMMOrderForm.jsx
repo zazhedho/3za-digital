@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import SearchableSelect from '../../components/common/SearchableSelect'
+
+const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  maximumFractionDigits: 0,
+}).format(Number(value || 0))
 
 const SMMOrderForm = () => {
   const [services, setServices] = useState([])
@@ -18,6 +25,10 @@ const SMMOrderForm = () => {
 
   const submit = async (event) => {
     event.preventDefault()
+    if (!form.service_id) {
+      toast.error('Service is required')
+      return
+    }
     setLoading(true)
     try {
       await smmService.createOrder({ ...form, quantity: Number(form.quantity) })
@@ -42,12 +53,22 @@ const SMMOrderForm = () => {
       <section className="form-panel">
         <form onSubmit={submit}>
           <label className="form-label">Service</label>
-          <select className="form-select" value={form.service_id} onChange={(event) => setForm({ ...form, service_id: event.target.value })} required>
-            <option value="">Select service</option>
-            {services.map((service) => (
-              <option value={service.id} key={service.id}>{service.name} - {service.price}</option>
-            ))}
-          </select>
+          <SearchableSelect
+            value={form.service_id}
+            onChange={(serviceId) => setForm({ ...form, service_id: serviceId })}
+            placeholder="Select service"
+            searchPlaceholder="Search service name, platform, category"
+            options={services.map((service) => ({
+              value: service.id,
+              label: service.name,
+              description: service.category || service.brand || 'SMM service',
+              meta: [
+                { label: 'ID', value: service.provider_service_id || '-' },
+                { label: 'Platform', value: service.platform || '-' },
+                { label: 'Price/1k', value: formatMoney(service.price) },
+              ],
+            }))}
+          />
 
           <label className="form-label mt-3">Target</label>
           <input className="form-control" value={form.target} onChange={(event) => setForm({ ...form, target: event.target.value })} required />

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 
 const titleMap = {
@@ -26,12 +26,26 @@ const TopNav = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
   const parts = location.pathname.split('/').filter(Boolean)
   const title = parts.length ? titleMap[parts.at(-1)] || parts.at(-1) : 'Dashboard'
 
+  useEffect(() => {
+    const query = new URLSearchParams(location.search)
+    setSearch(query.get('search') || '')
+  }, [location.search])
+
   const handleLogout = async () => {
     await logout()
     navigate('/login')
   }
 
   const crumbs = ['dashboard', ...parts.filter((part) => part !== 'dashboard')]
+
+  const submitSearch = (event) => {
+    event.preventDefault()
+    const value = search.trim()
+    if (!value) return
+
+    const targetPath = location.pathname.startsWith('/smm/orders') ? '/smm/orders' : '/smm/services'
+    navigate(`${targetPath}?search=${encodeURIComponent(value)}`)
+  }
 
   return (
     <header className="modern-topnav">
@@ -61,20 +75,18 @@ const TopNav = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
         </nav>
       </div>
 
-      <div className="topnav-search">
+      <form className="topnav-search" onSubmit={submitSearch}>
         <i className="bi bi-search"></i>
         <input
           type="search"
           placeholder="Search services or orders"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && search.trim()) {
-              navigate(`/smm/services?search=${encodeURIComponent(search.trim())}`)
-            }
-          }}
         />
-      </div>
+        <button className="topnav-search-button" type="submit" aria-label="Search">
+          <i className="bi bi-arrow-right"></i>
+        </button>
+      </form>
 
       <div className="topnav-user">
         <div className="user-info">

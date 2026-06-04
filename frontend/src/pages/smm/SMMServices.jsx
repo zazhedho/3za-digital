@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import PaginationBar from '../../components/common/PaginationBar'
 
 const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -15,24 +16,34 @@ const SMMServices = () => {
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState(params.get('search') || '')
   const [platform, setPlatform] = useState('')
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setSearch(params.get('search') || '')
+    setPage(1)
+  }, [params])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const response = await smmService.getServices({
         search,
+        page,
         limit: 50,
         'filters[platform]': platform || undefined,
         'filters[is_active]': 'true',
       })
-      setRows(getListPayload(response).rows)
+      const payload = getListPayload(response)
+      setRows(payload.rows)
+      setPagination(payload)
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to load services'))
     } finally {
       setLoading(false)
     }
-  }, [platform, search])
+  }, [page, platform, search])
 
   useEffect(() => {
     load()
@@ -60,8 +71,8 @@ const SMMServices = () => {
 
       <div className="filter-pill">
         <i className="bi bi-search"></i>
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search service name" />
-        <select value={platform} onChange={(event) => setPlatform(event.target.value)}>
+        <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search service name" />
+        <select value={platform} onChange={(event) => { setPlatform(event.target.value); setPage(1) }}>
           <option value="">All platforms</option>
           <option value="instagram">Instagram</option>
           <option value="tiktok">TikTok</option>
@@ -75,21 +86,20 @@ const SMMServices = () => {
         <table className="table align-middle">
           <thead>
             <tr>
-              <th>Service</th>
+              <th>ID</th>
+              <th>Service Name</th>
               <th>Platform</th>
               <th>Category</th>
               <th>Min/Max</th>
-              <th>Price</th>
+              <th>Price / 1k</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>
-                  <strong>{row.name}</strong>
-                  <div className="text-muted small">{row.provider_service_id}</div>
-                </td>
+                <td><span className="text-muted small">{row.provider_service_id}</span></td>
+                <td><strong>{row.name}</strong></td>
                 <td>{row.platform || '-'}</td>
                 <td>{row.category || row.brand || '-'}</td>
                 <td>{row.min_quantity || '-'} / {row.max_quantity || '-'}</td>
@@ -98,11 +108,12 @@ const SMMServices = () => {
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan="6" className="text-center text-muted py-5">{loading ? 'Loading...' : 'No services found'}</td></tr>
+              <tr><td colSpan="7" className="text-center text-muted py-5">{loading ? 'Loading...' : 'No services found'}</td></tr>
             )}
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
     </div>
   )
 }

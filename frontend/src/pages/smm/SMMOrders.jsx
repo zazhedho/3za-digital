@@ -1,28 +1,42 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import PaginationBar from '../../components/common/PaginationBar'
 
 const SMMOrders = () => {
+  const [params] = useSearchParams()
   const [rows, setRows] = useState([])
+  const [search, setSearch] = useState(params.get('search') || '')
   const [status, setStatus] = useState('')
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setSearch(params.get('search') || '')
+    setPage(1)
+  }, [params])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const response = await smmService.getOrders({
+        search,
+        page,
         limit: 50,
         'filters[status]': status || undefined,
       })
-      setRows(getListPayload(response).rows)
+      const payload = getListPayload(response)
+      setRows(payload.rows)
+      setPagination(payload)
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to load orders'))
     } finally {
       setLoading(false)
     }
-  }, [status])
+  }, [page, search, status])
 
   useEffect(() => {
     load()
@@ -48,8 +62,10 @@ const SMMOrders = () => {
         <Link to="/smm/orders/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New order</Link>
       </div>
 
-      <div className="filter-pill compact">
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+      <div className="filter-pill compact status-filter">
+        <i className="bi bi-funnel"></i>
+        <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search ref, target, or service" />
+        <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1) }}>
           <option value="">All status</option>
           <option value="pending">Pending</option>
           <option value="processing">Processing</option>
@@ -96,6 +112,7 @@ const SMMOrders = () => {
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
     </div>
   )
 }
