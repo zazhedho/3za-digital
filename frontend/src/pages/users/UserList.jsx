@@ -1,0 +1,69 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { toast } from 'react-toastify'
+import { useAuth } from '../../contexts/AuthContext'
+import userService from '../../services/userService'
+import { getErrorMessage, getListPayload } from '../../services/api'
+
+const UserList = () => {
+  const { hasPermission } = useAuth()
+  const [rows, setRows] = useState([])
+  const [search, setSearch] = useState('')
+
+  const load = useCallback(async () => {
+    const response = await userService.getAll({ search, limit: 50 })
+    setRows(getListPayload(response).rows)
+  }, [search])
+
+  useEffect(() => {
+    load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load users')))
+  }, [load])
+
+  return (
+    <div>
+      <div className="page-toolbar">
+        <div>
+          <h1>Users</h1>
+          <p>Registered accounts and roles.</p>
+        </div>
+        {hasPermission('users', 'create') && <Link to="/users/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New user</Link>}
+      </div>
+
+      <div className="filter-pill compact">
+        <i className="bi bi-search"></i>
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search user" />
+        <button className="btn btn-dark" onClick={load}>Apply</button>
+      </div>
+
+      <section className="table-panel">
+        <table className="table align-middle">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>{row.name || '-'}</td>
+                <td>{row.email}</td>
+                <td>{row.role}</td>
+                <td><span className="badge rounded-pill text-bg-light">{row.status || (row.is_active === false ? 'inactive' : 'active')}</span></td>
+                <td className="text-end">
+                  {hasPermission('users', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/users/${row.id}`}>Detail</Link>}
+                </td>
+              </tr>
+            ))}
+            {!rows.length && <tr><td colSpan="5" className="text-center text-muted py-5">No users found</td></tr>}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  )
+}
+
+export default UserList
