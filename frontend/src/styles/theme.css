@@ -907,13 +907,15 @@ body {
 }
 
 .detail-grid span,
-.detail-grid strong {
+.detail-grid strong,
+.detail-grid .detail-value {
   border-top: 1px solid var(--hairline-soft);
-  padding: 14px 0;
+  padding: 14px 12px;
 }
 
 .detail-grid span:first-child,
-.detail-grid span:first-child + strong {
+.detail-grid span:first-child + strong,
+.detail-grid span:first-child + .detail-value {
   border-top: 0;
 }
 
@@ -922,7 +924,8 @@ body {
   font-weight: 400;
 }
 
-.detail-grid strong {
+.detail-grid strong,
+.detail-grid .detail-value {
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -933,12 +936,27 @@ body {
 }
 
 .detail-grid-compact span,
-.detail-grid-compact strong {
-  padding: 8px 0;
+.detail-grid-compact strong,
+.detail-grid-compact .detail-value {
+  padding: 8px 12px;
+}
+
+.detail-grid-compact .detail-value {
+  padding-bottom: 10px;
+  padding-top: 10px;
 }
 
 .detail-grid-compact strong {
   font-weight: 600;
+}
+
+.detail-value {
+  align-items: center;
+  display: flex;
+}
+
+.detail-value .status-badge {
+  margin: 4px 0;
 }
 
 .wallet-card {
@@ -1214,6 +1232,78 @@ body {
   padding: 7px 9px;
 }
 
+.status-badge {
+  align-items: center;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 650;
+  gap: 7px;
+  line-height: 1;
+  min-height: 28px;
+  padding: 6px 10px 6px 8px;
+  white-space: nowrap;
+}
+
+.status-badge::before {
+  background: currentColor;
+  border-radius: 999px;
+  content: "";
+  display: inline-block;
+  height: 7px;
+  width: 7px;
+}
+
+.status-badge-detail {
+  font-size: 13px;
+  min-height: 30px;
+  padding: 7px 12px 7px 9px;
+}
+
+.status-paid {
+  background: #f3fbf6;
+  border-color: #cdeed9;
+  color: #157347;
+}
+
+.status-unpaid {
+  background: #fffbeb;
+  border-color: #f3df9d;
+  color: #a16207;
+}
+
+.status-pending {
+  background: #f3f7ff;
+  border-color: #ccdcff;
+  color: #1b5dbf;
+}
+
+.status-expired {
+  background: #f7f8f9;
+  border-color: #dfe3e7;
+  color: #667085;
+}
+
+.status-failed {
+  background: #fff5f5;
+  border-color: #f2c7c7;
+  color: #b42318;
+}
+
+.status-cancelled {
+  background: #faf5ff;
+  border-color: #e7d2fe;
+  color: #7e22ce;
+}
+
+.status-default {
+  background: var(--canvas);
+  border-color: var(--hairline-soft);
+  color: var(--muted);
+}
+
 .app-table .empty-cell {
   color: var(--muted);
   padding: 46px 16px;
@@ -1478,11 +1568,16 @@ body {
   }
 
   .detail-grid span {
+    padding-left: 10px;
+    padding-right: 10px;
     padding-bottom: 2px;
   }
 
-  .detail-grid strong {
+  .detail-grid strong,
+  .detail-grid .detail-value {
     border-top: 0;
+    padding-left: 10px;
+    padding-right: 10px;
     padding-top: 0;
   }
 

@@ -90,7 +90,7 @@ type PaymentStatusData struct {
 	Status        string         `json:"status"`
 	Amount        FlexibleInt64  `json:"amount"`
 	Name          string         `json:"name"`
-	PaidAt        string         `json:"paid_at"`
+	PaidAt        FlexibleString `json:"paid_at"`
 	CreatedAt     string         `json:"created_at"`
 	UpdatedAt     string         `json:"updated_at"`
 }

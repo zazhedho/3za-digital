@@ -5,7 +5,7 @@ import walletService from '../../services/walletService'
 import { getErrorMessage } from '../../services/api'
 import BackButton from '../../components/common/BackButton'
 import QRISPaymentBox from '../../components/common/QRISPaymentBox'
-import { depositMetadata, depositPayableAmount, formatMoney, isQRISDeposit, qrisImageURL, qrisString } from '../../utils/deposit'
+import { depositMetadata, depositPayableAmount, depositStatus, depositStatusClass, formatMoney, isQRISDeposit, qrisImageURL, qrisString } from '../../utils/deposit'
 
 const methodLabel = (method) => {
   if (method === 'manual_admin') return 'Manual deposit'
@@ -43,7 +43,7 @@ const AdminDepositDetail = () => {
   return (
     <div>
       <div className="page-toolbar">
-        <div><h1>Admin Deposit Detail</h1><p>{deposit ? `${methodLabel(deposit.method)} - ${deposit.status || 'pending'}` : 'Loading deposit'}</p></div>
+        <div><h1>Admin Deposit Detail</h1><p>{deposit ? `${methodLabel(deposit.method)} - ${depositStatus(deposit)}` : 'Loading deposit'}</p></div>
         <div className="toolbar-actions">
           <BackButton fallback="/admin/deposits" />
           <button className="btn btn-primary" disabled={deposit?.status !== 'pending'} onClick={approve}>Approve</button>
@@ -57,7 +57,7 @@ const AdminDepositDetail = () => {
           {qris && <><span>Topup Fee</span><strong>{formatMoney(metadata.fee_amount)} ({metadata.fee_percent || 5}%)</strong></>}
           {qris && <><span>Kode Unik</span><strong>{formatMoney(metadata.unique_code_amount)}</strong></>}
           {qris && <><span>Total Pay</span><strong>{formatMoney(depositPayableAmount(deposit))}</strong></>}
-          <span>Status</span><strong>{deposit?.status || '-'}</strong>
+          <span>Status</span><div className="detail-value"><span className={`status-badge status-badge-detail ${depositStatusClass(deposit)} text-capitalize`}>{depositStatus(deposit)}</span></div>
           <span>Method</span><strong>{methodLabel(deposit?.method)}</strong>
           <span>Provider</span><strong>{deposit?.provider || '-'}</strong>
           {deposit?.payment_reference && <><span>Reference</span><strong>{deposit.payment_reference}</strong></>}

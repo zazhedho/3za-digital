@@ -4,7 +4,7 @@ import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import DepositForm from './DepositForm'
-import { depositPayableAmount, formatMoney, isQRISDeposit } from '../../utils/deposit'
+import { depositPayableAmount, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
 
 const methodLabel = (method) => {
   if (method === 'manual_admin') return 'Manual deposit'
@@ -73,7 +73,7 @@ const DepositList = () => {
                 <td className="table-number">{formatMoney(row.amount)}</td>
                 <td className="table-number">{isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : '-'}</td>
                 <td className="text-capitalize table-nowrap">{row.provider || '-'}</td>
-                <td><span className="badge rounded-pill text-bg-light text-capitalize">{row.status}</span></td>
+                <td><span className={`status-badge ${depositStatusClass(row)} text-capitalize`}>{depositStatus(row)}</span></td>
                 <td className="table-date">{row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
                 <td className="text-end"><span className="table-actions"><Link className="btn btn-sm btn-outline-dark" to={`/deposits/${row.id}`}>Detail</Link></span></td>
               </tr>

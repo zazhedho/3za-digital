@@ -18,8 +18,15 @@ import (
 
 type walletRepoStub struct {
 	deposit              domainwallet.DepositRequest
+	deposits             []domainwallet.DepositRequest
 	depositsUserID       string
 	createdDeposit       domainwallet.DepositRequest
+	updatedProvider      string
+	updatedReference     string
+	updatedStatus        string
+	completedProvider    string
+	completedReference   string
+	completedAmount      string
 	manualTopupLimit     string
 	adjustLimit          string
 	createManualTopupErr error
@@ -43,7 +50,7 @@ func (r *walletRepoStub) GetWallets(ctx context.Context, params filter.BaseParam
 
 func (r *walletRepoStub) GetDeposits(ctx context.Context, userID string, params filter.BaseParams) ([]domainwallet.DepositRequest, int64, error) {
 	r.depositsUserID = userID
-	return nil, 0, nil
+	return r.deposits, int64(len(r.deposits)), nil
 }
 
 func (r *walletRepoStub) GetDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
@@ -80,11 +87,31 @@ func (r *walletRepoStub) AdjustWallet(ctx context.Context, userID, direction, am
 }
 
 func (r *walletRepoStub) UpdateDepositStatusByPaymentReference(ctx context.Context, provider, paymentReference, status string, log domainwallet.PaymentGatewayLog) (domainwallet.DepositRequest, error) {
-	return domainwallet.DepositRequest{}, nil
+	r.updatedProvider = provider
+	r.updatedReference = paymentReference
+	r.updatedStatus = status
+	for _, deposit := range r.deposits {
+		if deposit.Provider == provider && deposit.PaymentReference == paymentReference {
+			deposit.Status = status
+			return deposit, nil
+		}
+	}
+	r.deposit.Status = status
+	return r.deposit, nil
 }
 
 func (r *walletRepoStub) CompleteDepositByPaymentReference(ctx context.Context, provider, paymentReference, amount string, log domainwallet.PaymentGatewayLog) (domainwallet.DepositRequest, error) {
-	return domainwallet.DepositRequest{}, nil
+	r.completedProvider = provider
+	r.completedReference = paymentReference
+	r.completedAmount = amount
+	for _, deposit := range r.deposits {
+		if deposit.Provider == provider && deposit.PaymentReference == paymentReference {
+			deposit.Status = domainwallet.DepositStatusPaid
+			return deposit, nil
+		}
+	}
+	r.deposit.Status = domainwallet.DepositStatusPaid
+	return r.deposit, nil
 }
 
 type mainBalanceProviderStub struct {
@@ -100,9 +127,11 @@ func (p mainBalanceProviderStub) GetH2HBalance(ctx context.Context) (domainprovi
 }
 
 type qrisProviderStub struct {
-	req      qrisly.GenerateQRISRequest
-	response *qrisly.GenerateQRISResponse
-	err      error
+	req             qrisly.GenerateQRISRequest
+	statusHistoryID string
+	response        *qrisly.GenerateQRISResponse
+	statusResponse  *qrisly.PaymentStatusResponse
+	err             error
 }
 
 func (p *qrisProviderStub) GenerateQRIS(ctx context.Context, req qrisly.GenerateQRISRequest) (*qrisly.GenerateQRISResponse, error) {
@@ -111,6 +140,14 @@ func (p *qrisProviderStub) GenerateQRIS(ctx context.Context, req qrisly.Generate
 		return nil, p.err
 	}
 	return p.response, nil
+}
+
+func (p *qrisProviderStub) GetPaymentStatus(ctx context.Context, historyID string) (*qrisly.PaymentStatusResponse, error) {
+	p.statusHistoryID = historyID
+	if p.err != nil {
+		return nil, p.err
+	}
+	return p.statusResponse, nil
 }
 
 func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
@@ -214,6 +251,109 @@ func TestGetDepositsUsesEmptyUserFilterForAdminList(t *testing.T) {
 	}
 	if repo.depositsUserID != "" {
 		t.Fatalf("expected empty user filter for admin list, got %q", repo.depositsUserID)
+	}
+}
+
+func TestGetMyDepositsSyncsQRISLYUnpaidStatusForDisplay(t *testing.T) {
+	repo := &walletRepoStub{deposits: []domainwallet.DepositRequest{{
+		Id:               "deposit-1",
+		UserID:           "member-1",
+		Amount:           "10000.00",
+		Status:           domainwallet.DepositStatusPending,
+		Provider:         domainwallet.DepositProviderQRISLY,
+		PaymentReference: "2847",
+		Metadata:         utilsJSON(map[string]string{"payable_amount": "10002.00", "qrisly_history_id": "2847"}),
+	}}}
+	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
+		Data: qrisly.PaymentStatusData{
+			HistoryID:     qrisly.FlexibleString("2847"),
+			PaymentStatus: "unpaid",
+			Amount:        qrisly.FlexibleInt64(10002),
+		},
+	}}
+	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
+
+	deposits, _, err := service.GetMyDeposits(testUserContext("member-1"), filter.BaseParams{})
+	if err != nil {
+		t.Fatalf("GetMyDeposits returned error: %v", err)
+	}
+	if qrisProvider.statusHistoryID != "2847" {
+		t.Fatalf("expected QRISLY history id 2847, got %q", qrisProvider.statusHistoryID)
+	}
+	if deposits[0].Status != domainwallet.DepositStatusPending {
+		t.Fatalf("expected local pending status, got %q", deposits[0].Status)
+	}
+	var metadata map[string]string
+	if err := json.Unmarshal(deposits[0].Metadata, &metadata); err != nil {
+		t.Fatalf("unmarshal metadata: %v", err)
+	}
+	if metadata["qrisly_status"] != "unpaid" {
+		t.Fatalf("expected qrisly_status unpaid, got %+v", metadata)
+	}
+	if repo.updatedStatus != "" || repo.completedAmount != "" {
+		t.Fatalf("expected no final repo update, got status=%q amount=%q", repo.updatedStatus, repo.completedAmount)
+	}
+}
+
+func TestGetMyDepositsCompletesPaidQRISLYDeposit(t *testing.T) {
+	repo := &walletRepoStub{deposits: []domainwallet.DepositRequest{{
+		Id:               "deposit-1",
+		UserID:           "member-1",
+		Amount:           "10000.00",
+		Status:           domainwallet.DepositStatusPending,
+		Provider:         domainwallet.DepositProviderQRISLY,
+		PaymentReference: "2847",
+		Metadata:         utilsJSON(map[string]string{"payable_amount": "10002.00", "qrisly_history_id": "2847"}),
+	}}}
+	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
+		Data: qrisly.PaymentStatusData{
+			HistoryID:     qrisly.FlexibleString("2847"),
+			PaymentStatus: "paid",
+			Amount:        qrisly.FlexibleInt64(10002),
+		},
+	}}
+	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
+
+	deposits, _, err := service.GetMyDeposits(testUserContext("member-1"), filter.BaseParams{})
+	if err != nil {
+		t.Fatalf("GetMyDeposits returned error: %v", err)
+	}
+	if deposits[0].Status != domainwallet.DepositStatusPaid {
+		t.Fatalf("expected paid status, got %q", deposits[0].Status)
+	}
+	if repo.completedProvider != domainwallet.DepositProviderQRISLY || repo.completedReference != "2847" || repo.completedAmount != "10002.00" {
+		t.Fatalf("expected completion by qrisly ref amount, got provider=%q ref=%q amount=%q", repo.completedProvider, repo.completedReference, repo.completedAmount)
+	}
+}
+
+func TestGetMyDepositsExpiresQRISLYDeposit(t *testing.T) {
+	repo := &walletRepoStub{deposits: []domainwallet.DepositRequest{{
+		Id:               "deposit-1",
+		UserID:           "member-1",
+		Amount:           "10000.00",
+		Status:           domainwallet.DepositStatusPending,
+		Provider:         domainwallet.DepositProviderQRISLY,
+		PaymentReference: "2847",
+		Metadata:         utilsJSON(map[string]string{"payable_amount": "10002.00", "qrisly_history_id": "2847"}),
+	}}}
+	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
+		Data: qrisly.PaymentStatusData{
+			HistoryID:     qrisly.FlexibleString("2847"),
+			PaymentStatus: "expired",
+			Amount:        qrisly.FlexibleInt64(10002),
+		},
+	}}
+	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
+
+	deposits, _, err := service.GetMyDeposits(testUserContext("member-1"), filter.BaseParams{})
+	if err != nil {
+		t.Fatalf("GetMyDeposits returned error: %v", err)
+	}
+	if deposits[0].Status != domainwallet.DepositStatusExpired {
+		t.Fatalf("expected expired status, got %q", deposits[0].Status)
+	}
+	if repo.updatedProvider != domainwallet.DepositProviderQRISLY || repo.updatedReference != "2847" || repo.updatedStatus != domainwallet.DepositStatusExpired {
+		t.Fatalf("expected expired update, got provider=%q ref=%q status=%q", repo.updatedProvider, repo.updatedReference, repo.updatedStatus)
 	}
 }
 
@@ -443,4 +583,9 @@ func testActorContext(userID string) context.Context {
 
 func testUserContext(userID string) context.Context {
 	return authscope.WithContext(context.Background(), authscope.New(userID, "member", "member", nil))
+}
+
+func utilsJSON(value interface{}) json.RawMessage {
+	raw, _ := json.Marshal(value)
+	return raw
 }

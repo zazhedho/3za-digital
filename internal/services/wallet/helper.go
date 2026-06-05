@@ -57,6 +57,8 @@ func isDepositWebhookStatus(status string) bool {
 func normalizeGatewayStatus(status string) string {
 	status = utils.NormalizeKey(status)
 	switch status {
+	case "pending", "unpaid":
+		return domainwallet.DepositStatusPending
 	case "paid", "success", "settlement", "capture":
 		return domainwallet.DepositStatusPaid
 	case "expired":
