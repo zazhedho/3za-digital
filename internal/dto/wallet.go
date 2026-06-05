@@ -5,6 +5,11 @@ type CreateDepositRequest struct {
 	Provider string `json:"provider"`
 }
 
+type DepositSettingsResponse struct {
+	MinimumAmount  string `json:"minimum_amount"`
+	QRISFeePercent string `json:"qris_fee_percent"`
+}
+
 type AdminWalletTopupRequest struct {
 	Amount           string `json:"amount"`
 	DepositRequestID string `json:"deposit_request_id"`

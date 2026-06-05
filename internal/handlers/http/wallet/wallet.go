@@ -92,6 +92,16 @@ func (h *WalletHandler) GetWallets(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.PaginationResponse(http.StatusOK, int(total), params.Page, params.Limit, logID, data))
 }
 
+func (h *WalletHandler) GetDepositSettings(ctx *gin.Context) {
+	logID := utils.GenerateLogId(ctx)
+	data, err := h.Service.GetDepositSettings(ctx.Request.Context())
+	if err != nil {
+		writeWalletError(ctx, "[WalletHandler][GetDepositSettings]", logID, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, response.Response(http.StatusOK, "Get deposit settings successfully", logID, data))
+}
+
 func (h *WalletHandler) GetDeposits(ctx *gin.Context) {
 	logID := utils.GenerateLogId(ctx)
 	params, err := filter.GetBaseParams(ctx, "created_at", "desc", 50)

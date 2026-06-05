@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 const QRISVisual = ({ image, payload, size = 180 }) => {
   if (image) return <img src={image} alt="QRIS payment code" />
   if (payload) return <QRCodeSVG value={payload} size={size} level="M" includeMargin />
-  return <div className="qris-placeholder">QRIS belum tersedia</div>
+  return <div className="qris-placeholder">QRIS is not available yet</div>
 }
 
 const QRISPaymentBox = ({ amount, description, image, payload }) => {
@@ -15,12 +15,12 @@ const QRISPaymentBox = ({ amount, description, image, payload }) => {
     <>
       <div className="qris-summary">
         <div>
-          <span>Total Bayar</span>
+          <span>Total Payment</span>
           <strong>{amount}</strong>
           {description && <p>{description}</p>}
         </div>
         <button className="btn btn-primary" type="button" disabled={!canOpen} onClick={() => setOpen(true)}>
-          Lihat QRIS
+          View QRIS
         </button>
       </div>
       {open && (
@@ -29,7 +29,7 @@ const QRISPaymentBox = ({ amount, description, image, payload }) => {
             <div className="modal-heading">
               <div>
                 <h5>Scan QRIS</h5>
-                <p>Bayar sesuai nominal yang tertera.</p>
+                <p>Pay the exact amount shown.</p>
               </div>
               <button className="modal-close" type="button" onClick={() => setOpen(false)} aria-label="Close">
                 <i className="bi bi-x-lg"></i>

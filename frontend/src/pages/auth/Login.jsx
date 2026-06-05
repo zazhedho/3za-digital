@@ -43,7 +43,7 @@ const Login = () => {
           <span><i className="bi bi-wallet2"></i> Wallet</span>
         </div>
         <h1>3ZA Digital</h1>
-        <p>Panel transaksi SMM, wallet, deposit, dan operasional provider dalam satu workspace.</p>
+        <p>SMM transactions, wallet, deposits, and provider operations in one workspace.</p>
       </section>
 
       <section className="auth-card">
@@ -51,7 +51,7 @@ const Login = () => {
           <div className="brand-mark">3ZA</div>
           <div>
             <h2>Welcome back</h2>
-            <p>Masuk ke dashboard 3ZA Digital.</p>
+            <p>Sign in to the 3ZA Digital dashboard.</p>
           </div>
         </div>
 

@@ -439,6 +439,7 @@ func (r *Routes) WalletRoutes() {
 	{
 		deposits.POST("", depositLimiter, mdw.PermissionMiddleware("deposits", "create"), h.CreateDeposit)
 		deposits.GET("", mdw.PermissionMiddleware("deposits", "list"), h.GetMyDeposits)
+		deposits.GET("/settings", mdw.PermissionMiddleware("deposits", "create"), h.GetDepositSettings)
 		deposits.GET("/:id", mdw.PermissionMiddleware("deposits", "view"), h.GetMyDepositByID)
 	}
 

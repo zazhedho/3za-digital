@@ -61,6 +61,22 @@ func (s *WalletService) GetWallets(ctx context.Context, params filter.BaseParams
 	return s.Repo.GetWallets(ctx, params)
 }
 
+func (s *WalletService) GetDepositSettings(ctx context.Context) (dto.DepositSettingsResponse, error) {
+	feePercent := defaultQRISFeePercent
+	if s.ConfigService != nil {
+		value, err := s.ConfigService.GetString(ctx, "payment.qris.fee_percent", feePercent)
+		if err != nil {
+			return dto.DepositSettingsResponse{}, err
+		}
+		feePercent = strings.TrimSpace(value)
+	}
+
+	return dto.DepositSettingsResponse{
+		MinimumAmount:  domainwallet.DepositMinimumAmount,
+		QRISFeePercent: feePercent,
+	}, nil
+}
+
 func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dto.CreateDepositRequest) (domainwallet.DepositRequest, error) {
 	amount, err := money.NormalizePositive(req.Amount)
 	if err != nil {
@@ -302,7 +318,7 @@ func (s *WalletService) prepareQRISDeposit(ctx context.Context, deposit domainwa
 		return domainwallet.DepositRequest{}, domainwallet.ErrQRISProviderUnavailable
 	}
 
-	feePercent := "5"
+	feePercent := defaultQRISFeePercent
 	if s.ConfigService != nil {
 		if value, err := s.ConfigService.GetString(ctx, "payment.qris.fee_percent", feePercent); err != nil {
 			return domainwallet.DepositRequest{}, err
@@ -527,6 +543,8 @@ func belowMinimumDeposit(amount string) bool {
 	}
 	return amountCents < minimumCents
 }
+
+const defaultQRISFeePercent = "5"
 
 func parseGatewayTime(value string) *time.Time {
 	value = strings.TrimSpace(value)

@@ -886,6 +886,29 @@ body {
   display: block;
 }
 
+.deposit-created {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
+.deposit-created-total {
+  text-align: center;
+}
+
+.deposit-created-total span {
+  color: var(--muted);
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.deposit-created-total strong {
+  display: block;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
 .qris-payload {
   background: var(--surface-soft);
   border: 1px solid var(--hairline-soft);

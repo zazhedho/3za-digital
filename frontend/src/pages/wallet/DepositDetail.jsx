@@ -37,9 +37,9 @@ const DepositDetail = () => {
         <div className="detail-grid detail-grid-compact">
           <span>ID</span><strong>{deposit?.id || '-'}</strong>
           <span>Wallet Credit</span><strong>{formatMoney(deposit?.amount)}</strong>
-          {qris && <><span>Topup Fee</span><strong>{formatMoney(metadata.fee_amount)} ({metadata.fee_percent || 5}%)</strong></>}
-          {qris && <><span>Kode Unik</span><strong>{formatMoney(metadata.unique_code_amount)}</strong></>}
-          {qris && <><span>Total Pay</span><strong>{formatMoney(depositPayableAmount(deposit))}</strong></>}
+          {qris && <><span>Topup Fee</span><strong>{formatMoney(metadata.fee_amount)}</strong></>}
+          {qris && <><span>Unique Code</span><strong>{formatMoney(metadata.unique_code_amount)}</strong></>}
+          {qris && <><span>Total Payment</span><strong>{formatMoney(depositPayableAmount(deposit))}</strong></>}
           <span>Status</span><div className="detail-value"><span className={`status-badge status-badge-detail ${depositStatusClass(deposit)} text-capitalize`}>{depositStatus(deposit)}</span></div>
           <span>Method</span><strong>{methodLabel(deposit?.method)}</strong>
           <span>Provider</span><strong>{deposit?.provider || '-'}</strong>
@@ -50,7 +50,7 @@ const DepositDetail = () => {
         {qris && (
           <QRISPaymentBox
             amount={formatMoney(depositPayableAmount(deposit))}
-            description={`Wallet credit ${formatMoney(deposit?.amount)} setelah pembayaran dikonfirmasi.`}
+            description={`Wallet credit ${formatMoney(deposit?.amount)} after payment confirmation.`}
             image={qrisImage}
             payload={qrisPayload}
           />

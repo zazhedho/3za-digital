@@ -3,6 +3,7 @@ import api from './api'
 const walletService = {
   getMyWallet: () => api.get('/wallet/me'),
   getMyTransactions: (params = {}) => api.get('/wallet/transactions', { params }),
+  getDepositSettings: () => api.get('/deposits/settings'),
   createDeposit: (payload) => api.post('/deposits', payload),
   getMyDeposits: (params = {}) => api.get('/deposits', { params }),
   getMyDepositById: (id) => api.get(`/deposits/${id}`),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
@@ -15,7 +15,6 @@ const methodLabel = (method) => {
 const DepositList = () => {
   const [rows, setRows] = useState([])
   const [showCreate, setShowCreate] = useState(false)
-  const navigate = useNavigate()
 
   const load = async () => {
     const response = await walletService.getMyDeposits({ limit: 30 })
@@ -26,10 +25,8 @@ const DepositList = () => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposits')))
   }, [])
 
-  const handleCreated = async (deposit) => {
-    setShowCreate(false)
+  const handleCreated = async () => {
     await load()
-    if (deposit?.id) navigate(`/deposits/${deposit.id}`)
   }
 
   return (
