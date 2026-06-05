@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import PaginationBar from '../../components/common/PaginationBar'
+import ConfirmationModal from '../../components/common/ConfirmationModal'
 
 const SMMOrders = () => {
   const [params] = useSearchParams()
@@ -13,6 +14,8 @@ const SMMOrders = () => {
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
   const [loading, setLoading] = useState(false)
+  const [confirmOrder, setConfirmOrder] = useState(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
 
   useEffect(() => {
     setSearch(params.get('search') || '')
@@ -42,13 +45,18 @@ const SMMOrders = () => {
     load()
   }, [load])
 
-  const refresh = async (id) => {
+  const refresh = async () => {
+    if (!confirmOrder) return
+    setConfirmLoading(true)
     try {
-      await smmService.refreshOrderStatus(id)
+      await smmService.refreshOrderStatus(confirmOrder.id)
       toast.success('Status refreshed')
+      setConfirmOrder(null)
       load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Refresh failed'))
+    } finally {
+      setConfirmLoading(false)
     }
   }
 
@@ -105,7 +113,7 @@ const SMMOrders = () => {
                 <td className="text-end">
                   <span className="table-actions">
                     <Link className="btn btn-sm btn-outline-dark" to={`/smm/orders/${row.id}`}>Detail</Link>
-                    <button className="btn btn-sm btn-outline-dark" onClick={() => refresh(row.id)}>Refresh</button>
+                    <button className="btn btn-sm btn-outline-dark" onClick={() => setConfirmOrder(row)}>Refresh</button>
                   </span>
                 </td>
               </tr>
@@ -117,6 +125,15 @@ const SMMOrders = () => {
         </table>
       </section>
       <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
+      <ConfirmationModal
+        show={Boolean(confirmOrder)}
+        title="Refresh Order Status"
+        message={`Refresh provider status for order ${confirmOrder?.ref_id || confirmOrder?.id || ''}?`}
+        confirmLabel="Refresh"
+        loading={confirmLoading}
+        onCancel={() => setConfirmOrder(null)}
+        onConfirm={refresh}
+      />
     </div>
   )
 }

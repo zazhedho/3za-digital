@@ -1,9 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { ToastContainer } from 'react-toastify'
 import ProtectedLayout from './components/common/ProtectedLayout'
 import PermissionRoute from './components/common/PermissionRoute'
 import Loading from './components/common/Loading'
+import ThemedToastContainer from './components/common/ThemedToastContainer'
 import { AuthProvider } from './contexts/AuthContext'
 
 const Login = lazy(() => import('./pages/auth/Login'))
@@ -92,7 +92,7 @@ function App() {
             <Route path="*" element={<ErrorPage code="404" title="Page not found" />} />
           </Routes>
         </Suspense>
-        <ToastContainer position="top-right" autoClose={3000} theme="light" />
+        <ThemedToastContainer />
       </AuthProvider>
     </BrowserRouter>
   )

@@ -5,6 +5,7 @@ import walletService from '../../services/walletService'
 import { getErrorMessage } from '../../services/api'
 import BackButton from '../../components/common/BackButton'
 import QRISPaymentBox from '../../components/common/QRISPaymentBox'
+import ConfirmationModal from '../../components/common/ConfirmationModal'
 import { depositMetadata, depositPayableAmount, depositStatus, depositStatusClass, formatMoney, isQRISDeposit, qrisImageURL, qrisString } from '../../utils/deposit'
 
 const methodLabel = (method) => {
@@ -16,6 +17,8 @@ const methodLabel = (method) => {
 const AdminDepositDetail = () => {
   const { id } = useParams()
   const [deposit, setDeposit] = useState(null)
+  const [confirmApprove, setConfirmApprove] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const metadata = depositMetadata(deposit)
   const qris = isQRISDeposit(deposit)
   const qrisImage = qrisImageURL(deposit)
@@ -31,12 +34,16 @@ const AdminDepositDetail = () => {
   }, [load])
 
   const approve = async () => {
+    setConfirmLoading(true)
     try {
       await walletService.approveDeposit(id, { amount: deposit.amount, description: 'Approved from frontend' })
       toast.success('Deposit approved')
+      setConfirmApprove(false)
       await load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Approve failed'))
+    } finally {
+      setConfirmLoading(false)
     }
   }
 
@@ -46,7 +53,7 @@ const AdminDepositDetail = () => {
         <div><h1>Admin Deposit Detail</h1><p>{deposit ? `${methodLabel(deposit.method)} - ${depositStatus(deposit)}` : 'Loading deposit'}</p></div>
         <div className="toolbar-actions">
           <BackButton fallback="/admin/deposits" />
-          <button className="btn btn-primary" disabled={deposit?.status !== 'pending'} onClick={approve}>Approve</button>
+          <button className="btn btn-primary" disabled={deposit?.status !== 'pending'} onClick={() => setConfirmApprove(true)}>Approve</button>
         </div>
       </div>
       <section className="panel">
@@ -73,6 +80,15 @@ const AdminDepositDetail = () => {
           />
         )}
       </section>
+      <ConfirmationModal
+        show={confirmApprove}
+        title="Approve Deposit"
+        message={`Approve this deposit for ${deposit?.user?.name || deposit?.user?.email || 'this user'}?`}
+        confirmLabel="Approve"
+        loading={confirmLoading}
+        onCancel={() => setConfirmApprove(false)}
+        onConfirm={approve}
+      />
     </div>
   )
 }

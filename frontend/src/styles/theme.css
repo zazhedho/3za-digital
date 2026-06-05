@@ -1429,8 +1429,100 @@ body {
   width: 36px;
 }
 
+.error-toast-container {
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 32px));
+}
+
+.error-toast-container .Toastify__toast--error {
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-top: 4px solid #dc2626;
+  border-radius: 14px;
+  box-shadow: 0 22px 60px rgba(127, 29, 29, 0.24);
+  color: #7f1d1d;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.55;
+  max-height: min(54vh, 360px);
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 22px 18px;
+  text-align: center;
+  white-space: normal;
+  width: 100%;
+  word-break: break-word;
+}
+
+.error-toast-container .Toastify__toast--error::before {
+  align-items: center;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 9999px;
+  color: #b91c1c;
+  content: "!";
+  display: inline-flex;
+  font-size: 20px;
+  font-weight: 900;
+  height: 42px;
+  justify-content: center;
+  line-height: 1;
+  margin: 0 auto 14px;
+  width: 42px;
+}
+
+.error-toast-container .Toastify__toast--error .Toastify__toast-body {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  width: 100%;
+}
+
+.error-toast-container .Toastify__toast--error .Toastify__toast-body > div {
+  color: #7f1d1d;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.55;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+  width: 100%;
+}
+
+.error-toast-container .Toastify__toast--error .Toastify__toast-body div {
+  text-align: center !important;
+}
+
+.error-toast-container .Toastify__toast--error .Toastify__toast-icon {
+  display: none;
+}
+
+.error-toast-container .Toastify__toast--error .Toastify__close-button {
+  color: #991b1b;
+  opacity: 0.7;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.error-toast-container .Toastify__toast--error .Toastify__progress-bar {
+  background: #dc2626;
+}
+
 .deposit-modal {
   max-width: 480px;
+}
+
+.confirmation-modal {
+  max-width: 460px;
+}
+
+.confirmation-modal .modal-heading {
+  margin-bottom: 24px;
 }
 
 @media (max-width: 1100px) {

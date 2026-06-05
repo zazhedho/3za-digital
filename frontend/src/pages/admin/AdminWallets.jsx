@@ -3,6 +3,7 @@ import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import PaginationBar from '../../components/common/PaginationBar'
+import ConfirmationModal from '../../components/common/ConfirmationModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatMoney } from '../../utils/deposit'
 
@@ -13,6 +14,8 @@ const AdminWallets = () => {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [activeWallet, setActiveWallet] = useState(null)
+  const [confirmAdjust, setConfirmAdjust] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const [form, setForm] = useState({ amount: '', direction: 'credit', description: '' })
   const canAdjust = hasPermission('wallets', 'adjust')
 
@@ -34,13 +37,21 @@ const AdminWallets = () => {
 
   const adjust = async (event) => {
     event.preventDefault()
+    setConfirmAdjust(true)
+  }
+
+  const confirmAdjustment = async () => {
+    setConfirmLoading(true)
     try {
       await walletService.adminAdjust(activeWallet.user_id, form)
       toast.success('Wallet adjusted')
       setActiveWallet(null)
+      setConfirmAdjust(false)
       await load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Adjustment failed'))
+    } finally {
+      setConfirmLoading(false)
     }
   }
 
@@ -106,6 +117,16 @@ const AdminWallets = () => {
         </table>
       </section>
       <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
+      <ConfirmationModal
+        show={confirmAdjust}
+        title="Adjust Wallet"
+        message={`${form.direction === 'debit' ? 'Debit' : 'Credit'} ${formatMoney(form.amount)} for ${activeWallet?.user?.name || activeWallet?.user?.email || 'this user'}?`}
+        confirmLabel="Save Adjustment"
+        confirmClassName={form.direction === 'debit' ? 'btn-danger' : 'btn-primary'}
+        loading={confirmLoading}
+        onCancel={() => setConfirmAdjust(false)}
+        onConfirm={confirmAdjustment}
+      />
     </div>
   )
 }

@@ -17,15 +17,13 @@ const DepositList = () => {
   const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
   const [showCreate, setShowCreate] = useState(false)
-  const canViewAllDeposits = hasPermission('admin_deposits', 'list')
   const canCreateDeposit = hasPermission('deposits', 'create')
+  const canViewAllDeposits = hasPermission('admin_deposits', 'list')
 
   const load = useCallback(async () => {
-    const response = canViewAllDeposits
-      ? await walletService.getDeposits({ limit: 50 })
-      : await walletService.getMyDeposits({ limit: 30 })
+    const response = await walletService.getMyDeposits({ limit: 30 })
     setRows(getListPayload(response).rows)
-  }, [canViewAllDeposits])
+  }, [])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposits')))
@@ -40,13 +38,20 @@ const DepositList = () => {
       <div className="page-toolbar">
         <div>
           <h1>Deposits</h1>
-          <p>{canViewAllDeposits ? 'Review deposit requests from every user.' : 'Create deposit requests and track status.'}</p>
+          <p>Create deposit requests and track status.</p>
         </div>
-        {canCreateDeposit && (
-          <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
-            <i className="bi bi-plus-lg me-2"></i>Create deposit
-          </button>
-        )}
+        <div className="toolbar-actions">
+          {canViewAllDeposits && (
+            <Link className="btn btn-outline-dark" to="/admin/deposits">
+              <i className="bi bi-bank me-2"></i>Admin Deposits
+            </Link>
+          )}
+          {canCreateDeposit && (
+            <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
+              <i className="bi bi-plus-lg me-2"></i>Create deposit
+            </button>
+          )}
+        </div>
       </div>
 
       {showCreate && (
@@ -57,7 +62,6 @@ const DepositList = () => {
         <table className="table app-table align-middle">
           <thead>
             <tr>
-              {canViewAllDeposits && <th>User</th>}
               <th>Reference</th>
               <th>Amount</th>
               <th>Pay</th>
@@ -70,14 +74,6 @@ const DepositList = () => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                {canViewAllDeposits && (
-                  <td>
-                    <span className="table-main">
-                      <strong>{row.user?.name || row.user?.email || 'User'}</strong>
-                      {row.user?.email && row.user?.name && <span className="table-subtext">{row.user.email}</span>}
-                    </span>
-                  </td>
-                )}
                 <td>
                   <span className="table-main">
                     <strong>{methodLabel(row.method)}</strong>
@@ -91,12 +87,12 @@ const DepositList = () => {
                 <td className="table-date">{row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
                 <td className="text-end">
                   <span className="table-actions">
-                    <Link className="btn btn-sm btn-outline-dark" to={`${canViewAllDeposits ? '/admin/deposits' : '/deposits'}/${row.id}`}>Detail</Link>
+                    <Link className="btn btn-sm btn-outline-dark" to={`/deposits/${row.id}`}>Detail</Link>
                   </span>
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={canViewAllDeposits ? 8 : 7} className="empty-cell">No deposits found</td></tr>}
+            {!rows.length && <tr><td colSpan="7" className="empty-cell">No deposits found</td></tr>}
           </tbody>
         </table>
       </section>

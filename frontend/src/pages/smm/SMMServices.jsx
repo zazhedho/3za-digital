@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import PaginationBar from '../../components/common/PaginationBar'
+import ConfirmationModal from '../../components/common/ConfirmationModal'
 import { useAuth } from '../../contexts/AuthContext'
 
 const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
@@ -21,6 +22,8 @@ const SMMServices = () => {
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
   const [loading, setLoading] = useState(false)
+  const [confirmSync, setConfirmSync] = useState(false)
+  const [confirmLoading, setConfirmLoading] = useState(false)
 
   useEffect(() => {
     setSearch(params.get('search') || '')
@@ -52,12 +55,16 @@ const SMMServices = () => {
   }, [load])
 
   const sync = async () => {
+    setConfirmLoading(true)
     try {
       await smmService.syncServices({ platform })
       toast.success('Services synced')
+      setConfirmSync(false)
       load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Sync failed'))
+    } finally {
+      setConfirmLoading(false)
     }
   }
 
@@ -69,7 +76,7 @@ const SMMServices = () => {
           <p>Provider catalog for SMM orders.</p>
         </div>
         {hasPermission('smm_services', 'sync') && (
-          <button className="btn btn-primary" onClick={sync}><i className="bi bi-cloud-arrow-down me-2"></i>Sync</button>
+          <button className="btn btn-primary" onClick={() => setConfirmSync(true)}><i className="bi bi-cloud-arrow-down me-2"></i>Sync</button>
         )}
       </div>
 
@@ -118,6 +125,15 @@ const SMMServices = () => {
         </table>
       </section>
       <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
+      <ConfirmationModal
+        show={confirmSync}
+        title="Sync Services"
+        message={`Sync SMM services${platform ? ` for ${platform}` : ''} from provider? Existing service data may be updated.`}
+        confirmLabel="Sync"
+        loading={confirmLoading}
+        onCancel={() => setConfirmSync(false)}
+        onConfirm={sync}
+      />
     </div>
   )
 }
