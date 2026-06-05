@@ -12,6 +12,7 @@ import (
 	"3za-digital/internal/dto"
 	"3za-digital/internal/integrations/qrisly"
 	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 
 	"gorm.io/gorm"
 )
@@ -183,10 +184,10 @@ func TestCreateDepositQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.T) {
 	repo := &walletRepoStub{}
 	qrisProvider := &qrisProviderStub{response: &qrisly.GenerateQRISResponse{
 		Data: qrisly.GenerateQRISData{
-			HistoryID:      qrisly.FlexibleString("1778"),
+			HistoryID:      utils.FlexibleString("1778"),
 			QRISImageURL:   "https://qris.test/image.png",
-			OriginalAmount: qrisly.FlexibleInt64(105000),
-			FinalAmount:    qrisly.FlexibleInt64(105003),
+			OriginalAmount: utils.FlexibleInt64(105000),
+			FinalAmount:    utils.FlexibleInt64(105003),
 			PaymentStatus:  "unpaid",
 			ExpiryTime:     "2026-03-03 14:52:52",
 			MerchantName:   "ABC Store",
@@ -266,9 +267,9 @@ func TestGetMyDepositsSyncsQRISLYUnpaidStatusForDisplay(t *testing.T) {
 	}}}
 	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
 		Data: qrisly.PaymentStatusData{
-			HistoryID:     qrisly.FlexibleString("2847"),
+			HistoryID:     utils.FlexibleString("2847"),
 			PaymentStatus: "unpaid",
-			Amount:        qrisly.FlexibleInt64(10002),
+			Amount:        utils.FlexibleInt64(10002),
 		},
 	}}
 	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
@@ -307,9 +308,9 @@ func TestGetMyDepositsCompletesPaidQRISLYDeposit(t *testing.T) {
 	}}}
 	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
 		Data: qrisly.PaymentStatusData{
-			HistoryID:     qrisly.FlexibleString("2847"),
+			HistoryID:     utils.FlexibleString("2847"),
 			PaymentStatus: "paid",
-			Amount:        qrisly.FlexibleInt64(10002),
+			Amount:        utils.FlexibleInt64(10002),
 		},
 	}}
 	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
@@ -338,9 +339,9 @@ func TestGetMyDepositsExpiresQRISLYDeposit(t *testing.T) {
 	}}}
 	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
 		Data: qrisly.PaymentStatusData{
-			HistoryID:     qrisly.FlexibleString("2847"),
+			HistoryID:     utils.FlexibleString("2847"),
 			PaymentStatus: "expired",
-			Amount:        qrisly.FlexibleInt64(10002),
+			Amount:        utils.FlexibleInt64(10002),
 		},
 	}}
 	service := NewWalletService(repo).WithQRISProvider(qrisProvider)

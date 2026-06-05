@@ -13,6 +13,7 @@ import (
 	"3za-digital/internal/integrations/h2h"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
 	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 )
 
 func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
@@ -36,9 +37,9 @@ func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 			Status:         true,
 			RefID:          "ref",
 			ProviderStatus: "processing",
-			Charge:         h2h.FlexibleNumber("1200"),
-			StartCount:     h2h.FlexibleNumber("10"),
-			Remains:        h2h.FlexibleNumber("90"),
+			Charge:         utils.FlexibleNumber("1200"),
+			StartCount:     utils.FlexibleNumber("10"),
+			Remains:        utils.FlexibleNumber("90"),
 			Raw:            json.RawMessage(`{"status":true}`),
 		},
 	}

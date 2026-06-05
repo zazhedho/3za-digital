@@ -24,12 +24,7 @@ type WalletService struct {
 	Repo                interfacewallet.RepoWalletInterface
 	MainBalanceProvider interfacewallet.MainBalanceProvider
 	ConfigService       interfaceappconfig.ServiceAppConfigInterface
-	QRISProvider        QRISPaymentProvider
-}
-
-type QRISPaymentProvider interface {
-	GenerateQRIS(ctx context.Context, req qrisly.GenerateQRISRequest) (*qrisly.GenerateQRISResponse, error)
-	GetPaymentStatus(ctx context.Context, historyID string) (*qrisly.PaymentStatusResponse, error)
+	QRISProvider        interfacewallet.QRISPaymentProvider
 }
 
 func NewWalletService(repo interfacewallet.RepoWalletInterface, mainBalanceProviders ...interfacewallet.MainBalanceProvider) *WalletService {
@@ -45,7 +40,7 @@ func (s *WalletService) WithConfigService(configService interfaceappconfig.Servi
 	return s
 }
 
-func (s *WalletService) WithQRISProvider(provider QRISPaymentProvider) *WalletService {
+func (s *WalletService) WithQRISProvider(provider interfacewallet.QRISPaymentProvider) *WalletService {
 	s.QRISProvider = provider
 	return s
 }

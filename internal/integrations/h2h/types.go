@@ -1,6 +1,10 @@
 package h2h
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"3za-digital/utils"
+)
 
 const (
 	ProductTypeSMM     = "smm"
@@ -28,17 +32,17 @@ type CreateOrderRequest struct {
 type BalanceResponse struct {
 	Status  bool   `json:"status"`
 	Message string `json:"message"`
-	Balance FlexibleNumber
+	Balance utils.FlexibleNumber
 	Data    BalanceData     `json:"data"`
 	Raw     json.RawMessage `json:"-"`
 }
 
 func (r *BalanceResponse) UnmarshalJSON(data []byte) error {
 	type wireBalanceResponse struct {
-		Status  bool           `json:"status"`
-		Message string         `json:"message"`
-		Balance FlexibleNumber `json:"balance"`
-		Data    BalanceData    `json:"data"`
+		Status  bool                 `json:"status"`
+		Message string               `json:"message"`
+		Balance utils.FlexibleNumber `json:"balance"`
+		Data    BalanceData          `json:"data"`
 	}
 
 	var wire wireBalanceResponse
@@ -58,8 +62,8 @@ func (r *BalanceResponse) UnmarshalJSON(data []byte) error {
 }
 
 type BalanceData struct {
-	Balance          FlexibleNumber `json:"balance"`
-	BalanceFormatted string         `json:"balance_formatted"`
+	Balance          utils.FlexibleNumber `json:"balance"`
+	BalanceFormatted string               `json:"balance_formatted"`
 }
 
 type PriceListResponse struct {
@@ -72,19 +76,19 @@ type PriceListResponse struct {
 }
 
 type Service struct {
-	Code        FlexibleString  `json:"code"`
-	ID          FlexibleString  `json:"id"`
-	Name        string          `json:"name"`
-	Category    string          `json:"category"`
-	Brand       string          `json:"brand"`
-	Platform    string          `json:"platform"`
-	Type        string          `json:"type"`
-	Price       FlexibleNumber  `json:"price"`
-	PricePer1K  FlexibleNumber  `json:"price_per_1k"`
-	MinQuantity FlexibleInt     `json:"min"`
-	MaxQuantity FlexibleInt     `json:"max"`
-	Status      FlexibleString  `json:"status"`
-	Raw         json.RawMessage `json:"-"`
+	Code        utils.FlexibleString `json:"code"`
+	ID          utils.FlexibleString `json:"id"`
+	Name        string               `json:"name"`
+	Category    string               `json:"category"`
+	Brand       string               `json:"brand"`
+	Platform    string               `json:"platform"`
+	Type        string               `json:"type"`
+	Price       utils.FlexibleNumber `json:"price"`
+	PricePer1K  utils.FlexibleNumber `json:"price_per_1k"`
+	MinQuantity utils.FlexibleInt    `json:"min"`
+	MaxQuantity utils.FlexibleInt    `json:"max"`
+	Status      utils.FlexibleString `json:"status"`
+	Raw         json.RawMessage      `json:"-"`
 }
 
 func (s Service) ProviderServiceID() string {
@@ -95,28 +99,28 @@ func (s Service) ProviderServiceID() string {
 }
 
 type CreateOrderResponse struct {
-	Status          bool            `json:"status"`
-	Message         string          `json:"message"`
-	RefID           string          `json:"refID"`
-	OrderID         string          `json:"order_id"`
-	ProviderOrderID string          `json:"id"`
-	ProviderStatus  string          `json:"status_order"`
-	Charge          FlexibleNumber  `json:"charge"`
-	StartCount      FlexibleNumber  `json:"start_count"`
-	Remains         FlexibleNumber  `json:"remains"`
-	Raw             json.RawMessage `json:"-"`
+	Status          bool                 `json:"status"`
+	Message         string               `json:"message"`
+	RefID           string               `json:"refID"`
+	OrderID         string               `json:"order_id"`
+	ProviderOrderID string               `json:"id"`
+	ProviderStatus  string               `json:"status_order"`
+	Charge          utils.FlexibleNumber `json:"charge"`
+	StartCount      utils.FlexibleNumber `json:"start_count"`
+	Remains         utils.FlexibleNumber `json:"remains"`
+	Raw             json.RawMessage      `json:"-"`
 }
 
 type OrderStatusResponse struct {
-	Status         bool            `json:"status"`
-	Message        string          `json:"message"`
-	RefID          string          `json:"refID"`
-	OrderID        string          `json:"order_id"`
-	ProviderStatus string          `json:"status_order"`
-	Charge         FlexibleNumber  `json:"charge"`
-	StartCount     FlexibleNumber  `json:"start_count"`
-	Remains        FlexibleNumber  `json:"remains"`
-	Raw            json.RawMessage `json:"-"`
+	Status         bool                 `json:"status"`
+	Message        string               `json:"message"`
+	RefID          string               `json:"refID"`
+	OrderID        string               `json:"order_id"`
+	ProviderStatus string               `json:"status_order"`
+	Charge         utils.FlexibleNumber `json:"charge"`
+	StartCount     utils.FlexibleNumber `json:"start_count"`
+	Remains        utils.FlexibleNumber `json:"remains"`
+	Raw            json.RawMessage      `json:"-"`
 }
 
 type APIError struct {

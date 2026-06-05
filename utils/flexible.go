@@ -1,4 +1,4 @@
-package h2h
+package utils
 
 import (
 	"bytes"
@@ -37,11 +37,8 @@ func (s *FlexibleString) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("unsupported string value: %s", string(data))
 }
 
-func (s *FlexibleString) String() string {
-	if s == nil {
-		return ""
-	}
-	return string(*s)
+func (s FlexibleString) String() string {
+	return string(s)
 }
 
 type FlexibleNumber string
@@ -67,11 +64,8 @@ func (n *FlexibleNumber) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("unsupported number value: %s", string(data))
 }
 
-func (n *FlexibleNumber) String() string {
-	if n == nil {
-		return ""
-	}
-	return string(*n)
+func (n FlexibleNumber) String() string {
+	return string(n)
 }
 
 type FlexibleInt int
@@ -106,9 +100,42 @@ func (i *FlexibleInt) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("unsupported int value: %s", string(data))
 }
 
-func (i *FlexibleInt) Int() int {
-	if i == nil {
-		return 0
+func (i FlexibleInt) Int() int {
+	return int(i)
+}
+
+type FlexibleInt64 int64
+
+func (i *FlexibleInt64) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, []byte("null")) {
+		*i = 0
+		return nil
 	}
-	return int(*i)
+
+	var number int64
+	if err := json.Unmarshal(data, &number); err == nil {
+		*i = FlexibleInt64(number)
+		return nil
+	}
+
+	var text string
+	if err := json.Unmarshal(data, &text); err == nil {
+		text = strings.TrimSpace(text)
+		if text == "" {
+			*i = 0
+			return nil
+		}
+		parsed, err := strconv.ParseInt(text, 10, 64)
+		if err != nil {
+			return err
+		}
+		*i = FlexibleInt64(parsed)
+		return nil
+	}
+
+	return fmt.Errorf("unsupported int value: %s", string(data))
+}
+
+func (i FlexibleInt64) Int64() int64 {
+	return int64(i)
 }

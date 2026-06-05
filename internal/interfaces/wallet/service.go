@@ -5,8 +5,14 @@ import (
 
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
+	"3za-digital/internal/integrations/qrisly"
 	"3za-digital/pkg/filter"
 )
+
+type QRISPaymentProvider interface {
+	GenerateQRIS(ctx context.Context, req qrisly.GenerateQRISRequest) (*qrisly.GenerateQRISResponse, error)
+	GetPaymentStatus(ctx context.Context, historyID string) (*qrisly.PaymentStatusResponse, error)
+}
 
 type ServiceWalletInterface interface {
 	GetMyWallet(ctx context.Context, userID string) (domainwallet.Wallet, error)

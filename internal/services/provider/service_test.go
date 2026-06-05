@@ -9,6 +9,7 @@ import (
 	"3za-digital/internal/integrations/h2h"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
 	"3za-digital/pkg/filter"
+	"3za-digital/utils"
 )
 
 func TestProviderServiceGetH2HBalanceUsesNestedBalance(t *testing.T) {
@@ -18,7 +19,7 @@ func TestProviderServiceGetH2HBalanceUsesNestedBalance(t *testing.T) {
 			balance: &h2h.BalanceResponse{
 				Status:  true,
 				Message: "success",
-				Balance: h2h.FlexibleNumber("3409"),
+				Balance: utils.FlexibleNumber("3409"),
 				Raw:     json.RawMessage(`{"status":true,"data":{"balance":3409}}`),
 			},
 		}, nil

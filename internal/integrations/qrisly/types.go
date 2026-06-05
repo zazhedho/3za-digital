@@ -1,6 +1,10 @@
 package qrisly
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"3za-digital/utils"
+)
 
 type GenerateQRISRequest struct {
 	QRISID       string
@@ -18,22 +22,22 @@ type GenerateQRISResponse struct {
 }
 
 type GenerateQRISData struct {
-	HistoryID      FlexibleString `json:"history_id"`
-	QRISID         FlexibleString `json:"qris_id"`
-	QRISString     string         `json:"qris_string"`
-	QRISImage      string         `json:"qris_image"`
-	QRISImageURL   string         `json:"qris_image_url"`
-	Image          string         `json:"image"`
-	ImageURL       string         `json:"image_url"`
-	OriginalAmount FlexibleInt64  `json:"original_amount"`
-	FinalAmount    FlexibleInt64  `json:"final_amount"`
-	Amount         FlexibleInt64  `json:"amount"`
-	PaymentStatus  string         `json:"payment_status"`
-	ExpiryTime     string         `json:"expiry_time"`
-	ExpiredAt      string         `json:"expired_at"`
-	ExpiresAt      string         `json:"expires_at"`
-	MerchantName   string         `json:"merchant_name"`
-	Name           string         `json:"name"`
+	HistoryID      utils.FlexibleString `json:"history_id"`
+	QRISID         utils.FlexibleString `json:"qris_id"`
+	QRISString     string               `json:"qris_string"`
+	QRISImage      string               `json:"qris_image"`
+	QRISImageURL   string               `json:"qris_image_url"`
+	Image          string               `json:"image"`
+	ImageURL       string               `json:"image_url"`
+	OriginalAmount utils.FlexibleInt64  `json:"original_amount"`
+	FinalAmount    utils.FlexibleInt64  `json:"final_amount"`
+	Amount         utils.FlexibleInt64  `json:"amount"`
+	PaymentStatus  string               `json:"payment_status"`
+	ExpiryTime     string               `json:"expiry_time"`
+	ExpiredAt      string               `json:"expired_at"`
+	ExpiresAt      string               `json:"expires_at"`
+	MerchantName   string               `json:"merchant_name"`
+	Name           string               `json:"name"`
 }
 
 func (d GenerateQRISData) PayableAmount() int64 {
@@ -85,14 +89,14 @@ type PaymentStatusResponse struct {
 }
 
 type PaymentStatusData struct {
-	HistoryID     FlexibleString `json:"history_id"`
-	PaymentStatus string         `json:"payment_status"`
-	Status        string         `json:"status"`
-	Amount        FlexibleInt64  `json:"amount"`
-	Name          string         `json:"name"`
-	PaidAt        FlexibleString `json:"paid_at"`
-	CreatedAt     string         `json:"created_at"`
-	UpdatedAt     string         `json:"updated_at"`
+	HistoryID     utils.FlexibleString `json:"history_id"`
+	PaymentStatus string               `json:"payment_status"`
+	Status        string               `json:"status"`
+	Amount        utils.FlexibleInt64  `json:"amount"`
+	Name          string               `json:"name"`
+	PaidAt        utils.FlexibleString `json:"paid_at"`
+	CreatedAt     string               `json:"created_at"`
+	UpdatedAt     string               `json:"updated_at"`
 }
 
 type Meta struct {
