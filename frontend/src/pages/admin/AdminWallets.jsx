@@ -1,21 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import PaginationBar from '../../components/common/PaginationBar'
+import { useAuth } from '../../contexts/AuthContext'
+import { formatMoney } from '../../utils/deposit'
 
 const AdminWallets = () => {
+  const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
+  const [pagination, setPagination] = useState(null)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(false)
   const [activeWallet, setActiveWallet] = useState(null)
   const [form, setForm] = useState({ amount: '', direction: 'credit', description: '' })
+  const canAdjust = hasPermission('wallets', 'adjust')
 
-  const load = async () => {
-    const response = await walletService.getWallets({ limit: 50 })
-    setRows(getListPayload(response).rows)
-  }
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await walletService.getWallets({ page, limit: 50 })
+      const payload = getListPayload(response)
+      setRows(payload.rows)
+      setPagination(payload)
+    } finally {
+      setLoading(false)
+    }
+  }, [page])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load wallets')))
-  }, [])
+  }, [load])
 
   const adjust = async (event) => {
     event.preventDefault()
@@ -62,7 +77,7 @@ const AdminWallets = () => {
               <th>Balance</th>
               <th>Currency</th>
               <th>Status</th>
-              <th></th>
+              {canAdjust && <th></th>}
             </tr>
           </thead>
           <tbody>
@@ -74,16 +89,23 @@ const AdminWallets = () => {
                     {row.user?.email && <span className="table-subtext">{row.user.email}</span>}
                   </span>
                 </td>
-                <td className="table-number">{row.balance}</td>
+                <td className="table-number">{formatMoney(row.balance)}</td>
                 <td className="table-nowrap">{row.currency}</td>
                 <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
-                <td className="text-end"><span className="table-actions"><button className="btn btn-sm btn-outline-dark" onClick={() => setActiveWallet(row)}>Adjust</button></span></td>
+                {canAdjust && (
+                  <td className="text-end">
+                    <span className="table-actions">
+                      <button className="btn btn-sm btn-outline-dark" onClick={() => setActiveWallet(row)}>Adjust</button>
+                    </span>
+                  </td>
+                )}
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="5" className="empty-cell">No wallets found</td></tr>}
+            {!rows.length && <tr><td colSpan={canAdjust ? 5 : 4} className="empty-cell">{loading ? 'Loading...' : 'No wallets found'}</td></tr>}
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
     </div>
   )
 }

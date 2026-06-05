@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -10,8 +12,10 @@ const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
 }).format(Number(value || 0))
 
 const Wallet = () => {
+  const { hasPermission } = useAuth()
   const [wallet, setWallet] = useState(null)
   const [transactions, setTransactions] = useState([])
+  const canViewAllWallets = hasPermission('wallets', 'list')
 
   useEffect(() => {
     Promise.all([
@@ -30,6 +34,11 @@ const Wallet = () => {
           <h1>Wallet</h1>
           <p>Balance and transaction ledger.</p>
         </div>
+        {canViewAllWallets && (
+          <Link className="btn btn-outline-dark" to="/admin/wallets">
+            <i className="bi bi-safe me-2"></i>Admin Wallets
+          </Link>
+        )}
       </div>
 
       <div className="wallet-card">

@@ -4,4 +4,4 @@ WHERE permission_id IN (
 );
 
 DELETE FROM permissions WHERE resource IN ('smm_services', 'smm_orders', 'provider_balance', 'provider_api_logs', 'wallet', 'wallet_transactions', 'wallets', 'admin_deposits', 'deposits', 'payment_webhooks');
-DELETE FROM menu_items WHERE name IN ('smm_services', 'smm_orders', 'wallet', 'deposits', 'admin_wallets');
+DELETE FROM menu_items WHERE name IN ('smm_services', 'smm_orders', 'wallet', 'deposits', 'wallets', 'admin_wallets', 'admin_deposits');

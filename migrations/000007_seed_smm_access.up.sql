@@ -3,7 +3,8 @@ INSERT INTO menu_items (id, name, display_name, path, icon, order_index) VALUES
     (gen_random_uuid(), 'smm_orders', 'SMM Orders', '/smm/orders', 'bi-receipt', 101),
     (gen_random_uuid(), 'wallet', 'Wallet', '/wallet', 'bi-wallet2', 102),
     (gen_random_uuid(), 'deposits', 'Deposits', '/deposits', 'bi-cash-coin', 103),
-    (gen_random_uuid(), 'admin_wallets', 'Admin Wallets', '/admin/wallets', 'bi-safe', 905)
+    (gen_random_uuid(), 'wallets', 'Admin Wallets', '/admin/wallets', 'bi-safe', 905),
+    (gen_random_uuid(), 'admin_deposits', 'Admin Deposits', '/admin/deposits', 'bi-bank', 906)
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO permissions (id, name, display_name, resource, action) VALUES

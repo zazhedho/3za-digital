@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import menuService from '../../services/menuService'
+import { useAuth } from '../../contexts/AuthContext'
 import TopNav from './TopNav'
 
 const normalizeMenus = (menus) => (
@@ -17,6 +18,7 @@ const normalizeMenus = (menus) => (
 
 const DashboardLayout = () => {
   const location = useLocation()
+  const { hasPermission } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [apiMenus, setApiMenus] = useState([])
@@ -39,7 +41,28 @@ const DashboardLayout = () => {
     setMobileOpen(false)
   }, [location.pathname])
 
-  const menus = useMemo(() => apiMenus, [apiMenus])
+  const menus = useMemo(() => {
+    const nextMenus = [...apiMenus]
+    const addPermissionMenu = (resource, action, item) => {
+      if (!hasPermission(resource, action) || nextMenus.some((menu) => menu.path === item.path)) return
+      nextMenus.push(item)
+    }
+
+    addPermissionMenu('wallets', 'list', {
+      path: '/admin/wallets',
+      label: 'Admin Wallets',
+      icon: 'bi-safe',
+      orderIndex: 905,
+    })
+    addPermissionMenu('admin_deposits', 'list', {
+      path: '/admin/deposits',
+      label: 'Admin Deposits',
+      icon: 'bi-bank',
+      orderIndex: 906,
+    })
+
+    return nextMenus.sort((a, b) => a.orderIndex - b.orderIndex)
+  }, [apiMenus, hasPermission])
 
   return (
     <div className={`layout-wrapper ${mobileOpen ? 'sidebar-open' : ''} ${collapsed ? 'sidebar-collapsed' : ''}`}>
