@@ -352,7 +352,7 @@ func (r *Routes) SMMRoutes() {
 	providerFactory := func() (interfaceprovider.Client, error) {
 		return newObservedH2HClient(repoProvider)
 	}
-	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory)
+	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory, svcAppConfig)
 	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory, svcAppConfig).WithAuditService(svcAudit)
 	h := smmHandler.NewSMMHandler(svcCatalog, svcOrder)
 

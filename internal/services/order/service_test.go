@@ -93,11 +93,26 @@ func TestOrderServiceCreateOrderRejectsBelowMinimum(t *testing.T) {
 
 	_, err := service.CreateOrder(orderTestActorContext("user-id"), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
 		ServiceID: "service-id",
-		Target:    "target",
+		Target:    "https://instagram.com/3zadigital",
 		Quantity:  1,
 	})
 	if !errors.Is(err, ErrQuantityBelowMinimum) {
 		t.Fatalf("expected ErrQuantityBelowMinimum, got %v", err)
+	}
+}
+
+func TestOrderServiceCreateOrderRejectsInvalidSMMTargetURL(t *testing.T) {
+	service := NewOrderService(&mockOrderRepo{}, func() (interfaceprovider.Client, error) {
+		return &mockOrderProvider{}, nil
+	})
+
+	_, err := service.CreateOrder(orderTestActorContext("user-id"), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
+		ServiceID: "service-id",
+		Target:    "instagram.com/3zadigital",
+		Quantity:  100,
+	})
+	if !errors.Is(err, ErrInvalidOrderRequest) {
+		t.Fatalf("expected ErrInvalidOrderRequest, got %v", err)
 	}
 }
 

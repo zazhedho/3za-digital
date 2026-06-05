@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import PaginationBar from '../../components/common/PaginationBar'
+import { useAuth } from '../../contexts/AuthContext'
 
 const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -12,6 +13,7 @@ const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
 }).format(Number(value || 0))
 
 const SMMServices = () => {
+  const { hasPermission } = useAuth()
   const [params] = useSearchParams()
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState(params.get('search') || '')
@@ -66,7 +68,9 @@ const SMMServices = () => {
           <h1>SMM Services</h1>
           <p>Provider catalog for SMM orders.</p>
         </div>
-        <button className="btn btn-primary" onClick={sync}><i className="bi bi-cloud-arrow-down me-2"></i>Sync</button>
+        {hasPermission('smm_services', 'sync') && (
+          <button className="btn btn-primary" onClick={sync}><i className="bi bi-cloud-arrow-down me-2"></i>Sync</button>
+        )}
       </div>
 
       <div className="filter-pill">

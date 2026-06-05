@@ -1,6 +1,8 @@
 package serviceorder
 
 import (
+	"net/url"
+
 	domaincatalog "3za-digital/internal/domain/catalog"
 	domainorder "3za-digital/internal/domain/order"
 	"3za-digital/utils"
@@ -20,6 +22,23 @@ func validateService(service domaincatalog.ProviderService, productType string, 
 	}
 	if service.MaxQuantity != nil && quantity > *service.MaxQuantity {
 		return ErrQuantityAboveMaximum
+	}
+	return nil
+}
+
+func validateOrderTarget(productType string, target string) error {
+	if productType != domaincatalog.ProductTypeSMM {
+		return nil
+	}
+	parsed, err := url.ParseRequestURI(strings.TrimSpace(target))
+	if err != nil || parsed == nil {
+		return ErrInvalidOrderRequest
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return ErrInvalidOrderRequest
+	}
+	if parsed.Host == "" {
+		return ErrInvalidOrderRequest
 	}
 	return nil
 }

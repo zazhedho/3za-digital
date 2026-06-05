@@ -81,6 +81,9 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 		return domainorder.Order{}, ErrInvalidOrderRequest
 	}
 	productType = utils.NormalizeKey(productType)
+	if err := validateOrderTarget(productType, req.Target); err != nil {
+		return domainorder.Order{}, err
+	}
 
 	service, err := s.Repo.GetServiceByID(ctx, req.ServiceID)
 	if err != nil {

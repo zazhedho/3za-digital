@@ -4,9 +4,11 @@ const SearchableSelect = ({
   value,
   options,
   onChange,
+  onSearch,
   placeholder = 'Select option',
   searchPlaceholder = 'Search...',
   emptyLabel = 'No options found',
+  loading = false,
 }) => {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -64,12 +66,16 @@ const SearchableSelect = ({
             <i className="bi bi-search"></i>
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value)
+                onSearch?.(event.target.value)
+              }}
               placeholder={searchPlaceholder}
               autoFocus
             />
           </div>
           <div className="searchable-select-options">
+            {loading && <div className="searchable-select-empty">Searching...</div>}
             {filteredOptions.map((option) => (
               <button
                 type="button"
@@ -88,7 +94,7 @@ const SearchableSelect = ({
                 )}
               </button>
             ))}
-            {!filteredOptions.length && <div className="searchable-select-empty">{emptyLabel}</div>}
+            {!loading && !filteredOptions.length && <div className="searchable-select-empty">{emptyLabel}</div>}
           </div>
         </div>
       )}
