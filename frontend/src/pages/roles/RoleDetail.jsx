@@ -30,7 +30,7 @@ const RoleDetail = () => {
         </div>
       </div>
       <section className="panel">
-        <div className="detail-grid">
+        <div className="detail-grid detail-grid-compact">
           <span>Name</span><strong>{role?.name || '-'}</strong>
           <span>Display</span><strong>{role?.display_name || '-'}</strong>
           <span>Description</span><strong>{role?.description || '-'}</strong>

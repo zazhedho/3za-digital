@@ -109,15 +109,6 @@ func (s *CatalogService) Sync(ctx context.Context, productType string, req dto.S
 
 var _ interfacecatalog.ServiceCatalogInterface = (*CatalogService)(nil)
 
-func (s *CatalogService) calculatePrice(ctx context.Context, productType string, providerPrice string) (string, string, string, error) {
-	markupPercent, err := s.markupPercent(ctx, productType)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	return money.MarkupAmount(providerPrice, markupPercent)
-}
-
 func (s *CatalogService) markupPercent(ctx context.Context, productType string) (string, error) {
 	markupPercent := "0"
 	if s.ConfigService != nil {

@@ -44,7 +44,7 @@ const SMMOrderDetail = () => {
       </div>
       <div className="content-grid two">
         <section className="panel">
-          <div className="detail-grid">
+          <div className="detail-grid detail-grid-compact">
             <span>Status</span><strong>{order?.status || '-'}</strong>
             <span>Target</span><strong>{order?.target || '-'}</strong>
             <span>Quantity</span><strong>{order?.quantity || '-'}</strong>

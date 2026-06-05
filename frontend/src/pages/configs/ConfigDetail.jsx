@@ -27,7 +27,7 @@ const ConfigDetail = () => {
         </div>
       </div>
       <section className="panel">
-        <div className="detail-grid">
+        <div className="detail-grid detail-grid-compact">
           <span>Key</span><strong>{config?.config_key || '-'}</strong>
           <span>Display</span><strong>{config?.display_name || '-'}</strong>
           <span>Category</span><strong>{config?.category || '-'}</strong>

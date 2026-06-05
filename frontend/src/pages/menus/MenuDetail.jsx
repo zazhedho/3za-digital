@@ -27,7 +27,7 @@ const MenuDetail = () => {
         </div>
       </div>
       <section className="panel">
-        <div className="detail-grid">
+        <div className="detail-grid detail-grid-compact">
           <span>Name</span><strong>{menu?.name || '-'}</strong>
           <span>Display</span><strong>{menu?.display_name || '-'}</strong>
           <span>Path</span><strong>{menu?.path || '-'}</strong>

@@ -31,7 +31,7 @@ const UserDetail = () => {
       </div>
 
       <section className="panel">
-        <div className="detail-grid">
+        <div className="detail-grid detail-grid-compact">
           <span>Name</span><strong>{user?.name || '-'}</strong>
           <span>Email</span><strong>{user?.email || '-'}</strong>
           <span>Phone</span><strong>{user?.phone || '-'}</strong>

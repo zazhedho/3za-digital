@@ -3,6 +3,7 @@ package qrisly
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -91,8 +92,8 @@ func TestGenerateQRISReturnsAPIErrorOnSemanticFailure(t *testing.T) {
 	}
 
 	_, err = client.GenerateQRIS(context.Background(), GenerateQRISRequest{Amount: 1000, UniqueAmount: true})
-	apiErr, ok := err.(*APIError)
-	if !ok {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
 		t.Fatalf("expected APIError, got %T %v", err, err)
 	}
 	if apiErr.Message != "QRIS not found" {
