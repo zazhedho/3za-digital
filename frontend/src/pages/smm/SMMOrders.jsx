@@ -78,7 +78,7 @@ const SMMOrders = () => {
       </div>
 
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead>
             <tr>
               <th>Reference</th>
@@ -93,21 +93,25 @@ const SMMOrders = () => {
             {rows.map((row) => (
               <tr key={row.id}>
                 <td>
-                  <strong>{row.ref_id || row.id}</strong>
-                  <div className="text-muted small">{row.provider_order_id || '-'}</div>
+                  <span className="table-main">
+                    <strong>{row.ref_id || row.id}</strong>
+                    <span className="table-subtext">{row.provider_order_id || '-'}</span>
+                  </span>
                 </td>
-                <td>{row.service?.name || row.service_name || row.provider_service_id || '-'}</td>
-                <td className="text-truncate" style={{ maxWidth: 260 }}>{row.target}</td>
-                <td>{new Intl.NumberFormat('id-ID').format(row.quantity || 0)}</td>
+                <td><span className="table-subtext">{row.service?.name || row.service_name || row.provider_service_id || '-'}</span></td>
+                <td><span className="table-long">{row.target}</span></td>
+                <td className="table-number">{new Intl.NumberFormat('id-ID').format(row.quantity || 0)}</td>
                 <td><span className="badge rounded-pill text-bg-light text-capitalize">{row.status || '-'}</span></td>
                 <td className="text-end">
-                  <Link className="btn btn-sm btn-outline-dark me-2" to={`/smm/orders/${row.id}`}>Detail</Link>
-                  <button className="btn btn-sm btn-outline-dark" onClick={() => refresh(row.id)}>Refresh</button>
+                  <span className="table-actions">
+                    <Link className="btn btn-sm btn-outline-dark" to={`/smm/orders/${row.id}`}>Detail</Link>
+                    <button className="btn btn-sm btn-outline-dark" onClick={() => refresh(row.id)}>Refresh</button>
+                  </span>
                 </td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan="6" className="text-center text-muted py-5">{loading ? 'Loading...' : 'No orders found'}</td></tr>
+              <tr><td colSpan="6" className="empty-cell">{loading ? 'Loading...' : 'No orders found'}</td></tr>
             )}
           </tbody>
         </table>

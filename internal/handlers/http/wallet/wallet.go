@@ -1,10 +1,12 @@
 package handlerwallet
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"3za-digital/internal/authscope"
@@ -244,9 +246,8 @@ func (h *WalletHandler) GetMyDepositByID(ctx *gin.Context) {
 func (h *WalletHandler) PaymentWebhook(ctx *gin.Context) {
 	logID := utils.GenerateLogId(ctx)
 	provider := strings.TrimSpace(ctx.Param("provider"))
-	var req dto.PaymentWebhookRequest
-	if err := ctx.BindJSON(&req); err != nil {
-		writeBindError(ctx, logID, req, err)
+	req, err := bindPaymentWebhook(ctx, logID, provider)
+	if err != nil {
 		return
 	}
 
@@ -306,8 +307,71 @@ func walletPublicErrorMessage(err error) string {
 		return "insufficient main provider balance; top up H2H main balance first, then approve this pending deposit again"
 	case errors.Is(err, domainwallet.ErrMainBalanceUnavailable):
 		return "main provider balance unavailable; check H2H credentials/connectivity before approving deposit"
+	case errors.Is(err, domainwallet.ErrQRISProviderUnavailable):
+		return "qris payment provider unavailable; set QRISLY_API_KEY and QRISLY_QRIS_ID before creating QRIS deposit"
 	default:
 		return err.Error()
+	}
+}
+
+func bindPaymentWebhook(ctx *gin.Context, logID uuid.UUID, provider string) (dto.PaymentWebhookRequest, error) {
+	if utils.NormalizeKey(provider) == domainwallet.DepositProviderQRISLY {
+		var req dto.QRISLYWebhookRequest
+		if err := ctx.BindJSON(&req); err != nil {
+			writeBindError(ctx, logID, req, err)
+			return dto.PaymentWebhookRequest{}, err
+		}
+		historyID := stringifyWebhookValue(req.Data.HistoryID)
+		qrisID := stringifyWebhookValue(req.Data.QRISID)
+		return dto.PaymentWebhookRequest{
+			EventType:        req.Event,
+			RequestID:        historyID,
+			PaymentReference: historyID,
+			Amount:           stringifyWebhookValue(req.Data.Amount),
+			Status:           req.Data.Status,
+			Payload: map[string]interface{}{
+				"event":            req.Event,
+				"timestamp":        req.Timestamp,
+				"history_id":       historyID,
+				"qris_id":          qrisID,
+				"amount":           req.Data.Amount,
+				"original_amount":  req.Data.OriginalAmount,
+				"status":           req.Data.Status,
+				"paid_at":          req.Data.PaidAt,
+				"expired_at":       req.Data.ExpiredAt,
+				"payment_method":   req.Data.PaymentMethod,
+				"payment_provider": req.Data.PaymentProvider,
+				"created_at":       req.Data.CreatedAt,
+			},
+		}, nil
+	}
+
+	var req dto.PaymentWebhookRequest
+	if err := ctx.BindJSON(&req); err != nil {
+		writeBindError(ctx, logID, req, err)
+		return dto.PaymentWebhookRequest{}, err
+	}
+	return req, nil
+}
+
+func stringifyWebhookValue(value interface{}) string {
+	switch typed := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return strings.TrimSpace(typed)
+	case float64:
+		return strconv.FormatFloat(typed, 'f', -1, 64)
+	case float32:
+		return strconv.FormatFloat(float64(typed), 'f', -1, 32)
+	case int:
+		return strconv.Itoa(typed)
+	case int64:
+		return strconv.FormatInt(typed, 10)
+	case json.Number:
+		return typed.String()
+	default:
+		return fmt.Sprint(typed)
 	}
 }
 

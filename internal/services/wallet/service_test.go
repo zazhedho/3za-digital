@@ -2,6 +2,7 @@ package servicewallet
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	domainprovider "3za-digital/internal/domain/provider"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
+	"3za-digital/internal/integrations/qrisly"
 	"3za-digital/pkg/filter"
 
 	"gorm.io/gorm"
@@ -97,6 +99,20 @@ func (p mainBalanceProviderStub) GetH2HBalance(ctx context.Context) (domainprovi
 	return domainprovider.BalanceSnapshot{Balance: p.balance}, nil
 }
 
+type qrisProviderStub struct {
+	req      qrisly.GenerateQRISRequest
+	response *qrisly.GenerateQRISResponse
+	err      error
+}
+
+func (p *qrisProviderStub) GenerateQRIS(ctx context.Context, req qrisly.GenerateQRISRequest) (*qrisly.GenerateQRISResponse, error) {
+	p.req = req
+	if p.err != nil {
+		return nil, p.err
+	}
+	return p.response, nil
+}
+
 func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 	repo := &walletRepoStub{}
 	service := NewWalletService(repo)
@@ -110,6 +126,81 @@ func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 	}
 	if repo.createdDeposit.Method != domainwallet.DepositMethodManualAdmin {
 		t.Fatalf("expected manual_admin method, got %q", repo.createdDeposit.Method)
+	}
+}
+
+func TestCreateDepositRejectsBelowMinimumAmount(t *testing.T) {
+	repo := &walletRepoStub{}
+	service := NewWalletService(repo)
+
+	_, err := service.CreateDeposit(context.Background(), "user-1", dto.CreateDepositRequest{Amount: "9999"})
+	if !errors.Is(err, domainwallet.ErrDepositBelowMinimum) {
+		t.Fatalf("expected ErrDepositBelowMinimum, got %v", err)
+	}
+	if repo.createdDeposit.Id != "" {
+		t.Fatalf("expected no created deposit, got %+v", repo.createdDeposit)
+	}
+}
+
+func TestCreateDepositQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.T) {
+	repo := &walletRepoStub{}
+	qrisProvider := &qrisProviderStub{response: &qrisly.GenerateQRISResponse{
+		Data: qrisly.GenerateQRISData{
+			HistoryID:      qrisly.FlexibleString("1778"),
+			QRISImageURL:   "https://qris.test/image.png",
+			OriginalAmount: qrisly.FlexibleInt64(105000),
+			FinalAmount:    qrisly.FlexibleInt64(105003),
+			PaymentStatus:  "unpaid",
+			ExpiryTime:     "2026-03-03 14:52:52",
+			MerchantName:   "ABC Store",
+		},
+	}}
+	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
+
+	_, err := service.CreateDeposit(context.Background(), "user-1", dto.CreateDepositRequest{
+		Amount:   "100000",
+		Provider: "qris",
+	})
+	if err != nil {
+		t.Fatalf("CreateDeposit returned error: %v", err)
+	}
+	if repo.createdDeposit.Amount != "100000.00" {
+		t.Fatalf("expected credit amount 100000.00, got %q", repo.createdDeposit.Amount)
+	}
+	if repo.createdDeposit.Method != domainwallet.DepositMethodPaymentGateway {
+		t.Fatalf("expected payment_gateway method, got %q", repo.createdDeposit.Method)
+	}
+	if repo.createdDeposit.Provider != domainwallet.DepositProviderQRISLY {
+		t.Fatalf("expected qrisly provider, got %q", repo.createdDeposit.Provider)
+	}
+	if repo.createdDeposit.PaymentReference != "1778" {
+		t.Fatalf("expected history id payment reference, got %q", repo.createdDeposit.PaymentReference)
+	}
+	if qrisProvider.req.Amount != 105000 {
+		t.Fatalf("expected QRISLY amount 105000, got %d", qrisProvider.req.Amount)
+	}
+	if !qrisProvider.req.UniqueAmount {
+		t.Fatal("expected unique amount request")
+	}
+
+	var metadata map[string]string
+	if err := json.Unmarshal(repo.createdDeposit.Metadata, &metadata); err != nil {
+		t.Fatalf("unmarshal metadata: %v", err)
+	}
+	if metadata["fee_percent"] != "5" {
+		t.Fatalf("expected fee percent 5, got %q", metadata["fee_percent"])
+	}
+	if metadata["fee_amount"] != "5000.00" {
+		t.Fatalf("expected fee amount 5000.00, got %q", metadata["fee_amount"])
+	}
+	if metadata["unique_code"] != "3" || metadata["unique_code_amount"] != "3.00" {
+		t.Fatalf("expected unique amount 3.00, got %+v", metadata)
+	}
+	if metadata["payable_amount"] != "105003.00" {
+		t.Fatalf("expected payable amount 105003.00, got %q", metadata["payable_amount"])
+	}
+	if metadata["qrisly_history_id"] != "1778" {
+		t.Fatalf("expected history metadata, got %+v", metadata)
 	}
 }
 

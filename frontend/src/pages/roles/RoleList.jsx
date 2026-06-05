@@ -25,21 +25,21 @@ const RoleList = () => {
         {hasPermission('roles', 'create') && <Link to="/roles/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New role</Link>}
       </div>
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead>
             <tr><th>Name</th><th>Display</th><th>Description</th><th>System</th><th></th></tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.name}</td>
+                <td><span className="table-main"><strong>{row.name}</strong></span></td>
                 <td>{row.display_name || '-'}</td>
-                <td>{row.description || '-'}</td>
-                <td>{row.is_system ? 'Yes' : 'No'}</td>
-                <td className="text-end">{hasPermission('roles', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/roles/${row.id}`}>Detail</Link>}</td>
+                <td><span className="table-subtext">{row.description || '-'}</span></td>
+                <td><span className={`badge ${row.is_system ? 'text-bg-secondary' : 'text-bg-light'}`}>{row.is_system ? 'System' : 'Custom'}</span></td>
+                <td className="text-end"><span className="table-actions">{hasPermission('roles', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/roles/${row.id}`}>Detail</Link>}</span></td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="5" className="text-center text-muted py-5">No roles found</td></tr>}
+            {!rows.length && <tr><td colSpan="5" className="empty-cell">No roles found</td></tr>}
           </tbody>
         </table>
       </section>

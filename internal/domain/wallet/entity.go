@@ -24,6 +24,11 @@ const (
 
 	DepositMethodManualAdmin    = "manual_admin"
 	DepositMethodPaymentGateway = "payment_gateway"
+
+	DepositProviderQRIS   = "qris"
+	DepositProviderQRISLY = "qrisly"
+
+	DepositMinimumAmount = "10000.00"
 )
 
 func (Wallet) TableName() string {

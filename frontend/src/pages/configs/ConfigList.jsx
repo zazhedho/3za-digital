@@ -21,19 +21,19 @@ const ConfigList = () => {
         <div><h1>Configs</h1><p>Application settings.</p></div>
       </div>
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead><tr><th>Key</th><th>Display</th><th>Category</th><th>Active</th><th></th></tr></thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.config_key}</td>
-                <td>{row.display_name}</td>
-                <td>{row.category}</td>
-                <td>{row.is_active ? 'Yes' : 'No'}</td>
-                <td className="text-end">{hasPermission('configs', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/configs/${row.id}`}>Detail</Link>}</td>
+                <td><span className="table-id">{row.config_key}</span></td>
+                <td><span className="table-main"><strong>{row.display_name}</strong></span></td>
+                <td className="table-nowrap">{row.category}</td>
+                <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td className="text-end"><span className="table-actions">{hasPermission('configs', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/configs/${row.id}`}>Detail</Link>}</span></td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="5" className="text-center text-muted py-5">No configs found</td></tr>}
+            {!rows.length && <tr><td colSpan="5" className="empty-cell">No configs found</td></tr>}
           </tbody>
         </table>
       </section>

@@ -3,11 +3,15 @@ package servicewallet
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"time"
 
 	"3za-digital/internal/authscope"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
+	"3za-digital/internal/integrations/qrisly"
+	interfaceappconfig "3za-digital/internal/interfaces/appconfig"
 	interfacewallet "3za-digital/internal/interfaces/wallet"
 	"3za-digital/pkg/filter"
 	"3za-digital/pkg/money"
@@ -19,6 +23,12 @@ import (
 type WalletService struct {
 	Repo                interfacewallet.RepoWalletInterface
 	MainBalanceProvider interfacewallet.MainBalanceProvider
+	ConfigService       interfaceappconfig.ServiceAppConfigInterface
+	QRISProvider        QRISPaymentProvider
+}
+
+type QRISPaymentProvider interface {
+	GenerateQRIS(ctx context.Context, req qrisly.GenerateQRISRequest) (*qrisly.GenerateQRISResponse, error)
 }
 
 func NewWalletService(repo interfacewallet.RepoWalletInterface, mainBalanceProviders ...interfacewallet.MainBalanceProvider) *WalletService {
@@ -27,6 +37,16 @@ func NewWalletService(repo interfacewallet.RepoWalletInterface, mainBalanceProvi
 		service.MainBalanceProvider = mainBalanceProviders[0]
 	}
 	return service
+}
+
+func (s *WalletService) WithConfigService(configService interfaceappconfig.ServiceAppConfigInterface) *WalletService {
+	s.ConfigService = configService
+	return s
+}
+
+func (s *WalletService) WithQRISProvider(provider QRISPaymentProvider) *WalletService {
+	s.QRISProvider = provider
+	return s
 }
 
 func (s *WalletService) GetMyWallet(ctx context.Context, userID string) (domainwallet.Wallet, error) {
@@ -50,6 +70,9 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
+	if belowMinimumDeposit(amount) {
+		return domainwallet.DepositRequest{}, domainwallet.ErrDepositBelowMinimum
+	}
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		return domainwallet.DepositRequest{}, domainwallet.ErrInvalidAmount
@@ -64,6 +87,14 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 		Provider:  strings.TrimSpace(req.Provider),
 		Metadata:  utils.EmptyJSON(),
 		CreatedBy: &userID,
+	}
+	provider := utils.NormalizeKey(req.Provider)
+	if provider == domainwallet.DepositProviderQRIS || provider == domainwallet.DepositProviderQRISLY {
+		qrisDeposit, err := s.prepareQRISDeposit(ctx, deposit)
+		if err != nil {
+			return domainwallet.DepositRequest{}, err
+		}
+		deposit = qrisDeposit
 	}
 	return s.Repo.CreateDepositRequest(ctx, deposit)
 }
@@ -131,7 +162,6 @@ func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.A
 		}
 		deposit = existingDeposit
 		deposit.Amount = money.NormalizeOrTrim(existingDeposit.Amount)
-		deposit.Method = domainwallet.DepositMethodManualAdmin
 		deposit.CreatedBy = &actorID
 	} else {
 		normalizedAmount, err := money.NormalizePositive(req.Amount)
@@ -168,7 +198,6 @@ func (s *WalletService) AdminApproveDeposit(ctx context.Context, depositID strin
 		return domainwallet.DepositRequest{}, domainwallet.ErrDepositAmountMismatch
 	}
 	deposit.Amount = money.NormalizeOrTrim(deposit.Amount)
-	deposit.Method = domainwallet.DepositMethodManualAdmin
 	deposit.CreatedBy = &actorID
 
 	mainBalance, err := s.currentMainBalance(ctx)
@@ -256,4 +285,120 @@ func (s *WalletService) currentMainBalance(ctx context.Context) (string, error) 
 		return "", domainwallet.ErrMainBalanceUnavailable
 	}
 	return balance, nil
+}
+
+func (s *WalletService) prepareQRISDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
+	if s.QRISProvider == nil {
+		return domainwallet.DepositRequest{}, domainwallet.ErrQRISProviderUnavailable
+	}
+
+	feePercent := "5"
+	if s.ConfigService != nil {
+		if value, err := s.ConfigService.GetString(ctx, "payment.qris.fee_percent", feePercent); err != nil {
+			return domainwallet.DepositRequest{}, err
+		} else {
+			feePercent = value
+		}
+	}
+
+	_, amountWithFee, feeAmount, err := money.MarkupAmount(deposit.Amount, feePercent)
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+	amountWithFeeRupiah, err := wholeRupiahAmount(amountWithFee)
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+	if amountWithFeeRupiah < 1000 {
+		return domainwallet.DepositRequest{}, domainwallet.ErrInvalidAmount
+	}
+
+	qrisResponse, err := s.QRISProvider.GenerateQRIS(ctx, qrisly.GenerateQRISRequest{
+		Amount:       amountWithFeeRupiah,
+		UniqueAmount: true,
+	})
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+
+	payableRupiah := qrisResponse.Data.PayableAmount()
+	if payableRupiah <= 0 {
+		payableRupiah = amountWithFeeRupiah
+	}
+	payableAmount := money.FormatCents(payableRupiah * 100)
+	uniqueCodeValue := payableRupiah - amountWithFeeRupiah
+	if uniqueCodeValue < 0 {
+		uniqueCodeValue = 0
+	}
+	uniqueCodeAmount := money.FormatCents(uniqueCodeValue * 100)
+	uniqueCode := fmt.Sprintf("%d", uniqueCodeValue)
+
+	paymentReference := strings.TrimSpace(qrisResponse.Data.HistoryID.String())
+	if paymentReference == "" {
+		paymentReference = "QRISLY-" + strings.ToUpper(strings.ReplaceAll(deposit.Id, "-", "")[:12])
+	}
+	expiredAt := parseGatewayTime(qrisResponse.Data.ExpiryValue())
+
+	deposit.Method = domainwallet.DepositMethodPaymentGateway
+	deposit.Provider = domainwallet.DepositProviderQRISLY
+	deposit.PaymentReference = paymentReference
+	deposit.PaymentURL = strings.TrimSpace(qrisResponse.Data.ImageValue())
+	deposit.ExpiredAt = expiredAt
+	deposit.Metadata = utils.MustJSON(map[string]string{
+		"payment_channel":    domainwallet.DepositProviderQRISLY,
+		"credit_amount":      deposit.Amount,
+		"fee_percent":        feePercent,
+		"fee_amount":         feeAmount,
+		"unique_code":        uniqueCode,
+		"unique_code_amount": uniqueCodeAmount,
+		"payable_amount":     payableAmount,
+		"qris_base_amount":   amountWithFee,
+		"qris_image_url":     qrisResponse.Data.ImageValue(),
+		"qris_string":        qrisResponse.Data.QRISString,
+		"qris_merchant_name": qrisResponse.Data.MerchantValue(),
+		"qrisly_history_id":  qrisResponse.Data.HistoryID.String(),
+		"qrisly_qris_id":     qrisResponse.Data.QRISID.String(),
+		"qrisly_status":      qrisResponse.Data.PaymentStatus,
+		"qrisly_expiry_time": qrisResponse.Data.ExpiryValue(),
+	})
+	return deposit, nil
+}
+
+func wholeRupiahAmount(value string) (int64, error) {
+	cents, err := money.ParseCents(value)
+	if err != nil || cents <= 0 || cents%100 != 0 {
+		return 0, domainwallet.ErrInvalidAmount
+	}
+	return cents / 100, nil
+}
+
+func belowMinimumDeposit(amount string) bool {
+	amountCents, err := money.ParseCents(amount)
+	if err != nil {
+		return true
+	}
+	minimumCents, err := money.ParseCents(domainwallet.DepositMinimumAmount)
+	if err != nil {
+		return true
+	}
+	return amountCents < minimumCents
+}
+
+func parseGatewayTime(value string) *time.Time {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	layouts := []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05-07:00",
+	}
+	for _, layout := range layouts {
+		parsed, err := time.Parse(layout, value)
+		if err == nil {
+			return &parsed
+		}
+	}
+	return nil
 }

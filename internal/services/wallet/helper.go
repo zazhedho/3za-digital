@@ -16,6 +16,9 @@ import (
 func verifyWebhookSignature(provider string, req dto.PaymentWebhookRequest) error {
 	secret := utils.GetEnv("PAYMENT_WEBHOOK_SECRET_"+utils.EnvKey(provider), "")
 	if secret == "" {
+		if utils.NormalizeKey(provider) == domainwallet.DepositProviderQRISLY {
+			return nil
+		}
 		return domainwallet.ErrInvalidSignature
 	}
 
@@ -74,10 +77,12 @@ func IsPublicError(err error) bool {
 		errors.Is(err, domainwallet.ErrInvalidDirection) ||
 		errors.Is(err, domainwallet.ErrDepositAlreadyFinal) ||
 		errors.Is(err, domainwallet.ErrDepositAmountMismatch) ||
+		errors.Is(err, domainwallet.ErrDepositBelowMinimum) ||
 		errors.Is(err, domainwallet.ErrInvalidSignature) ||
 		errors.Is(err, domainwallet.ErrPaymentWebhookDisabled) ||
 		errors.Is(err, domainwallet.ErrInsufficientMainBalance) ||
-		errors.Is(err, domainwallet.ErrMainBalanceUnavailable)
+		errors.Is(err, domainwallet.ErrMainBalanceUnavailable) ||
+		errors.Is(err, domainwallet.ErrQRISProviderUnavailable)
 }
 
 func IsNotFound(err error) bool {

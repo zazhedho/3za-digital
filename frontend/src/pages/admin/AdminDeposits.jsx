@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import { depositPayableAmount, formatMoney, isQRISDeposit } from '../../utils/deposit'
 
 const methodLabel = (method) => {
   if (method === 'manual_admin') return 'Manual deposit'
@@ -41,12 +42,13 @@ const AdminDeposits = () => {
         </div>
       </div>
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead>
             <tr>
               <th>User</th>
               <th>Reference</th>
               <th>Amount</th>
+              <th>Pay</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -54,20 +56,25 @@ const AdminDeposits = () => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.user?.name || row.user?.email || 'User'}</td>
+                <td><span className="table-main"><strong>{row.user?.name || row.user?.email || 'User'}</strong></span></td>
                 <td>
-                  <strong>{methodLabel(row.method)}</strong>
-                  <div className="text-muted small">{row.payment_reference ? `Ref ${row.payment_reference}` : 'Waiting for reference'}</div>
+                  <span className="table-main">
+                    <strong>{methodLabel(row.method)}</strong>
+                    <span className="table-subtext">{row.payment_reference ? `Ref ${row.payment_reference}` : 'Waiting for reference'}</span>
+                  </span>
                 </td>
-                <td>{row.amount}</td>
+                <td className="table-number">{formatMoney(row.amount)}</td>
+                <td className="table-number">{isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : '-'}</td>
                 <td><span className="badge rounded-pill text-bg-light text-capitalize">{row.status}</span></td>
                 <td className="text-end">
-                  <Link className="btn btn-sm btn-outline-dark me-2" to={`/admin/deposits/${row.id}`}>Detail</Link>
-                  <button className="btn btn-sm btn-primary" disabled={row.status !== 'pending'} onClick={() => approve(row)}>Approve</button>
+                  <span className="table-actions">
+                    <Link className="btn btn-sm btn-outline-dark" to={`/admin/deposits/${row.id}`}>Detail</Link>
+                    <button className="btn btn-sm btn-primary" disabled={row.status !== 'pending'} onClick={() => approve(row)}>Approve</button>
+                  </span>
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="5" className="text-center text-muted py-5">No deposits found</td></tr>}
+            {!rows.length && <tr><td colSpan="6" className="empty-cell">No deposits found</td></tr>}
           </tbody>
         </table>
       </section>

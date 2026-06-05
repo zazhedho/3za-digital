@@ -36,7 +36,7 @@ const UserList = () => {
       </div>
 
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead>
             <tr>
               <th>Name</th>
@@ -49,16 +49,16 @@ const UserList = () => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.name || '-'}</td>
-                <td>{row.email}</td>
-                <td>{row.role}</td>
+                <td><span className="table-main"><strong>{row.name || '-'}</strong></span></td>
+                <td><span className="table-subtext">{row.email}</span></td>
+                <td className="table-nowrap">{row.role}</td>
                 <td><span className="badge rounded-pill text-bg-light">{row.status || (row.is_active === false ? 'inactive' : 'active')}</span></td>
                 <td className="text-end">
-                  {hasPermission('users', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/users/${row.id}`}>Detail</Link>}
+                  <span className="table-actions">{hasPermission('users', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/users/${row.id}`}>Detail</Link>}</span>
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="5" className="text-center text-muted py-5">No users found</td></tr>}
+            {!rows.length && <tr><td colSpan="5" className="empty-cell">No users found</td></tr>}
           </tbody>
         </table>
       </section>

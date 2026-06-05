@@ -39,7 +39,7 @@ const Wallet = () => {
       </div>
 
       <section className="table-panel mt-4">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead>
             <tr>
               <th>Type</th>
@@ -54,12 +54,12 @@ const Wallet = () => {
               <tr key={row.id}>
                 <td className="text-capitalize">{row.type}</td>
                 <td><span className="badge text-bg-light text-capitalize">{row.direction}</span></td>
-                <td>{formatMoney(row.amount)}</td>
-                <td>{row.reference || row.deposit_request_id || '-'}</td>
-                <td>{row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
+                <td className="table-number">{formatMoney(row.amount)}</td>
+                <td><span className="table-subtext">{row.reference || row.deposit_request_id || '-'}</span></td>
+                <td className="table-date">{row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
               </tr>
             ))}
-            {!transactions.length && <tr><td colSpan="5" className="text-center text-muted py-5">No transactions found</td></tr>}
+            {!transactions.length && <tr><td colSpan="5" className="empty-cell">No transactions found</td></tr>}
           </tbody>
         </table>
       </section>

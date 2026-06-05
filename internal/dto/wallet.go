@@ -31,3 +31,22 @@ type PaymentWebhookRequest struct {
 	Signature        string                 `json:"signature"`
 	Payload          map[string]interface{} `json:"payload"`
 }
+
+type QRISLYWebhookRequest struct {
+	Event     string            `json:"event"`
+	Timestamp string            `json:"timestamp"`
+	Data      QRISLYWebhookData `json:"data"`
+}
+
+type QRISLYWebhookData struct {
+	HistoryID       interface{} `json:"history_id"`
+	QRISID          interface{} `json:"qris_id"`
+	Amount          interface{} `json:"amount"`
+	OriginalAmount  interface{} `json:"original_amount"`
+	Status          string      `json:"status"`
+	PaidAt          string      `json:"paid_at"`
+	ExpiredAt       string      `json:"expired_at"`
+	PaymentMethod   string      `json:"payment_method"`
+	PaymentProvider string      `json:"payment_provider"`
+	CreatedAt       string      `json:"created_at"`
+}

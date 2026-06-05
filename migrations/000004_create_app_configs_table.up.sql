@@ -79,5 +79,32 @@ VALUES
         '5',
         'Markup percentage applied to SMM provider charge before charging reseller or enduser wallet.',
         TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'payment.qris.fee_percent',
+        'QRIS Topup Fee Percent',
+        'payment',
+        '5',
+        'QRIS topup fee percentage added to the user requested deposit amount.',
+        TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'payment.qris.image_url',
+        'QRIS Image URL',
+        'payment',
+        '',
+        'Public QRIS image URL shown to users when creating a QRIS deposit.',
+        TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'payment.qris.merchant_name',
+        'QRIS Merchant Name',
+        'payment',
+        '',
+        'Merchant name shown to users when creating a QRIS deposit.',
+        TRUE
     )
 ON CONFLICT (config_key) DO NOTHING;

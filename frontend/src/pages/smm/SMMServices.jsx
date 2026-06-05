@@ -87,7 +87,7 @@ const SMMServices = () => {
       </div>
 
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table table-wide align-middle">
           <thead>
             <tr>
               <th>ID</th>
@@ -102,17 +102,17 @@ const SMMServices = () => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td><span className="text-muted small">{row.provider_service_id}</span></td>
-                <td><strong>{row.name}</strong></td>
-                <td>{row.platform || '-'}</td>
-                <td>{row.category || row.brand || '-'}</td>
-                <td>{row.min_quantity || '-'} / {row.max_quantity || '-'}</td>
-                <td>{formatMoney(row.price)}</td>
+                <td><span className="table-id">{row.provider_service_id}</span></td>
+                <td><span className="table-main"><strong>{row.name}</strong></span></td>
+                <td className="text-capitalize table-nowrap">{row.platform || '-'}</td>
+                <td><span className="table-subtext">{row.category || row.brand || '-'}</span></td>
+                <td className="table-number">{row.min_quantity || '-'} / {row.max_quantity || '-'}</td>
+                <td className="table-number">{formatMoney(row.price)}</td>
                 <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan="7" className="text-center text-muted py-5">{loading ? 'Loading...' : 'No services found'}</td></tr>
+              <tr><td colSpan="7" className="empty-cell">{loading ? 'Loading...' : 'No services found'}</td></tr>
             )}
           </tbody>
         </table>

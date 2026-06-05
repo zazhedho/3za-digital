@@ -2,6 +2,7 @@ package repositorywallet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -184,7 +185,6 @@ func (r *repo) ApproveManualTopup(ctx context.Context, deposit domainwallet.Depo
 		}
 
 		existing.Status = domainwallet.DepositStatusPaid
-		existing.Method = domainwallet.DepositMethodManualAdmin
 		existing.PaidAt = &now
 		existing.UpdatedAt = &now
 		existing.CreatedBy = deposit.CreatedBy
@@ -258,7 +258,7 @@ func (r *repo) CompleteDepositByPaymentReference(ctx context.Context, provider, 
 			First(&deposit).Error; err != nil {
 			return err
 		}
-		if money.NormalizeOrTrim(deposit.Amount) != money.NormalizeOrTrim(amount) {
+		if money.NormalizeOrTrim(paymentExpectedAmount(deposit)) != money.NormalizeOrTrim(amount) {
 			return domainwallet.ErrDepositAmountMismatch
 		}
 		if deposit.Status == domainwallet.DepositStatusPaid {
@@ -328,6 +328,20 @@ func (r *repo) UpdateDepositStatusByPaymentReference(ctx context.Context, provid
 		return tx.Save(&deposit).Error
 	})
 	return deposit, err
+}
+
+func paymentExpectedAmount(deposit domainwallet.DepositRequest) string {
+	if len(deposit.Metadata) == 0 {
+		return deposit.Amount
+	}
+	var metadata map[string]string
+	if err := json.Unmarshal(deposit.Metadata, &metadata); err != nil {
+		return deposit.Amount
+	}
+	if payableAmount := strings.TrimSpace(metadata["payable_amount"]); payableAmount != "" {
+		return payableAmount
+	}
+	return deposit.Amount
 }
 
 type walletMutation struct {

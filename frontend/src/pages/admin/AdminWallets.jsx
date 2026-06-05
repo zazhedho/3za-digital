@@ -55,7 +55,7 @@ const AdminWallets = () => {
       )}
 
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead>
             <tr>
               <th>User</th>
@@ -68,14 +68,19 @@ const AdminWallets = () => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.user?.name || row.user_id}</td>
-                <td>{row.balance}</td>
-                <td>{row.currency}</td>
-                <td>{row.is_active ? 'Active' : 'Inactive'}</td>
-                <td className="text-end"><button className="btn btn-sm btn-outline-dark" onClick={() => setActiveWallet(row)}>Adjust</button></td>
+                <td>
+                  <span className="table-main">
+                    <strong>{row.user?.name || row.user_id}</strong>
+                    {row.user?.email && <span className="table-subtext">{row.user.email}</span>}
+                  </span>
+                </td>
+                <td className="table-number">{row.balance}</td>
+                <td className="table-nowrap">{row.currency}</td>
+                <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td className="text-end"><span className="table-actions"><button className="btn btn-sm btn-outline-dark" onClick={() => setActiveWallet(row)}>Adjust</button></span></td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="5" className="text-center text-muted py-5">No wallets found</td></tr>}
+            {!rows.length && <tr><td colSpan="5" className="empty-cell">No wallets found</td></tr>}
           </tbody>
         </table>
       </section>

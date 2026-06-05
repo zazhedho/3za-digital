@@ -21,20 +21,20 @@ const MenuList = () => {
         <div><h1>Menus</h1><p>Backend-driven navigation entries.</p></div>
       </div>
       <section className="table-panel">
-        <table className="table align-middle">
+        <table className="table app-table align-middle">
           <thead><tr><th>Name</th><th>Path</th><th>Icon</th><th>Order</th><th>Active</th><th></th></tr></thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.display_name}</td>
-                <td>{row.path}</td>
-                <td><i className={`bi ${row.icon || 'bi-circle'}`}></i> {row.icon}</td>
-                <td>{row.order_index}</td>
-                <td>{row.is_active ? 'Yes' : 'No'}</td>
-                <td className="text-end">{hasPermission('menus', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/menus/${row.id}`}>Detail</Link>}</td>
+                <td><span className="table-main"><strong>{row.display_name}</strong></span></td>
+                <td><span className="table-subtext">{row.path}</span></td>
+                <td className="table-nowrap"><i className={`bi ${row.icon || 'bi-circle'} me-2`}></i>{row.icon || '-'}</td>
+                <td className="table-number">{row.order_index}</td>
+                <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td className="text-end"><span className="table-actions">{hasPermission('menus', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/menus/${row.id}`}>Detail</Link>}</span></td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="6" className="text-center text-muted py-5">No menus found</td></tr>}
+            {!rows.length && <tr><td colSpan="6" className="empty-cell">No menus found</td></tr>}
           </tbody>
         </table>
       </section>

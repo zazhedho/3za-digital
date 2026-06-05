@@ -66,6 +66,28 @@ func TestAssertMainBalanceLimitAllowsExactLiabilityLimit(t *testing.T) {
 	}
 }
 
+func TestPaymentExpectedAmountUsesPayableAmountMetadata(t *testing.T) {
+	deposit := domainwallet.DepositRequest{
+		Amount:   "100000.00",
+		Metadata: []byte(`{"payable_amount":"105123.00"}`),
+	}
+
+	if got := paymentExpectedAmount(deposit); got != "105123.00" {
+		t.Fatalf("expected payable amount metadata, got %q", got)
+	}
+}
+
+func TestPaymentExpectedAmountFallsBackToDepositAmount(t *testing.T) {
+	deposit := domainwallet.DepositRequest{
+		Amount:   "100000.00",
+		Metadata: []byte(`{}`),
+	}
+
+	if got := paymentExpectedAmount(deposit); got != "100000.00" {
+		t.Fatalf("expected deposit amount fallback, got %q", got)
+	}
+}
+
 func TestGetDepositsPreloadsUserSummaryForAdminList(t *testing.T) {
 	db, mock := newWalletMockDB(t)
 	repo := &repo{db: db}
