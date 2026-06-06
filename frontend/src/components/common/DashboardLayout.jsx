@@ -1,8 +1,10 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import menuService from '../../services/menuService'
+import walletService from '../../services/walletService'
 import { useAuth } from '../../contexts/AuthContext'
 import TopNav from './TopNav'
+import { formatMoney } from '../../utils/deposit'
 
 const normalizeMenus = (menus) => (
   menus
@@ -22,6 +24,18 @@ const DashboardLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [apiMenus, setApiMenus] = useState([])
+  const [wallet, setWallet] = useState(null)
+  const canViewWallet = hasPermission('wallet', 'view')
+  const canOpenDeposits = hasPermission('deposits', 'list')
+
+  const loadWallet = useCallback(async () => {
+    if (!canViewWallet) {
+      setWallet(null)
+      return
+    }
+    const response = await walletService.getMyWallet()
+    setWallet(response.data.data)
+  }, [canViewWallet])
 
   useEffect(() => {
     let mounted = true
@@ -39,7 +53,8 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     setMobileOpen(false)
-  }, [location.pathname])
+    loadWallet().catch(() => setWallet(null))
+  }, [loadWallet, location.pathname])
 
   const menus = useMemo(() => {
     const nextMenus = [...apiMenus]
@@ -80,6 +95,25 @@ const DashboardLayout = () => {
             <small className="sidebar-subtitle">Social commerce panel</small>
           </div>
         </div>
+
+        {canViewWallet && (
+          <div className="sidebar-wallet-card">
+            <div className="sidebar-wallet-icon"><i className="bi bi-wallet2"></i></div>
+            <div className="sidebar-wallet-copy">
+              <span className="sidebar-wallet-meta">
+                <span>Balance</span>
+                <small>{wallet?.currency || 'IDR'}</small>
+              </span>
+              <strong>{formatMoney(wallet?.balance)}</strong>
+            </div>
+            {canOpenDeposits && (
+              <Link className="sidebar-wallet-action" to="/deposits">
+                <i className="bi bi-plus-lg"></i>
+                <span>Deposit</span>
+              </Link>
+            )}
+          </div>
+        )}
 
         <nav className="sidebar-menu">
           {menus.map((item) => {
