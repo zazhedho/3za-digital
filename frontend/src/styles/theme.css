@@ -1734,6 +1734,141 @@ body {
   max-width: 520px;
 }
 
+.role-permission-section {
+  border-top: 1px solid var(--hairline-soft);
+  margin-top: 28px;
+  padding-top: 24px;
+}
+
+.role-permission-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.role-permission-heading h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.role-permission-heading p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.permission-search {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 9999px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  max-width: 420px;
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+.permission-search i {
+  color: var(--muted);
+}
+
+.permission-search input {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  outline: 0;
+}
+
+.permission-group-list {
+  display: grid;
+  gap: 14px;
+}
+
+.permission-group {
+  border: 1px solid var(--hairline-soft);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.permission-group-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  text-transform: capitalize;
+}
+
+.permission-resource-label {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+}
+
+.permission-resource-label input {
+  flex: 0 0 auto;
+}
+
+.permission-group-title > span:last-child {
+  background: var(--surface-soft);
+  border-radius: 9999px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.permission-check-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.permission-check {
+  align-items: flex-start;
+  border: 1px solid var(--hairline-soft);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  min-height: 64px;
+  padding: 10px;
+}
+
+.permission-check:hover {
+  background: var(--surface-soft);
+}
+
+.permission-check input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.permission-check span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.permission-check strong {
+  color: var(--ink);
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.permission-check small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .segmented-control {
   background: var(--surface);
   border: 1px solid var(--hairline);
@@ -1948,6 +2083,15 @@ body {
   .form-panel .d-flex.gap-2 .btn,
   .auth-card .d-flex.gap-2 .btn {
     flex: 1 1 160px;
+  }
+
+  .role-permission-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .permission-search {
+    max-width: none;
   }
 
   .pagination-bar {
