@@ -84,7 +84,9 @@ func IsPublicError(err error) bool {
 		errors.Is(err, domainwallet.ErrPaymentWebhookDisabled) ||
 		errors.Is(err, domainwallet.ErrInsufficientMainBalance) ||
 		errors.Is(err, domainwallet.ErrMainBalanceUnavailable) ||
-		errors.Is(err, domainwallet.ErrQRISProviderUnavailable)
+		errors.Is(err, domainwallet.ErrQRISProviderUnavailable) ||
+		errors.Is(err, domainwallet.ErrQRISStaticImageUnavailable) ||
+		errors.Is(err, domainwallet.ErrDepositCancelReasonRequired)
 }
 
 func IsNotFound(err error) bool {

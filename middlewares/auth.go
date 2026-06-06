@@ -29,6 +29,11 @@ type Middleware struct {
 	PermissionCache *redis.Client
 }
 
+type RequiredPermission struct {
+	Resource string
+	Action   string
+}
+
 func NewMiddleware(blacklistRepo interfaceauth.RepoAuthInterface, permissionRepo interfacepermission.RepoPermissionInterface) *Middleware {
 	return &Middleware{
 		BlacklistRepo:   blacklistRepo,
@@ -86,6 +91,91 @@ func (m *Middleware) AuthMiddleware() gin.HandlerFunc {
 		ctx.Request = ctx.Request.WithContext(authscope.WithContext(ctx.Request.Context(), authscope.NewFromClaims(dataJWT, nil)))
 
 		ctx.Next()
+	}
+}
+
+func (m *Middleware) AnyPermissionMiddleware(permissions ...RequiredPermission) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var (
+			logId     uuid.UUID
+			logPrefix string
+		)
+
+		logId = utils.GenerateLogId(ctx)
+		logPrefix = "[AnyPermissionMiddleware]"
+
+		authData, exists := ctx.Get(utils.CtxKeyAuthData)
+		if !exists {
+			logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; AuthData not found", logPrefix))
+			res := response.Forbidden(logId, messages.AccessDenied)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, res)
+			return
+		}
+		dataJWT, ok := authData.(map[string]interface{})
+		if !ok {
+			logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Invalid AuthData type", logPrefix))
+			res := response.Forbidden(logId, messages.AccessDenied)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, res)
+			return
+		}
+
+		userRole := strings.TrimSpace(utils.InterfaceString(dataJWT["role"]))
+		if userRole == "" {
+			logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; there is no role user", logPrefix))
+			res := response.Forbidden(logId, messages.AccessDenied)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, res)
+			return
+		}
+
+		if userRole == utils.RoleSuperAdmin {
+			ctx.Next()
+			return
+		}
+
+		userId := strings.TrimSpace(utils.InterfaceString(dataJWT["user_id"]))
+		if userId == "" {
+			logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Invalid token claims: user_id is empty", logPrefix))
+			res := response.Unauthorized(logId, "Invalid or expired token. Please login again.")
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, res)
+			return
+		}
+
+		permissionKeys, cacheHit := permissioncache.GetUserPermissionKeys(ctx.Request.Context(), m.PermissionCache, userId)
+		if !cacheHit {
+			loadedPermissions, err := m.PermissionRepo.GetUserPermissions(ctx.Request.Context(), userId)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					logger.WriteLogWithContext(ctx, logger.LogLevelWarn, fmt.Sprintf("%s; User '%s' not found when loading permissions", logPrefix, userId))
+					res := response.Forbidden(logId, messages.AccessDenied)
+					ctx.AbortWithStatusJSON(http.StatusForbidden, res)
+					return
+				}
+				logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Failed to get user permissions: %s", logPrefix, err.Error()))
+				res := response.InternalServerError(logId)
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, res)
+				return
+			}
+			permissionKeys = permissionKeysFromPermissions(loadedPermissions)
+			permissioncache.SetUserPermissionKeys(ctx.Request.Context(), m.PermissionCache, userId, permissionKeys)
+		}
+
+		dataJWT["permissions"] = permissionKeys
+		ctx.Set(utils.CtxKeyAuthData, dataJWT)
+		ctx.Set("permissions", permissionKeys)
+
+		scope := authscope.NewFromClaims(dataJWT, permissionKeys)
+		ctx.Request = ctx.Request.WithContext(authscope.WithContext(ctx.Request.Context(), scope))
+
+		for _, permission := range permissions {
+			if scope.Has(permission.Resource, permission.Action) {
+				ctx.Next()
+				return
+			}
+		}
+
+		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; User '%s' lacks any allowed permission", logPrefix, userId))
+		res := response.Forbidden(logId, messages.AccessDenied)
+		ctx.AbortWithStatusJSON(http.StatusForbidden, res)
 	}
 }
 

@@ -12,7 +12,7 @@ const walletService = {
   adminAdjust: (userId, payload) => api.post(`/admin/wallets/${userId}/adjust`, payload),
   getDeposits: (params = {}) => api.get('/admin/deposits', { params }),
   getDepositById: (id) => api.get(`/admin/deposits/${id}`),
-  approveDeposit: (id, payload) => api.post(`/admin/deposits/${id}/approve`, payload),
+  updateDepositStatus: (id, payload) => api.post(`/admin/deposits/${id}/status`, payload),
 }
 
 export default walletService

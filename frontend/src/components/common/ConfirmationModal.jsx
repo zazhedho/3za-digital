@@ -7,6 +7,8 @@ const ConfirmationModal = ({
   confirmLabel = 'Confirm',
   confirmClassName = 'btn-primary',
   loading = false,
+  confirmDisabled = false,
+  children,
 }) => {
   if (!show) return null
 
@@ -22,9 +24,10 @@ const ConfirmationModal = ({
             <i className="bi bi-x-lg"></i>
           </button>
         </div>
+        {children && <div className="confirmation-modal-body">{children}</div>}
         <div className="toolbar-actions justify-content-end">
           <button type="button" className="btn btn-outline-dark" onClick={onCancel} disabled={loading}>Cancel</button>
-          <button type="button" className={`btn ${confirmClassName}`} onClick={onConfirm} disabled={loading}>
+          <button type="button" className={`btn ${confirmClassName}`} onClick={onConfirm} disabled={loading || confirmDisabled}>
             {loading ? 'Processing...' : confirmLabel}
           </button>
         </div>

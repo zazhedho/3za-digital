@@ -5,7 +5,7 @@ import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import DepositForm from './DepositForm'
 import { useAuth } from '../../contexts/AuthContext'
-import { depositPayableAmount, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
+import { depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
 
 const methodLabel = (method) => {
   if (method === 'manual_admin') return 'Manual deposit'
@@ -82,7 +82,7 @@ const DepositList = () => {
                 </td>
                 <td className="table-number">{formatMoney(row.amount)}</td>
                 <td className="table-number">{isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : '-'}</td>
-                <td className="text-capitalize table-nowrap">{row.provider || '-'}</td>
+                <td className="table-nowrap">{depositProviderLabel(row)}</td>
                 <td><span className={`status-badge ${depositStatusClass(row)} text-capitalize`}>{depositStatus(row)}</span></td>
                 <td className="table-date">{row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
                 <td className="text-end">

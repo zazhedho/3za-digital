@@ -17,6 +17,15 @@ export const isQRISDeposit = (deposit) => {
 
 export const depositPayableAmount = (deposit) => depositMetadata(deposit).payable_amount || deposit?.amount
 
+export const depositProviderLabel = (deposit) => {
+  const metadata = depositMetadata(deposit)
+  const provider = deposit?.provider || metadata.payment_channel
+  const qrisType = metadata.qris_type
+  if (provider === 'qrisly' || qrisType === 'dynamic') return 'Dynamic QRIS'
+  if (provider === 'qris' || qrisType === 'static') return 'Static QRIS'
+  return provider || '-'
+}
+
 export const depositStatus = (deposit) => {
   const metadata = depositMetadata(deposit)
   if (isQRISDeposit(deposit) && deposit?.status === 'pending' && metadata.qrisly_status) {

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"3za-digital/internal/authscope"
+	domainappconfig "3za-digital/internal/domain/appconfig"
 	domainprovider "3za-digital/internal/domain/provider"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
@@ -28,6 +30,8 @@ type walletRepoStub struct {
 	completedProvider    string
 	completedReference   string
 	completedAmount      string
+	cancelActorID        string
+	cancelReason         string
 	manualTopupLimit     string
 	adjustLimit          string
 	createManualTopupErr error
@@ -80,6 +84,13 @@ func (r *walletRepoStub) ApproveManualTopup(ctx context.Context, deposit domainw
 	r.createdDeposit = deposit
 	r.manualTopupLimit = mainBalanceLimit
 	return deposit, r.createManualTopupErr
+}
+
+func (r *walletRepoStub) CancelDeposit(ctx context.Context, depositID string, actorID string, reason string) (domainwallet.DepositRequest, error) {
+	r.cancelActorID = actorID
+	r.cancelReason = reason
+	r.deposit.Status = domainwallet.DepositStatusCancelled
+	return r.deposit, nil
 }
 
 func (r *walletRepoStub) AdjustWallet(ctx context.Context, userID, direction, amount, description, createdBy string, mainBalanceLimit string) (domainwallet.WalletTransaction, error) {
@@ -151,6 +162,57 @@ func (p *qrisProviderStub) GetPaymentStatus(ctx context.Context, historyID strin
 	return p.statusResponse, nil
 }
 
+type appConfigServiceStub struct {
+	values map[string]string
+	err    error
+}
+
+func (s appConfigServiceStub) GetAll(ctx context.Context, params filter.BaseParams) ([]domainappconfig.AppConfig, int64, error) {
+	return nil, 0, nil
+}
+
+func (s appConfigServiceStub) GetByID(ctx context.Context, id string) (domainappconfig.AppConfig, error) {
+	return domainappconfig.AppConfig{}, nil
+}
+
+func (s appConfigServiceStub) GetByKey(ctx context.Context, configKey string) (domainappconfig.AppConfig, error) {
+	return domainappconfig.AppConfig{}, nil
+}
+
+func (s appConfigServiceStub) Update(ctx context.Context, id string, req dto.UpdateAppConfig) (domainappconfig.AppConfig, error) {
+	return domainappconfig.AppConfig{}, nil
+}
+
+func (s appConfigServiceStub) GetString(ctx context.Context, configKey string, fallback string) (string, error) {
+	if s.err != nil {
+		return "", s.err
+	}
+	if value, ok := s.values[configKey]; ok {
+		return value, nil
+	}
+	return fallback, nil
+}
+
+func (s appConfigServiceStub) GetBool(ctx context.Context, configKey string, fallback bool) (bool, error) {
+	return fallback, nil
+}
+
+func (s appConfigServiceStub) GetInt(ctx context.Context, configKey string, fallback int) (int, error) {
+	return fallback, nil
+}
+
+func (s appConfigServiceStub) GetDuration(ctx context.Context, configKey string, fallback time.Duration) (time.Duration, error) {
+	return fallback, nil
+}
+
+func (s appConfigServiceStub) DecodeJSON(ctx context.Context, configKey string, target interface{}) error {
+	return nil
+}
+
+func (s appConfigServiceStub) IsEnabled(ctx context.Context, configKey string, fallback bool) (bool, error) {
+	return fallback, nil
+}
+
 func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 	repo := &walletRepoStub{}
 	service := NewWalletService(repo)
@@ -180,7 +242,47 @@ func TestCreateDepositRejectsBelowMinimumAmount(t *testing.T) {
 	}
 }
 
-func TestCreateDepositQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.T) {
+func TestCreateDepositStaticQRISUsesConfiguredImageAndUniqueCode(t *testing.T) {
+	repo := &walletRepoStub{}
+	service := NewWalletService(repo).WithConfigService(appConfigServiceStub{values: map[string]string{
+		"payment.qris.fee_percent":   "5",
+		"payment.qris.image_url":     "https://static-qris.test/image.png",
+		"payment.qris.merchant_name": "Static Store",
+	}})
+
+	_, err := service.CreateDeposit(context.Background(), "user-1", dto.CreateDepositRequest{
+		Amount:   "100000",
+		Provider: "qris",
+	})
+	if err != nil {
+		t.Fatalf("CreateDeposit returned error: %v", err)
+	}
+	if repo.createdDeposit.Provider != domainwallet.DepositProviderQRIS {
+		t.Fatalf("expected qris provider, got %q", repo.createdDeposit.Provider)
+	}
+	if repo.createdDeposit.PaymentURL != "https://static-qris.test/image.png" {
+		t.Fatalf("expected static image url, got %q", repo.createdDeposit.PaymentURL)
+	}
+
+	var metadata map[string]string
+	if err := json.Unmarshal(repo.createdDeposit.Metadata, &metadata); err != nil {
+		t.Fatalf("unmarshal metadata: %v", err)
+	}
+	if metadata["qris_type"] != "static" {
+		t.Fatalf("expected static qris metadata, got %+v", metadata)
+	}
+	if metadata["fee_amount"] != "5000.00" {
+		t.Fatalf("expected fee amount 5000.00, got %q", metadata["fee_amount"])
+	}
+	if metadata["unique_code_amount"] == "0.00" || metadata["payable_amount"] == "105000.00" {
+		t.Fatalf("expected payable amount with unique code, got %+v", metadata)
+	}
+	if metadata["qris_merchant_name"] != "Static Store" {
+		t.Fatalf("expected merchant name, got %q", metadata["qris_merchant_name"])
+	}
+}
+
+func TestCreateDepositDynamicQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.T) {
 	repo := &walletRepoStub{}
 	qrisProvider := &qrisProviderStub{response: &qrisly.GenerateQRISResponse{
 		Data: qrisly.GenerateQRISData{
@@ -197,7 +299,7 @@ func TestCreateDepositQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.T) {
 
 	_, err := service.CreateDeposit(context.Background(), "user-1", dto.CreateDepositRequest{
 		Amount:   "100000",
-		Provider: "qris",
+		Provider: "qrisly",
 	})
 	if err != nil {
 		t.Fatalf("CreateDeposit returned error: %v", err)
@@ -227,6 +329,9 @@ func TestCreateDepositQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.T) {
 	}
 	if metadata["fee_percent"] != "5" {
 		t.Fatalf("expected fee percent 5, got %q", metadata["fee_percent"])
+	}
+	if metadata["qris_type"] != "dynamic" {
+		t.Fatalf("expected dynamic qris metadata, got %+v", metadata)
 	}
 	if metadata["fee_amount"] != "5000.00" {
 		t.Fatalf("expected fee amount 5000.00, got %q", metadata["fee_amount"])
@@ -526,6 +631,44 @@ func TestAdminApproveDepositUsesPendingDepositAndMainBalanceLimit(t *testing.T) 
 	}
 	if repo.manualTopupLimit != "200000.00" {
 		t.Fatalf("expected H2H balance limit 200000.00, got %q", repo.manualTopupLimit)
+	}
+}
+
+func TestAdminCancelDepositCancelsPendingDeposit(t *testing.T) {
+	repo := &walletRepoStub{deposit: domainwallet.DepositRequest{
+		Id:     "deposit-1",
+		UserID: "user-1",
+		Amount: "10000.00",
+		Status: domainwallet.DepositStatusPending,
+		Method: domainwallet.DepositMethodManualAdmin,
+	}}
+	service := NewWalletService(repo)
+
+	deposit, err := service.AdminCancelDeposit(testActorContext("admin-1"), "deposit-1", dto.AdminDepositCancelRequest{Reason: "duplicate"})
+	if err != nil {
+		t.Fatalf("AdminCancelDeposit returned error: %v", err)
+	}
+	if deposit.Status != domainwallet.DepositStatusCancelled {
+		t.Fatalf("expected cancelled deposit, got %q", deposit.Status)
+	}
+	if repo.cancelActorID != "admin-1" || repo.cancelReason != "duplicate" {
+		t.Fatalf("expected actor/reason, got actor=%q reason=%q", repo.cancelActorID, repo.cancelReason)
+	}
+}
+
+func TestAdminCancelDepositRequiresReason(t *testing.T) {
+	repo := &walletRepoStub{deposit: domainwallet.DepositRequest{
+		Id:     "deposit-1",
+		UserID: "user-1",
+		Amount: "10000.00",
+		Status: domainwallet.DepositStatusPending,
+		Method: domainwallet.DepositMethodManualAdmin,
+	}}
+	service := NewWalletService(repo)
+
+	_, err := service.AdminCancelDeposit(testActorContext("admin-1"), "deposit-1", dto.AdminDepositCancelRequest{})
+	if !errors.Is(err, domainwallet.ErrDepositCancelReasonRequired) {
+		t.Fatalf("expected ErrDepositCancelReasonRequired, got %v", err)
 	}
 }
 

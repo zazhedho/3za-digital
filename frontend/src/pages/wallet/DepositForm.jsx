@@ -8,7 +8,7 @@ import { depositPayableAmount, formatMoney, isQRISDeposit, qrisImageURL, qrisStr
 
 const DepositForm = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({ amount: '', provider: 'qris' })
-  const [settings, setSettings] = useState({ minimumAmount: 10000, qrisFeePercent: '' })
+  const [settings, setSettings] = useState({ minimumAmount: 10000, qrisFeePercent: '', qrisStaticImageURL: '' })
   const [settingsLoading, setSettingsLoading] = useState(true)
   const [createdDeposit, setCreatedDeposit] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -17,7 +17,9 @@ const DepositForm = ({ onClose, onCreated }) => {
   const feePercent = Number(settings.qrisFeePercent)
   const qrisFeeKnown = Number.isFinite(feePercent)
   const belowMinimum = amount > 0 && amount < minimumAmount
-  const estimatedFee = form.provider === 'qris' && qrisFeeKnown ? amount * (feePercent / 100) : 0
+  const isQRISProvider = ['qris', 'qrisly'].includes(form.provider)
+  const staticQRISReady = Boolean(settings.qrisStaticImageURL)
+  const estimatedFee = isQRISProvider && qrisFeeKnown ? amount * (feePercent / 100) : 0
   const estimatedPayable = amount + estimatedFee
   const createdIsQRIS = isQRISDeposit(createdDeposit)
   const createdQRISImage = qrisImageURL(createdDeposit)
@@ -27,12 +29,18 @@ const DepositForm = ({ onClose, onCreated }) => {
     walletService.getDepositSettings()
       .then((response) => {
         const data = response.data.data || {}
+        const staticImageURL = data.qris_static_image_url || ''
         setSettings({
           minimumAmount: Number(data.minimum_amount || 10000),
           qrisFeePercent: data.qris_fee_percent ?? '',
+          qrisStaticImageURL: staticImageURL,
         })
+        if (!staticImageURL) setForm((current) => (current.provider === 'qris' ? { ...current, provider: 'qrisly' } : current))
       })
-      .catch(() => setSettings((current) => ({ ...current, qrisFeePercent: '' })))
+      .catch(() => {
+        setSettings((current) => ({ ...current, qrisFeePercent: '', qrisStaticImageURL: '' }))
+        setForm((current) => (current.provider === 'qris' ? { ...current, provider: 'qrisly' } : current))
+      })
       .finally(() => setSettingsLoading(false))
   }, [])
 
@@ -58,7 +66,7 @@ const DepositForm = ({ onClose, onCreated }) => {
         <div className="modal-heading">
           <div>
             <h5>{createdDeposit ? 'Scan QRIS' : 'Create Deposit'}</h5>
-            <p>{createdDeposit ? 'Pay the exact amount shown.' : 'Choose QRIS or manual review for wallet topup.'}</p>
+            <p>{createdDeposit ? 'Pay the exact amount shown.' : 'Choose static QRIS, dynamic QRIS, or manual review for wallet topup.'}</p>
           </div>
           <button className="modal-close" type="button" onClick={onClose} aria-label="Close">
             <i className="bi bi-x-lg"></i>
@@ -101,9 +109,11 @@ const DepositForm = ({ onClose, onCreated }) => {
             value={form.provider}
             onChange={(event) => setForm({ ...form, provider: event.target.value })}
           >
-            <option value="qris">QRIS</option>
+            <option value="qris" disabled={!staticQRISReady}>Static QRIS</option>
+            <option value="qrisly">Dynamic QRIS</option>
             <option value="">Manual review</option>
           </select>
+          {form.provider === 'qris' && !staticQRISReady && <div className="form-hint text-danger">Static QRIS image URL is not configured.</div>}
 
           <label className="form-label mt-3">Amount</label>
           <input
@@ -116,7 +126,7 @@ const DepositForm = ({ onClose, onCreated }) => {
             required
           />
           {belowMinimum && <div className="form-hint text-danger">Minimum deposit {formatMoney(minimumAmount)}</div>}
-          {form.provider === 'qris' && (
+          {isQRISProvider && (
             <div className="payment-summary mt-3">
               <div><span>Wallet credit</span><strong>{formatMoney(amount)}</strong></div>
               <div>
@@ -131,7 +141,7 @@ const DepositForm = ({ onClose, onCreated }) => {
           )}
           <div className="toolbar-actions justify-content-end mt-4">
             <button className="btn btn-outline-dark" type="button" onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary" disabled={loading || belowMinimum}>{loading ? 'Creating...' : 'Create deposit'}</button>
+            <button className="btn btn-primary" disabled={loading || belowMinimum || (form.provider === 'qris' && !staticQRISReady)}>{loading ? 'Creating...' : 'Create deposit'}</button>
           </div>
         </form>
         )}

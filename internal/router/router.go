@@ -432,7 +432,10 @@ func (r *Routes) WalletRoutes() {
 	{
 		adminDeposits.GET("", mdw.PermissionMiddleware("admin_deposits", "list"), h.GetDeposits)
 		adminDeposits.GET("/:id", mdw.PermissionMiddleware("admin_deposits", "view"), h.GetDepositByID)
-		adminDeposits.POST("/:id/approve", mdw.PermissionMiddleware("admin_deposits", "approve"), h.AdminApproveDeposit)
+		adminDeposits.POST("/:id/status", mdw.AnyPermissionMiddleware(
+			middlewares.RequiredPermission{Resource: "admin_deposits", Action: "approve"},
+			middlewares.RequiredPermission{Resource: "admin_deposits", Action: "cancel"},
+		), h.AdminUpdateDepositStatus)
 	}
 
 	deposits := r.App.Group("/api/deposits").Use(mdw.AuthMiddleware())

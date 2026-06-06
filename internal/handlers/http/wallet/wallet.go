@@ -157,26 +157,60 @@ func (h *WalletHandler) AdminTopup(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, response.Response(http.StatusCreated, "Wallet topup successfully", logID, data))
 }
 
-func (h *WalletHandler) AdminApproveDeposit(ctx *gin.Context) {
+func (h *WalletHandler) AdminUpdateDepositStatus(ctx *gin.Context) {
 	logID := utils.GenerateLogId(ctx)
 	id, err := utils.ValidateUUID(ctx, logID)
 	if err != nil {
 		return
 	}
 
-	var req dto.AdminDepositApproveRequest
+	var req dto.AdminDepositStatusRequest
 	if err := ctx.BindJSON(&req); err != nil {
 		writeBindError(ctx, logID, req, err)
 		return
 	}
-	data, err := h.Service.AdminApproveDeposit(ctx.Request.Context(), id, req)
-	if err != nil {
-		h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", id, domainaudit.StatusFailed, "Failed to approve deposit request", err.Error(), nil)
-		writeWalletError(ctx, "[WalletHandler][AdminApproveDeposit]", logID, err)
+
+	status := utils.NormalizeKey(req.Status)
+	scope := authscope.FromContext(ctx.Request.Context())
+	switch status {
+	case domainwallet.DepositStatusPaid:
+		if !scope.Has("admin_deposits", "approve") {
+			res := response.Forbidden(logID, messages.AccessDenied)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, res)
+			return
+		}
+		data, err := h.Service.AdminApproveDeposit(ctx.Request.Context(), id, dto.AdminDepositApproveRequest{
+			Amount:      req.Amount,
+			Description: req.Description,
+		})
+		if err != nil {
+			h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", id, domainaudit.StatusFailed, "Failed to approve deposit request", err.Error(), nil)
+			writeWalletError(ctx, "[WalletHandler][AdminUpdateDepositStatus]", logID, err)
+			return
+		}
+		h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", data.Id, domainaudit.StatusSuccess, "Approved deposit request", "", data)
+		ctx.JSON(http.StatusOK, response.Response(http.StatusOK, "Deposit request approved successfully", logID, data))
 		return
+	case domainwallet.DepositStatusCancelled, "cancel", "canceled":
+		if !scope.Has("admin_deposits", "cancel") {
+			res := response.Forbidden(logID, messages.AccessDenied)
+			ctx.AbortWithStatusJSON(http.StatusForbidden, res)
+			return
+		}
+		data, err := h.Service.AdminCancelDeposit(ctx.Request.Context(), id, dto.AdminDepositCancelRequest{
+			Reason: req.Reason,
+		})
+		if err != nil {
+			h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", id, domainaudit.StatusFailed, "Failed to cancel deposit request", err.Error(), nil)
+			writeWalletError(ctx, "[WalletHandler][AdminUpdateDepositStatus]", logID, err)
+			return
+		}
+		h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", data.Id, domainaudit.StatusSuccess, "Cancelled deposit request", "", data)
+		ctx.JSON(http.StatusOK, response.Response(http.StatusOK, "Deposit request cancelled successfully", logID, data))
+		return
+	default:
+		writeBadRequest(ctx, logID, "unsupported deposit status")
 	}
-	h.writeWalletAudit(ctx, domainaudit.ActionUpdate, "deposit_request", data.Id, domainaudit.StatusSuccess, "Approved deposit request", "", data)
-	ctx.JSON(http.StatusOK, response.Response(http.StatusOK, "Deposit request approved successfully", logID, data))
 }
 
 func (h *WalletHandler) AdminAdjust(ctx *gin.Context) {

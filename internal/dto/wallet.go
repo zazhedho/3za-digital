@@ -6,8 +6,9 @@ type CreateDepositRequest struct {
 }
 
 type DepositSettingsResponse struct {
-	MinimumAmount  string `json:"minimum_amount"`
-	QRISFeePercent string `json:"qris_fee_percent"`
+	MinimumAmount      string `json:"minimum_amount"`
+	QRISFeePercent     string `json:"qris_fee_percent"`
+	QRISStaticImageURL string `json:"qris_static_image_url"`
 }
 
 type AdminWalletTopupRequest struct {
@@ -19,6 +20,17 @@ type AdminWalletTopupRequest struct {
 type AdminDepositApproveRequest struct {
 	Amount      string `json:"amount"`
 	Description string `json:"description"`
+}
+
+type AdminDepositCancelRequest struct {
+	Reason string `json:"reason"`
+}
+
+type AdminDepositStatusRequest struct {
+	Status      string `json:"status" binding:"required"`
+	Amount      string `json:"amount"`
+	Description string `json:"description"`
+	Reason      string `json:"reason"`
 }
 
 type AdminWalletAdjustRequest struct {

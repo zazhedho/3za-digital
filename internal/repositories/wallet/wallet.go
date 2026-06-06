@@ -210,6 +210,32 @@ func (r *repo) ApproveManualTopup(ctx context.Context, deposit domainwallet.Depo
 	return deposit, err
 }
 
+func (r *repo) CancelDeposit(ctx context.Context, depositID string, actorID string, reason string) (domainwallet.DepositRequest, error) {
+	var deposit domainwallet.DepositRequest
+	now := time.Now()
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", depositID).First(&deposit).Error; err != nil {
+			return err
+		}
+		if deposit.Status != domainwallet.DepositStatusPending {
+			return domainwallet.ErrDepositAlreadyFinal
+		}
+
+		deposit.Status = domainwallet.DepositStatusCancelled
+		deposit.UpdatedAt = &now
+		if strings.TrimSpace(actorID) != "" {
+			deposit.CreatedBy = &actorID
+		}
+		deposit.Metadata = mergeDepositMetadataJSON(deposit.Metadata, map[string]string{
+			"cancelled_by":  actorID,
+			"cancelled_at":  now.Format(time.RFC3339),
+			"cancel_reason": strings.TrimSpace(reason),
+		})
+		return tx.Save(&deposit).Error
+	})
+	return deposit, err
+}
+
 func (r *repo) AdjustWallet(ctx context.Context, userID, direction, amount, description, createdBy string, mainBalanceLimit string) (domainwallet.WalletTransaction, error) {
 	var ret domainwallet.WalletTransaction
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -323,11 +349,23 @@ func (r *repo) UpdateDepositStatusByPaymentReference(ctx context.Context, provid
 			return nil
 		}
 
+		now := time.Now()
 		deposit.Status = status
-		deposit.UpdatedAt = new(time.Now())
+		deposit.UpdatedAt = &now
 		return tx.Save(&deposit).Error
 	})
 	return deposit, err
+}
+
+func mergeDepositMetadataJSON(raw json.RawMessage, values map[string]string) json.RawMessage {
+	metadata := map[string]string{}
+	if len(raw) > 0 {
+		_ = json.Unmarshal(raw, &metadata)
+	}
+	for key, value := range values {
+		metadata[key] = value
+	}
+	return utils.MustJSON(metadata)
 }
 
 func paymentExpectedAmount(deposit domainwallet.DepositRequest) string {
