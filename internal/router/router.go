@@ -322,7 +322,9 @@ func (r *Routes) SessionRoutes() {
 func (r *Routes) LocationRoutes() {
 	repo := locationRepo.NewLocationRepo(r.DB)
 	svc := locationSvc.NewLocationService(repo, database.GetRedisClient())
-	h := locationHandler.NewLocationHandler(svc)
+	repoAudit := auditRepo.NewAuditRepo(r.DB)
+	svcAudit := auditSvc.NewAuditService(repoAudit)
+	h := locationHandler.NewLocationHandler(svc, svcAudit)
 	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
 	pRepo := permissionRepo.NewPermissionRepo(r.DB)
 	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
@@ -355,7 +357,7 @@ func (r *Routes) SMMRoutes() {
 	}
 	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory, svcAppConfig)
 	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory, svcAppConfig).WithAuditService(svcAudit)
-	h := smmHandler.NewSMMHandler(svcCatalog, svcOrder)
+	h := smmHandler.NewSMMHandler(svcCatalog, svcOrder, svcAudit)
 
 	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
 	pRepo := permissionRepo.NewPermissionRepo(r.DB)

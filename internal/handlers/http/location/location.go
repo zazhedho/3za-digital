@@ -1,7 +1,10 @@
 package handlerlocation
 
 import (
+	domainaudit "3za-digital/internal/domain/audit"
 	"3za-digital/internal/dto"
+	handlercommon "3za-digital/internal/handlers/http/common"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
 	interfacelocation "3za-digital/internal/interfaces/location"
 	servicelocation "3za-digital/internal/services/location"
 	"3za-digital/pkg/logger"
@@ -18,11 +21,20 @@ import (
 )
 
 type LocationHandler struct {
-	Service interfacelocation.ServiceLocationInterface
+	Service      interfacelocation.ServiceLocationInterface
+	AuditService interfaceaudit.ServiceAuditInterface
 }
 
-func NewLocationHandler(s interfacelocation.ServiceLocationInterface) *LocationHandler {
-	return &LocationHandler{Service: s}
+func NewLocationHandler(s interfacelocation.ServiceLocationInterface, auditServices ...interfaceaudit.ServiceAuditInterface) *LocationHandler {
+	handler := &LocationHandler{Service: s}
+	if len(auditServices) > 0 {
+		handler.AuditService = auditServices[0]
+	}
+	return handler
+}
+
+func (h *LocationHandler) writeAudit(ctx *gin.Context, event domainaudit.AuditEvent) {
+	handlercommon.WriteAudit(ctx, h.AuditService, event, "LocationHandler")
 }
 
 func (h *LocationHandler) GetProvince(ctx *gin.Context) {
@@ -140,6 +152,14 @@ func (h *LocationHandler) Sync(ctx *gin.Context) {
 			return
 		}
 
+		h.writeAudit(ctx, domainaudit.AuditEvent{
+			Action:       domainaudit.ActionUpdate,
+			Resource:     "location_sync",
+			Status:       domainaudit.StatusFailed,
+			Message:      "Failed to start location sync",
+			ErrorMessage: err.Error(),
+			AfterData:    req,
+		})
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Service.StartSync; Error: %+v", logPrefix, err))
 		res := response.Response(http.StatusBadRequest, messages.MsgSomethingWrong, logId, nil)
 		res.Error = response.Errors{Code: http.StatusBadRequest, Message: err.Error()}
@@ -147,6 +167,14 @@ func (h *LocationHandler) Sync(ctx *gin.Context) {
 		return
 	}
 
+	h.writeAudit(ctx, domainaudit.AuditEvent{
+		Action:     domainaudit.ActionUpdate,
+		Resource:   "location_sync",
+		ResourceID: data.ID,
+		Status:     domainaudit.StatusSuccess,
+		Message:    "Started location sync",
+		AfterData:  data,
+	})
 	res := response.Response(http.StatusAccepted, "Location sync started", logId, data)
 	ctx.JSON(http.StatusAccepted, res)
 }

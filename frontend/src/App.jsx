@@ -33,6 +33,8 @@ const ConfigDetail = lazy(() => import('./pages/configs/ConfigDetail'))
 const MenuList = lazy(() => import('./pages/menus/MenuList'))
 const MenuForm = lazy(() => import('./pages/menus/MenuForm'))
 const MenuDetail = lazy(() => import('./pages/menus/MenuDetail'))
+const AuditList = lazy(() => import('./pages/audits/AuditList'))
+const AuditDetail = lazy(() => import('./pages/audits/AuditDetail'))
 const Profile = lazy(() => import('./pages/users/Profile'))
 
 const Guard = ({ resource, action, children }) => (
@@ -85,6 +87,8 @@ function App() {
               <Route path="/menus" element={<Guard resource="menus" action="list"><MenuList /></Guard>} />
               <Route path="/menus/:id" element={<Guard resource="menus" action="view"><MenuDetail /></Guard>} />
               <Route path="/menus/:id/edit" element={<Guard resource="menus" action="update"><MenuForm /></Guard>} />
+              <Route path="/audits" element={<Guard resource="audits" action="list"><AuditList /></Guard>} />
+              <Route path="/audits/:id" element={<Guard resource="audits" action="view"><AuditDetail /></Guard>} />
               <Route path="/profile" element={<Profile />} />
             </Route>
 

@@ -14,6 +14,7 @@ const titleMap = {
   users: 'Users',
   roles: 'Roles',
   configs: 'Configs',
+  audits: 'Audit Trails',
   profile: 'Profile',
   edit: 'Edit',
 }
@@ -30,6 +31,7 @@ const getRouteTitle = (parts) => {
     if (path.startsWith('/roles/')) return 'Role Detail'
     if (path.startsWith('/configs/')) return 'Config Detail'
     if (path.startsWith('/menus/')) return 'Menu Detail'
+    if (path.startsWith('/audits/')) return 'Audit Detail'
     return 'Detail'
   }
   if (parts.at(-1) === 'edit') {
@@ -67,7 +69,9 @@ const TopNav = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
     const value = search.trim()
     if (!value) return
 
-    const targetPath = location.pathname.startsWith('/smm/orders') ? '/smm/orders' : '/smm/services'
+    const targetPath = location.pathname.startsWith('/audits')
+      ? '/audits'
+      : location.pathname.startsWith('/smm/orders') ? '/smm/orders' : '/smm/services'
     navigate(`${targetPath}?search=${encodeURIComponent(value)}`)
   }
 

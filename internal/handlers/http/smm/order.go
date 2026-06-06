@@ -8,7 +8,9 @@ import (
 	"reflect"
 
 	"3za-digital/internal/authscope"
+	domainaudit "3za-digital/internal/domain/audit"
 	domaincatalog "3za-digital/internal/domain/catalog"
+	domainorder "3za-digital/internal/domain/order"
 	"3za-digital/internal/dto"
 	serviceorder "3za-digital/internal/services/order"
 	"3za-digital/pkg/filter"
@@ -108,10 +110,29 @@ func (h *SMMHandler) CreateOrder(ctx *gin.Context) {
 
 	data, err := h.OrderService.CreateOrder(reqCtx, domaincatalog.ProductTypeSMM, req)
 	if err != nil {
+		if data.Id != "" {
+			h.writeAudit(ctx, domainaudit.AuditEvent{
+				Action:       domainaudit.ActionCreate,
+				Resource:     "smm_order",
+				ResourceID:   data.Id,
+				Status:       domainaudit.StatusFailed,
+				Message:      "Failed to submit SMM order to provider",
+				ErrorMessage: err.Error(),
+				AfterData:    smmOrderAuditPayload(data),
+			})
+		}
 		writeOrderError(ctx, logPrefix, logID, err)
 		return
 	}
 
+	h.writeAudit(ctx, domainaudit.AuditEvent{
+		Action:     domainaudit.ActionCreate,
+		Resource:   "smm_order",
+		ResourceID: data.Id,
+		Status:     domainaudit.StatusSuccess,
+		Message:    "Created SMM order",
+		AfterData:  smmOrderAuditPayload(data),
+	})
 	res := response.Response(http.StatusCreated, "SMM order created successfully", logID, data)
 	ctx.JSON(http.StatusCreated, res)
 }
@@ -150,8 +171,40 @@ func (h *SMMHandler) RefreshOrderStatus(ctx *gin.Context) {
 		return
 	}
 
+	if existing.Status != data.Status {
+		h.writeAudit(ctx, domainaudit.AuditEvent{
+			Action:     domainaudit.ActionUpdate,
+			Resource:   "smm_order_status",
+			ResourceID: data.Id,
+			Status:     domainaudit.StatusSuccess,
+			Message:    "Updated SMM order status from provider",
+			BeforeData: map[string]interface{}{
+				"status": existing.Status,
+			},
+			AfterData: smmOrderAuditPayload(data),
+		})
+	}
 	res := response.Response(http.StatusOK, "SMM order status refreshed successfully", logID, data)
 	ctx.JSON(http.StatusOK, res)
+}
+
+func smmOrderAuditPayload(order domainorder.Order) map[string]interface{} {
+	quantity := int64(0)
+	if order.Quantity != nil {
+		quantity = *order.Quantity
+	}
+	return map[string]interface{}{
+		"id":                  order.Id,
+		"ref_id":              order.RefID,
+		"service_id":          order.ServiceID,
+		"provider_service_id": order.ProviderServiceID,
+		"quantity":            quantity,
+		"status":              order.Status,
+		"amount":              order.Amount,
+		"provider_charge":     order.ProviderCharge,
+		"profit":              order.Profit,
+		"created_by":          order.CreatedBy,
+	}
 }
 
 func (h *SMMHandler) GetOrderStatusLogs(ctx *gin.Context) {

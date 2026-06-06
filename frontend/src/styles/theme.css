@@ -1233,6 +1233,47 @@ body {
   flex-basis: 150px;
 }
 
+.audit-json-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 20px;
+}
+
+.audit-json-card {
+  background: var(--canvas);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.audit-json-card h2 {
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--hairline-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 0;
+  padding: 12px 14px;
+  text-transform: uppercase;
+}
+
+.audit-json-card pre {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .wallet-filter.filter-only {
   width: fit-content;
 }
@@ -2120,6 +2161,10 @@ body {
     padding-left: 10px;
     padding-right: 10px;
     padding-top: 0;
+  }
+
+  .audit-json-grid {
+    grid-template-columns: 1fr;
   }
 
   .modal-panel {

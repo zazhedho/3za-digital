@@ -656,13 +656,6 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 
 	tokenClaims, err := utils.JwtClaim(req.RefreshToken)
 	if err != nil {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to renew login session",
-			ErrorMessage: "The refresh token is invalid or expired",
-		})
 		res := response.Response(http.StatusUnauthorized, messages.MsgSomethingWrong, logId, nil)
 		res.Error = "invalid or expired refresh token"
 		ctx.JSON(http.StatusUnauthorized, res)
@@ -670,15 +663,6 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 	}
 
 	if !strings.EqualFold(utils.InterfaceString(tokenClaims["token_type"]), "refresh") {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			ActorUserID:  utils.InterfaceString(tokenClaims["user_id"]),
-			ActorRole:    utils.InterfaceString(tokenClaims["role"]),
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to renew login session",
-			ErrorMessage: "The provided token is not a refresh token",
-		})
 		res := response.Response(http.StatusUnauthorized, messages.MsgSomethingWrong, logId, nil)
 		res.Error = "invalid token type"
 		ctx.JSON(http.StatusUnauthorized, res)
@@ -687,30 +671,12 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 
 	isBlacklisted, err := h.BlacklistRepo.ExistsByToken(ctx.Request.Context(), req.RefreshToken)
 	if err != nil {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			ActorUserID:  utils.InterfaceString(tokenClaims["user_id"]),
-			ActorRole:    utils.InterfaceString(tokenClaims["role"]),
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to validate login session renewal",
-			ErrorMessage: err.Error(),
-		})
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; BlacklistRepo.ExistsByToken; ERROR: %s;", logPrefix, err))
 		res := response.InternalServerError(logId)
 		ctx.JSON(http.StatusInternalServerError, res)
 		return
 	}
 	if isBlacklisted {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			ActorUserID:  utils.InterfaceString(tokenClaims["user_id"]),
-			ActorRole:    utils.InterfaceString(tokenClaims["role"]),
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to renew login session",
-			ErrorMessage: "The refresh token has already been revoked",
-		})
 		res := response.Response(http.StatusUnauthorized, messages.MsgSomethingWrong, logId, nil)
 		res.Error = "refresh token has been revoked"
 		ctx.JSON(http.StatusUnauthorized, res)
@@ -718,19 +684,8 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 	}
 
 	userID := utils.InterfaceString(tokenClaims["user_id"])
-	userRole := utils.InterfaceString(tokenClaims["role"])
 	user, err := h.Service.GetUserById(reqCtx, userID)
 	if err != nil {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			ActorUserID:  userID,
-			ActorRole:    userRole,
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			ResourceID:   userID,
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to renew login session",
-			ErrorMessage: "The token owner user account was not found",
-		})
 		statusCode := http.StatusInternalServerError
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			statusCode = http.StatusNotFound
@@ -744,16 +699,6 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 	claimsOverride := buildImpersonationClaimsOverrideFromClaims(tokenClaims)
 	accessToken, err := utils.GenerateJwtWithClaims(&user, logId.String(), claimsOverride)
 	if err != nil {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			ActorUserID:  userID,
-			ActorRole:    user.Role,
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			ResourceID:   userID,
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to issue a new access token",
-			ErrorMessage: err.Error(),
-		})
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; GenerateJwtWithClaims; ERROR: %s;", logPrefix, err))
 		res := response.InternalServerError(logId)
 		ctx.JSON(http.StatusInternalServerError, res)
@@ -762,16 +707,6 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 
 	refreshToken, err := utils.GenerateRefreshJwt(&user, logId.String(), claimsOverride)
 	if err != nil {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			ActorUserID:  userID,
-			ActorRole:    user.Role,
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			ResourceID:   userID,
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to issue a new refresh token",
-			ErrorMessage: err.Error(),
-		})
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; GenerateRefreshJwt; ERROR: %s;", logPrefix, err))
 		res := response.InternalServerError(logId)
 		ctx.JSON(http.StatusInternalServerError, res)
@@ -781,16 +716,6 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 	if h.SessionSvc != nil {
 		session, sessionErr := h.SessionSvc.GetSessionByRefreshToken(reqCtx, req.RefreshToken)
 		if sessionErr != nil {
-			h.writeAudit(ctx, domainaudit.AuditEvent{
-				ActorUserID:  userID,
-				ActorRole:    user.Role,
-				Action:       domainaudit.ActionRefresh,
-				Resource:     "auth_token",
-				ResourceID:   userID,
-				Status:       domainaudit.StatusFailed,
-				Message:      "Failed to renew login session",
-				ErrorMessage: "No active session was found for the refresh token",
-			})
 			logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; SessionSvc.GetSessionByRefreshToken; ERROR: %s;", logPrefix, sessionErr))
 			res := response.Response(http.StatusUnauthorized, messages.MsgSomethingWrong, logId, nil)
 			res.Error = "session not found for refresh token"
@@ -800,19 +725,6 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 
 		refreshExpAt := time.Now().Add(time.Hour * time.Duration(utils.GetEnv("REFRESH_TOKEN_EXP_HOURS", 168)))
 		if sessionErr = h.SessionSvc.RotateSessionTokens(reqCtx, session.SessionID, accessToken, refreshToken, refreshExpAt); sessionErr != nil {
-			h.writeAudit(ctx, domainaudit.AuditEvent{
-				ActorUserID:  userID,
-				ActorRole:    user.Role,
-				Action:       domainaudit.ActionRefresh,
-				Resource:     "auth_token",
-				ResourceID:   userID,
-				Status:       domainaudit.StatusFailed,
-				Message:      "Failed to rotate login session tokens",
-				ErrorMessage: sessionErr.Error(),
-				Metadata: map[string]interface{}{
-					"session_id": session.SessionID,
-				},
-			})
 			logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; SessionSvc.RotateSessionTokens; ERROR: %s;", logPrefix, sessionErr))
 			res := response.InternalServerError(logId)
 			ctx.JSON(http.StatusInternalServerError, res)
@@ -821,31 +733,11 @@ func (h *HandlerUser) RefreshToken(ctx *gin.Context) {
 	}
 
 	if err = h.Service.LogoutUser(reqCtx, req.RefreshToken); err != nil {
-		h.writeAudit(ctx, domainaudit.AuditEvent{
-			ActorUserID:  userID,
-			ActorRole:    user.Role,
-			Action:       domainaudit.ActionRefresh,
-			Resource:     "auth_token",
-			ResourceID:   userID,
-			Status:       domainaudit.StatusFailed,
-			Message:      "Failed to revoke previous login session token",
-			ErrorMessage: err.Error(),
-		})
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Service.LogoutUser(refresh); ERROR: %s;", logPrefix, err))
 		res := response.InternalServerError(logId)
 		ctx.JSON(http.StatusInternalServerError, res)
 		return
 	}
-
-	h.writeAudit(ctx, domainaudit.AuditEvent{
-		ActorUserID: userID,
-		ActorRole:   user.Role,
-		Action:      domainaudit.ActionRefresh,
-		Resource:    "auth_token",
-		ResourceID:  userID,
-		Status:      domainaudit.StatusSuccess,
-		Message:     "Renewed login session",
-	})
 
 	res := response.Response(http.StatusOK, "Refresh token rotated successfully", logId, buildAuthTokenResponse(accessToken, refreshToken))
 	ctx.JSON(http.StatusOK, res)

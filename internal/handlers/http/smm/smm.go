@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
+	domainaudit "3za-digital/internal/domain/audit"
 	domaincatalog "3za-digital/internal/domain/catalog"
 	"3za-digital/internal/dto"
+	handlercommon "3za-digital/internal/handlers/http/common"
+	interfaceaudit "3za-digital/internal/interfaces/audit"
 	interfacecatalog "3za-digital/internal/interfaces/catalog"
 	interfaceorder "3za-digital/internal/interfaces/order"
 	servicecatalog "3za-digital/internal/services/catalog"
@@ -22,12 +25,32 @@ import (
 type SMMHandler struct {
 	CatalogService interfacecatalog.ServiceCatalogInterface
 	OrderService   interfaceorder.ServiceOrderInterface
+	AuditService   interfaceaudit.ServiceAuditInterface
 }
 
-func NewSMMHandler(catalogService interfacecatalog.ServiceCatalogInterface, orderService interfaceorder.ServiceOrderInterface) *SMMHandler {
-	return &SMMHandler{
+func NewSMMHandler(catalogService interfacecatalog.ServiceCatalogInterface, orderService interfaceorder.ServiceOrderInterface, auditServices ...interfaceaudit.ServiceAuditInterface) *SMMHandler {
+	handler := &SMMHandler{
 		CatalogService: catalogService,
 		OrderService:   orderService,
+	}
+	if len(auditServices) > 0 {
+		handler.AuditService = auditServices[0]
+	}
+	return handler
+}
+
+func (h *SMMHandler) writeAudit(ctx *gin.Context, event domainaudit.AuditEvent) {
+	handlercommon.WriteAudit(ctx, h.AuditService, event, "SMMHandler")
+}
+
+func syncCatalogAuditPayload(req dto.SyncCatalogRequest, data dto.SyncCatalogResponse) map[string]interface{} {
+	return map[string]interface{}{
+		"provider":     data.Provider,
+		"product_type": data.ProductType,
+		"total":        data.Total,
+		"synced":       data.Synced,
+		"platform":     req.Platform,
+		"category":     req.Category,
 	}
 }
 
@@ -82,6 +105,18 @@ func (h *SMMHandler) SyncServices(ctx *gin.Context) {
 
 	data, err := h.CatalogService.Sync(reqCtx, domaincatalog.ProductTypeSMM, req)
 	if err != nil {
+		h.writeAudit(ctx, domainaudit.AuditEvent{
+			Action:       domainaudit.ActionUpdate,
+			Resource:     "smm_service_catalog",
+			Status:       domainaudit.StatusFailed,
+			Message:      "Failed to sync SMM service catalog",
+			ErrorMessage: err.Error(),
+			AfterData: map[string]interface{}{
+				"product_type": domaincatalog.ProductTypeSMM,
+				"platform":     req.Platform,
+				"category":     req.Category,
+			},
+		})
 		statusCode := http.StatusBadGateway
 		publicMessage := "failed to sync SMM services from provider"
 		if errors.Is(err, servicecatalog.ErrUnsupportedProductType) {
@@ -100,6 +135,13 @@ func (h *SMMHandler) SyncServices(ctx *gin.Context) {
 		return
 	}
 
+	h.writeAudit(ctx, domainaudit.AuditEvent{
+		Action:    domainaudit.ActionUpdate,
+		Resource:  "smm_service_catalog",
+		Status:    domainaudit.StatusSuccess,
+		Message:   "Synced SMM service catalog",
+		AfterData: syncCatalogAuditPayload(req, data),
+	})
 	res := response.Response(http.StatusOK, "SMM services synced successfully", logID, data)
 	ctx.JSON(http.StatusOK, res)
 }
