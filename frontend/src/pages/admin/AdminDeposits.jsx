@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import ConfirmationModal from '../../components/common/ConfirmationModal'
+import TableActionMenu from '../../components/common/TableActionMenu'
 import { depositMetadata, depositPayableAmount, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -19,7 +19,6 @@ const AdminDeposits = () => {
   const [confirmAction, setConfirmAction] = useState(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
-  const [openActionId, setOpenActionId] = useState(null)
   const canApproveDeposit = hasPermission('admin_deposits', 'approve')
   const canCancelDeposit = hasPermission('admin_deposits', 'cancel')
 
@@ -67,7 +66,6 @@ const AdminDeposits = () => {
   const isCancelAction = confirmAction?.type === 'cancel'
   const openConfirm = (type, deposit) => {
     setCancelReason('')
-    setOpenActionId(null)
     setConfirmAction({ type, deposit })
   }
 
@@ -113,27 +111,15 @@ const AdminDeposits = () => {
                   <td className="table-number">{isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : '-'}</td>
                   <td><span className={`status-badge ${depositStatusClass(row)} text-capitalize`}>{depositStatus(row)}</span></td>
                   <td><span className="table-subtext">{metadata.cancel_reason || '-'}</span></td>
-                  <td className="text-end table-action-cell">
-                    <button
-                      className="action-menu-button"
-                      type="button"
-                      aria-label="Open deposit actions"
-                      aria-expanded={openActionId === row.id}
-                      onClick={() => setOpenActionId((current) => (current === row.id ? null : row.id))}
-                    >
-                      <i className="bi bi-list"></i>
-                    </button>
-                    {openActionId === row.id && (
-                      <div className="table-action-menu">
-                        <Link className="table-action-item" to={`/admin/deposits/${row.id}`} onClick={() => setOpenActionId(null)}>Detail</Link>
-                        {canApproveDeposit && (
-                          <button className="table-action-item" type="button" disabled={row.status !== 'pending'} onClick={() => openConfirm('approve', row)}>Approve</button>
-                        )}
-                        {canCancelDeposit && (
-                          <button className="table-action-item danger" type="button" disabled={row.status !== 'pending'} onClick={() => openConfirm('cancel', row)}>Cancel</button>
-                        )}
-                      </div>
-                    )}
+                  <td className="text-end">
+                    <TableActionMenu
+                      label="Open deposit actions"
+                      items={[
+                        { label: 'Detail', to: `/admin/deposits/${row.id}` },
+                        { label: 'Approve', hidden: !canApproveDeposit, disabled: row.status !== 'pending', onClick: () => openConfirm('approve', row) },
+                        { label: 'Cancel', hidden: !canCancelDeposit, disabled: row.status !== 'pending', danger: true, onClick: () => openConfirm('cancel', row) },
+                      ]}
+                    />
                   </td>
                 </tr>
               )
