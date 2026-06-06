@@ -139,11 +139,11 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 		RefID:       order.RefID,
 	})
 	if err != nil {
-		_ = s.failAndRefund(ctx, order, err, utils.EmptyJSON())
+		_ = s.markOrderProviderSubmissionUnknown(ctx, order, err, providerErrorRaw(err))
 		return order, err
 	}
 	if providerResp == nil {
-		_ = s.failAndRefund(ctx, order, ErrProviderEmptyResponse, utils.EmptyJSON())
+		_ = s.markOrderProviderSubmissionUnknown(ctx, order, ErrProviderEmptyResponse, utils.EmptyJSON())
 		return order, ErrProviderEmptyResponse
 	}
 
@@ -184,7 +184,7 @@ func (s *OrderService) providerClient() (interfaceprovider.Client, error) {
 
 func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domainorder.Order, providerResp *h2h.CreateOrderResponse) (domainorder.Order, error) {
 	oldStatus := order.Status
-	newStatus := normalizeProviderStatus(providerResp.ProviderStatus)
+	newStatus := normalizeCreateProviderStatus(providerResp.ProviderStatus)
 	if newStatus == "" {
 		newStatus = domainorder.StatusProcessing
 	}
@@ -211,9 +211,6 @@ func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domai
 
 	if err := s.Repo.UpdateWithStatusLog(ctx, order, log); err != nil {
 		return domainorder.Order{}, err
-	}
-	if order.Status == domainorder.StatusFailed {
-		_ = s.refundWallet(ctx, order, "provider failed order "+order.RefID)
 	}
 
 	return order, nil
@@ -253,8 +250,8 @@ func (s *OrderService) applyStatusResponse(ctx context.Context, order domainorde
 	if err := s.Repo.UpdateWithStatusLog(ctx, order, log); err != nil {
 		return domainorder.Order{}, err
 	}
-	if order.Status == domainorder.StatusFailed && oldStatus != domainorder.StatusFailed {
-		_ = s.refundWallet(ctx, order, "provider failed order "+order.RefID)
+	if isRefundableFinalStatus(order.Status) && oldStatus != order.Status {
+		_ = s.refundWallet(ctx, order, "provider "+order.Status+" order "+order.RefID)
 	}
 
 	return order, nil
@@ -265,6 +262,29 @@ func (s *OrderService) failAndRefund(ctx context.Context, order domainorder.Orde
 		return err
 	}
 	return s.refundWallet(ctx, order, "provider create order failed "+order.RefID)
+}
+
+func (s *OrderService) markOrderProviderSubmissionUnknown(ctx context.Context, order domainorder.Order, cause error, providerResponse json.RawMessage) error {
+	oldStatus := order.Status
+	order.Status = domainorder.StatusProcessing
+	order.Metadata = mergeOrderMetadata(order.Metadata, map[string]string{
+		"source":              "api",
+		"provider_submission": "unknown",
+		"error_message":       cause.Error(),
+	})
+	order.ProviderResponse = providerResponse
+	order.UpdatedAt = new(time.Now())
+
+	log := domainorder.OrderStatusLog{
+		OldStatus:        oldStatus,
+		NewStatus:        order.Status,
+		ProviderStatus:   "submission_unknown",
+		ProviderResponse: providerResponse,
+	}
+	if oldStatus == order.Status {
+		log.NewStatus = ""
+	}
+	return s.Repo.UpdateWithStatusLog(ctx, order, log)
 }
 
 func (s *OrderService) refundWallet(ctx context.Context, order domainorder.Order, description string) error {
@@ -323,6 +343,31 @@ func (s *OrderService) markOrderFailed(ctx context.Context, order domainorder.Or
 		ProviderStatus:   domainorder.StatusFailed,
 		ProviderResponse: providerResponse,
 	})
+}
+
+func providerErrorRaw(err error) json.RawMessage {
+	var apiErr *h2h.APIError
+	if errors.As(err, &apiErr) && len(apiErr.Raw) > 0 {
+		return apiErr.Raw
+	}
+	return utils.EmptyJSON()
+}
+
+func mergeOrderMetadata(raw json.RawMessage, values map[string]string) json.RawMessage {
+	metadata := orderMetadata(raw)
+	for key, value := range values {
+		metadata[key] = value
+	}
+	return utils.MustJSON(metadata)
+}
+
+func orderMetadata(raw json.RawMessage) map[string]string {
+	metadata := map[string]string{}
+	if len(raw) == 0 {
+		return metadata
+	}
+	_ = json.Unmarshal(raw, &metadata)
+	return metadata
 }
 
 func (s *OrderService) calculatePrice(ctx context.Context, productType string, providerPrice string) (string, string, string, error) {

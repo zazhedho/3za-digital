@@ -64,6 +64,23 @@ func normalizeProviderStatus(status string) string {
 	}
 }
 
+func normalizeCreateProviderStatus(status string) string {
+	normalized := normalizeProviderStatus(status)
+	if isFinalStatus(normalized) && normalized != domainorder.StatusCompleted {
+		return domainorder.StatusProcessing
+	}
+	return normalized
+}
+
+func isRefundableFinalStatus(status string) bool {
+	switch status {
+	case domainorder.StatusFailed, domainorder.StatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
 func isFinalStatus(status string) bool {
 	switch status {
 	case domainorder.StatusCompleted, domainorder.StatusPartial, domainorder.StatusFailed, domainorder.StatusCancelled:

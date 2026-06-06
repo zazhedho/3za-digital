@@ -48,9 +48,9 @@ func (r *repo) GetSummary(ctx context.Context, productType string, userID string
 		COUNT(*) FILTER (WHERE status = 'partial') AS partial_orders,
 		COUNT(*) FILTER (WHERE status = 'failed') AS failed_orders,
 		COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled_orders,
-		COALESCE(SUM(amount), 0)::text AS total_amount,
-		COALESCE(SUM(provider_charge), 0)::text AS total_provider_charge,
-		COALESCE(SUM(profit), 0)::text AS total_profit
+		COALESCE(SUM(amount) FILTER (WHERE status = 'completed'), 0)::text AS total_amount,
+		COALESCE(SUM(provider_charge) FILTER (WHERE status = 'completed'), 0)::text AS total_provider_charge,
+		COALESCE(SUM(profit) FILTER (WHERE status = 'completed'), 0)::text AS total_profit
 	`).Scan(&row).Error
 	if err != nil {
 		return domaindashboard.Summary{}, err
