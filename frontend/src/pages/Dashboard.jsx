@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import dashboardService from '../services/dashboardService'
 import walletService from '../services/walletService'
 import providerService from '../services/providerService'
 import { getErrorMessage } from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 
 const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -13,32 +14,37 @@ const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
 }).format(Number(value || 0))
 
 const Dashboard = () => {
+  const { hasPermission } = useAuth()
   const [summary, setSummary] = useState(null)
   const [wallet, setWallet] = useState(null)
   const [providerBalance, setProviderBalance] = useState(null)
   const [loading, setLoading] = useState(true)
+  const canViewProviderData = hasPermission('provider_balance', 'view')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [summaryRes, walletRes, providerRes] = await Promise.allSettled([
+      const requests = [
         dashboardService.getSummary('smm'),
         walletService.getMyWallet(),
-        providerService.getBalance(),
-      ])
+      ]
+      if (canViewProviderData) requests.push(providerService.getBalance())
+
+      const [summaryRes, walletRes, providerRes] = await Promise.allSettled(requests)
       if (summaryRes.status === 'fulfilled') setSummary(summaryRes.value.data.data)
       if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data.data)
-      if (providerRes.status === 'fulfilled') setProviderBalance(providerRes.value.data.data)
+      if (providerRes?.status === 'fulfilled') setProviderBalance(providerRes.value.data.data)
+      if (!canViewProviderData) setProviderBalance(null)
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to load dashboard'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [canViewProviderData])
 
   useEffect(() => {
     load()
-  }, [])
+  }, [load])
 
   const cards = [
     { label: 'Total orders', value: summary?.total_orders, icon: 'bi-bag' },
@@ -52,7 +58,7 @@ const Dashboard = () => {
       <div className="page-hero">
         <div>
           <h1>3ZA Digital Operations</h1>
-          <p>Track SMM orders, margin, wallet balance, and provider readiness.</p>
+          <p>{canViewProviderData ? 'Track SMM orders, margin, wallet balance, and provider readiness.' : 'Track your SMM orders, wallet balance, and deposit activity.'}</p>
         </div>
         <div className="hero-actions">
           <Link to="/smm/orders/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New order</Link>
@@ -80,14 +86,18 @@ const Dashboard = () => {
             <span>Total amount</span>
             <strong>{formatMoney(summary?.total_amount)}</strong>
           </div>
-          <div className="money-row">
-            <span>Provider charge</span>
-            <strong>{formatMoney(summary?.total_provider_charge)}</strong>
-          </div>
-          <div className="money-row highlight">
-            <span>Profit</span>
-            <strong>{formatMoney(summary?.total_profit)}</strong>
-          </div>
+          {canViewProviderData && (
+            <>
+              <div className="money-row">
+                <span>Provider charge</span>
+                <strong>{formatMoney(summary?.total_provider_charge)}</strong>
+              </div>
+              <div className="money-row highlight">
+                <span>Profit</span>
+                <strong>{formatMoney(summary?.total_profit)}</strong>
+              </div>
+            </>
+          )}
         </section>
 
         <section className="panel">
@@ -103,10 +113,12 @@ const Dashboard = () => {
             <span>Currency</span>
             <strong>{wallet?.currency || 'IDR'}</strong>
           </div>
-          <div className="money-row">
-            <span>Provider</span>
-            <strong>{formatMoney(providerBalance?.balance || providerBalance?.data?.balance)}</strong>
-          </div>
+          {canViewProviderData && (
+            <div className="money-row">
+              <span>Provider</span>
+              <strong>{formatMoney(providerBalance?.balance || providerBalance?.data?.balance)}</strong>
+            </div>
+          )}
         </section>
       </div>
 

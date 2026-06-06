@@ -11,6 +11,7 @@ INSERT INTO permissions (id, name, display_name, resource, action) VALUES
     (gen_random_uuid(), 'list_smm_services', 'List SMM Services', 'smm_services', 'list'),
     (gen_random_uuid(), 'sync_smm_services', 'Sync SMM Services', 'smm_services', 'sync'),
     (gen_random_uuid(), 'list_smm_orders', 'List SMM Orders', 'smm_orders', 'list'),
+    (gen_random_uuid(), 'list_all_smm_orders', 'List All SMM Orders', 'smm_orders', 'list_all'),
     (gen_random_uuid(), 'view_smm_orders', 'View SMM Order Detail', 'smm_orders', 'view'),
     (gen_random_uuid(), 'create_smm_orders', 'Create SMM Orders', 'smm_orders', 'create'),
     (gen_random_uuid(), 'refresh_status_smm_orders', 'Refresh SMM Order Status', 'smm_orders', 'refresh_status'),

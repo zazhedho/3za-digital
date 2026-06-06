@@ -2,6 +2,7 @@ package repositorydashboard
 
 import (
 	"context"
+	"strings"
 
 	domaindashboard "3za-digital/internal/domain/dashboard"
 	interfacedashboard "3za-digital/internal/interfaces/dashboard"
@@ -17,7 +18,7 @@ func NewDashboardRepo(db *gorm.DB) interfacedashboard.RepoDashboardInterface {
 	return &repo{db: db}
 }
 
-func (r *repo) GetSummary(ctx context.Context, productType string) (domaindashboard.Summary, error) {
+func (r *repo) GetSummary(ctx context.Context, productType string, userID string) (domaindashboard.Summary, error) {
 	var row struct {
 		TotalOrders         int64
 		PendingOrders       int64
@@ -34,6 +35,9 @@ func (r *repo) GetSummary(ctx context.Context, productType string) (domaindashbo
 	query := r.db.WithContext(ctx).Table("orders").Where("deleted_at IS NULL")
 	if productType != "" {
 		query = query.Where("product_type = ?", productType)
+	}
+	if strings.TrimSpace(userID) != "" {
+		query = query.Where("created_by = ?", strings.TrimSpace(userID))
 	}
 
 	err := query.Select(`

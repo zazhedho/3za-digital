@@ -7,5 +7,5 @@ import (
 )
 
 type RepoDashboardInterface interface {
-	GetSummary(ctx context.Context, productType string) (domaindashboard.Summary, error)
+	GetSummary(ctx context.Context, productType string, userID string) (domaindashboard.Summary, error)
 }

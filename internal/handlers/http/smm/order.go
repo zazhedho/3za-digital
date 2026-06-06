@@ -44,7 +44,7 @@ func (h *SMMHandler) GetOrders(ctx *gin.Context) {
 	params.Filters["provider"] = domaincatalog.ProviderH2H
 	params.Filters["product_type"] = domaincatalog.ProductTypeSMM
 	scope := authscope.FromContext(reqCtx)
-	if !isSMMAdmin(scope.Role) {
+	if !canViewAllSMMOrders(scope) {
 		params.Filters["created_by"] = scope.UserID
 	}
 
@@ -194,7 +194,7 @@ func (h *SMMHandler) GetOrderStatusLogs(ctx *gin.Context) {
 
 func canAccessSMMOrder(ctx context.Context, createdBy *string) bool {
 	scope := authscope.FromContext(ctx)
-	if isSMMAdmin(scope.Role) {
+	if canViewAllSMMOrders(scope) {
 		return true
 	}
 	if createdBy == nil {
@@ -203,8 +203,8 @@ func canAccessSMMOrder(ctx context.Context, createdBy *string) bool {
 	return *createdBy == scope.UserID
 }
 
-func isSMMAdmin(role string) bool {
-	return role == utils.RoleAdmin || role == utils.RoleSuperAdmin
+func canViewAllSMMOrders(scope authscope.Scope) bool {
+	return scope.Has("smm_orders", "list_all")
 }
 
 func writeOrderError(ctx *gin.Context, logPrefix string, logID uuid.UUID, err error) {
