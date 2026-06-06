@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
@@ -6,6 +6,7 @@ import ConfirmationModal from '../../components/common/ConfirmationModal'
 import TableActionMenu from '../../components/common/TableActionMenu'
 import { depositMetadata, depositPayableAmount, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
 import { useAuth } from '../../contexts/AuthContext'
+import PaginationBar from '../../components/common/PaginationBar'
 
 const methodLabel = (method) => {
   if (method === 'manual_admin') return 'Manual deposit'
@@ -16,20 +17,30 @@ const methodLabel = (method) => {
 const AdminDeposits = () => {
   const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
+  const [loading, setLoading] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const canApproveDeposit = hasPermission('admin_deposits', 'approve')
   const canCancelDeposit = hasPermission('admin_deposits', 'cancel')
 
-  const load = async () => {
-    const response = await walletService.getDeposits({ limit: 50 })
-    setRows(getListPayload(response).rows)
-  }
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await walletService.getDeposits({ page, limit: 50 })
+      const payload = getListPayload(response)
+      setRows(payload.rows)
+      setPagination(payload)
+    } finally {
+      setLoading(false)
+    }
+  }, [page])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposits')))
-  }, [])
+  }, [load])
 
   const approve = async () => {
     if (!confirmAction?.deposit) return
@@ -38,7 +49,7 @@ const AdminDeposits = () => {
       await walletService.updateDepositStatus(confirmAction.deposit.id, { status: 'paid', amount: confirmAction.deposit.amount, description: 'Approved from frontend' })
       toast.success('Deposit approved')
       setConfirmAction(null)
-      load()
+      await load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Approve failed'))
     } finally {
@@ -54,7 +65,7 @@ const AdminDeposits = () => {
       toast.success('Deposit cancelled')
       setConfirmAction(null)
       setCancelReason('')
-      load()
+      await load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Cancel failed'))
     } finally {
@@ -124,10 +135,11 @@ const AdminDeposits = () => {
                 </tr>
               )
             })}
-            {!rows.length && <tr><td colSpan="7" className="empty-cell">No deposits found</td></tr>}
+            {!rows.length && <tr><td colSpan="7" className="empty-cell">{loading ? 'Loading...' : 'No deposits found'}</td></tr>}
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
       <ConfirmationModal
         show={Boolean(confirmAction)}
         title={isCancelAction ? 'Cancel Deposit' : 'Approve Deposit'}

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import PaginationBar from '../../components/common/PaginationBar'
 
 const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -15,17 +16,30 @@ const Wallet = () => {
   const { hasPermission } = useAuth()
   const [wallet, setWallet] = useState(null)
   const [transactions, setTransactions] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 30 })
+  const [loading, setLoading] = useState(false)
   const canViewAllWallets = hasPermission('wallets', 'list')
 
-  useEffect(() => {
-    Promise.all([
-      walletService.getMyWallet(),
-      walletService.getMyTransactions({ limit: 30 }),
-    ]).then(([walletRes, txRes]) => {
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [walletRes, txRes] = await Promise.all([
+        walletService.getMyWallet(),
+        walletService.getMyTransactions({ page, limit: 30 }),
+      ])
+      const payload = getListPayload(txRes)
       setWallet(walletRes.data.data)
-      setTransactions(getListPayload(txRes).rows)
-    }).catch((error) => toast.error(getErrorMessage(error, 'Failed to load wallet')))
-  }, [])
+      setTransactions(payload.rows)
+      setPagination(payload)
+    } finally {
+      setLoading(false)
+    }
+  }, [page])
+
+  useEffect(() => {
+    load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load wallet')))
+  }, [load])
 
   return (
     <div>
@@ -68,10 +82,11 @@ const Wallet = () => {
                 <td className="table-date">{row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
               </tr>
             ))}
-            {!transactions.length && <tr><td colSpan="5" className="empty-cell">No transactions found</td></tr>}
+            {!transactions.length && <tr><td colSpan="5" className="empty-cell">{loading ? 'Loading...' : 'No transactions found'}</td></tr>}
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
     </div>
   )
 }

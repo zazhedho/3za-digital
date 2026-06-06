@@ -4,14 +4,12 @@ import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
 import { getErrorMessage } from '../../services/api'
 import BackButton from '../../components/common/BackButton'
-import ConfirmationModal from '../../components/common/ConfirmationModal'
 
 const SMMOrderDetail = () => {
   const { id } = useParams()
   const [order, setOrder] = useState(null)
   const [logs, setLogs] = useState([])
-  const [confirmRefresh, setConfirmRefresh] = useState(false)
-  const [confirmLoading, setConfirmLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   const load = useCallback(async () => {
     const [orderRes, logsRes] = await Promise.allSettled([
@@ -27,16 +25,15 @@ const SMMOrderDetail = () => {
   }, [load])
 
   const refresh = async () => {
-    setConfirmLoading(true)
+    setRefreshing(true)
     try {
       await smmService.refreshOrderStatus(id)
       toast.success('Status refreshed')
-      setConfirmRefresh(false)
       await load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Refresh failed'))
     } finally {
-      setConfirmLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -46,7 +43,9 @@ const SMMOrderDetail = () => {
         <div><h1>SMM Order Detail</h1><p>{order?.ref_id || id}</p></div>
         <div className="toolbar-actions">
           <BackButton fallback="/smm/orders" />
-          <button className="btn btn-primary" onClick={() => setConfirmRefresh(true)}>Refresh status</button>
+          <button className="btn btn-primary" onClick={refresh} disabled={refreshing}>
+            {refreshing ? 'Refreshing...' : 'Refresh status'}
+          </button>
         </div>
       </div>
       <div className="content-grid two">
@@ -71,15 +70,6 @@ const SMMOrderDetail = () => {
           {!logs.length && <p className="text-muted mb-0">No logs found</p>}
         </section>
       </div>
-      <ConfirmationModal
-        show={confirmRefresh}
-        title="Refresh Order Status"
-        message={`Refresh provider status for order ${order?.ref_id || id}?`}
-        confirmLabel="Refresh"
-        loading={confirmLoading}
-        onCancel={() => setConfirmRefresh(false)}
-        onConfirm={refresh}
-      />
     </div>
   )
 }

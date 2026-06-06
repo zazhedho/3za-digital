@@ -6,6 +6,7 @@ import { getErrorMessage, getListPayload } from '../../services/api'
 import DepositForm from './DepositForm'
 import { useAuth } from '../../contexts/AuthContext'
 import { depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
+import PaginationBar from '../../components/common/PaginationBar'
 
 const methodLabel = (method) => {
   if (method === 'manual_admin') return 'Manual deposit'
@@ -16,20 +17,34 @@ const methodLabel = (method) => {
 const DepositList = () => {
   const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 30 })
+  const [loading, setLoading] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const canCreateDeposit = hasPermission('deposits', 'create')
   const canViewAllDeposits = hasPermission('admin_deposits', 'list')
 
   const load = useCallback(async () => {
-    const response = await walletService.getMyDeposits({ limit: 30 })
-    setRows(getListPayload(response).rows)
-  }, [])
+    setLoading(true)
+    try {
+      const response = await walletService.getMyDeposits({ page, limit: 30 })
+      const payload = getListPayload(response)
+      setRows(payload.rows)
+      setPagination(payload)
+    } finally {
+      setLoading(false)
+    }
+  }, [page])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposits')))
   }, [load])
 
   const handleCreated = async () => {
+    if (page !== 1) {
+      setPage(1)
+      return
+    }
     await load()
   }
 
@@ -92,10 +107,11 @@ const DepositList = () => {
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="7" className="empty-cell">No deposits found</td></tr>}
+            {!rows.length && <tr><td colSpan="7" className="empty-cell">{loading ? 'Loading...' : 'No deposits found'}</td></tr>}
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
     </div>
   )
 }
