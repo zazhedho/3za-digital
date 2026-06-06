@@ -19,6 +19,10 @@ const Wallet = () => {
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 30 })
   const [loading, setLoading] = useState(false)
+  const [typeInput, setTypeInput] = useState('')
+  const [type, setType] = useState('')
+  const [directionInput, setDirectionInput] = useState('')
+  const [direction, setDirection] = useState('')
   const canViewAllWallets = hasPermission('wallets', 'list')
 
   const load = useCallback(async () => {
@@ -26,7 +30,12 @@ const Wallet = () => {
     try {
       const [walletRes, txRes] = await Promise.all([
         walletService.getMyWallet(),
-        walletService.getMyTransactions({ page, limit: 30 }),
+        walletService.getMyTransactions({
+          page,
+          limit: 30,
+          'filters[type]': type || undefined,
+          'filters[direction]': direction || undefined,
+        }),
       ])
       const payload = getListPayload(txRes)
       setWallet(walletRes.data.data)
@@ -35,11 +44,26 @@ const Wallet = () => {
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [direction, page, type])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load wallet')))
   }, [load])
+
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setType(typeInput)
+    setDirection(directionInput)
+    setPage(1)
+  }
+
+  const resetSearch = () => {
+    setTypeInput('')
+    setType('')
+    setDirectionInput('')
+    setDirection('')
+    setPage(1)
+  }
 
   return (
     <div>
@@ -60,6 +84,26 @@ const Wallet = () => {
         <strong>{formatMoney(wallet?.balance)}</strong>
         <small>{wallet?.currency || 'IDR'} - {wallet?.is_active === false ? 'Inactive' : 'Active'}</small>
       </div>
+
+      <form className="filter-pill filter-only wallet-filter" onSubmit={submitSearch}>
+        <i className="bi bi-funnel"></i>
+        <select value={typeInput} onChange={(event) => setTypeInput(event.target.value)}>
+          <option value="">All types</option>
+          <option value="deposit">Deposit</option>
+          <option value="debit_order">Order</option>
+          <option value="refund_order">Refund order</option>
+          <option value="adjustment">Adjustment</option>
+        </select>
+        <select value={directionInput} onChange={(event) => setDirectionInput(event.target.value)}>
+          <option value="">All directions</option>
+          <option value="credit">Credit</option>
+          <option value="debit">Debit</option>
+        </select>
+        <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
 
       <section className="table-panel mt-4">
         <table className="table app-table align-middle">

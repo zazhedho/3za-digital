@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
@@ -8,12 +8,27 @@ import { getErrorMessage, getListPayload } from '../../services/api'
 const RoleList = () => {
   const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+
+  const load = useCallback(async () => {
+    const response = await roleService.getAll({ search, limit: 50 })
+    setRows(getListPayload(response).rows)
+  }, [search])
 
   useEffect(() => {
-    roleService.getAll({ limit: 50 })
-      .then((response) => setRows(getListPayload(response).rows))
-      .catch((error) => toast.error(getErrorMessage(error, 'Failed to load roles')))
-  }, [])
+    load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load roles')))
+  }, [load])
+
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setSearch(searchInput.trim())
+  }
+
+  const resetSearch = () => {
+    setSearchInput('')
+    setSearch('')
+  }
 
   return (
     <div>
@@ -24,6 +39,14 @@ const RoleList = () => {
         </div>
         {hasPermission('roles', 'create') && <Link to="/roles/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New role</Link>}
       </div>
+      <form className="filter-pill compact" onSubmit={submitSearch}>
+        <i className="bi bi-search"></i>
+        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search role" />
+        <button className="btn btn-dark" type="submit">Search</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
       <section className="table-panel">
         <table className="table app-table align-middle">
           <thead>

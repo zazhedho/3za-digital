@@ -20,6 +20,8 @@ const DepositList = () => {
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 30 })
   const [loading, setLoading] = useState(false)
+  const [statusInput, setStatusInput] = useState('')
+  const [status, setStatus] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const canCreateDeposit = hasPermission('deposits', 'create')
   const canViewAllDeposits = hasPermission('admin_deposits', 'list')
@@ -27,14 +29,18 @@ const DepositList = () => {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await walletService.getMyDeposits({ page, limit: 30 })
+      const response = await walletService.getMyDeposits({
+        page,
+        limit: 30,
+        'filters[status]': status || undefined,
+      })
       const payload = getListPayload(response)
       setRows(payload.rows)
       setPagination(payload)
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, status])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposits')))
@@ -46,6 +52,18 @@ const DepositList = () => {
       return
     }
     await load()
+  }
+
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setStatus(statusInput)
+    setPage(1)
+  }
+
+  const resetSearch = () => {
+    setStatusInput('')
+    setStatus('')
+    setPage(1)
   }
 
   return (
@@ -72,6 +90,22 @@ const DepositList = () => {
       {showCreate && (
         <DepositForm onClose={() => setShowCreate(false)} onCreated={handleCreated} />
       )}
+
+      <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+        <i className="bi bi-funnel"></i>
+        <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
+          <option value="">All status</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="expired">Expired</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
 
       <section className="table-panel">
         <table className="table app-table align-middle">

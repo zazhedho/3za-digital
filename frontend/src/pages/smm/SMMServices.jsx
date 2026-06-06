@@ -15,9 +15,11 @@ const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
 
 const SMMServices = () => {
   const { hasPermission } = useAuth()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const [rows, setRows] = useState([])
+  const [searchInput, setSearchInput] = useState(params.get('search') || '')
   const [search, setSearch] = useState(params.get('search') || '')
+  const [platformInput, setPlatformInput] = useState('')
   const [platform, setPlatform] = useState('')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
@@ -26,7 +28,9 @@ const SMMServices = () => {
   const [confirmLoading, setConfirmLoading] = useState(false)
 
   useEffect(() => {
-    setSearch(params.get('search') || '')
+    const nextSearch = params.get('search') || ''
+    setSearchInput(nextSearch)
+    setSearch(nextSearch)
     setPage(1)
   }, [params])
 
@@ -54,10 +58,26 @@ const SMMServices = () => {
     load()
   }, [load])
 
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setSearch(searchInput.trim())
+    setPlatform(platformInput)
+    setPage(1)
+  }
+
+  const resetSearch = () => {
+    setSearchInput('')
+    setSearch('')
+    setPlatformInput('')
+    setPlatform('')
+    setPage(1)
+    setParams({})
+  }
+
   const sync = async () => {
     setConfirmLoading(true)
     try {
-      await smmService.syncServices({ platform })
+      await smmService.syncServices({ platform: platformInput })
       toast.success('Services synced')
       setConfirmSync(false)
       load()
@@ -80,18 +100,21 @@ const SMMServices = () => {
         )}
       </div>
 
-      <div className="filter-pill">
+      <form className="filter-pill" onSubmit={submitSearch}>
         <i className="bi bi-search"></i>
-        <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search service name" />
-        <select value={platform} onChange={(event) => { setPlatform(event.target.value); setPage(1) }}>
+        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search service name" />
+        <select value={platformInput} onChange={(event) => setPlatformInput(event.target.value)}>
           <option value="">All platforms</option>
           <option value="instagram">Instagram</option>
           <option value="tiktok">TikTok</option>
           <option value="youtube">YouTube</option>
           <option value="facebook">Facebook</option>
         </select>
-        <button className="btn btn-dark" onClick={load}>Apply</button>
-      </div>
+        <button className="btn btn-dark" type="submit" disabled={loading}>Search</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
 
       <section className="table-panel">
         <table className="table app-table table-wide align-middle">
@@ -128,7 +151,7 @@ const SMMServices = () => {
       <ConfirmationModal
         show={confirmSync}
         title="Sync Services"
-        message={`Sync SMM services${platform ? ` for ${platform}` : ''} from provider? Existing service data may be updated.`}
+        message={`Sync SMM services${platformInput ? ` for ${platformInput}` : ''} from provider? Existing service data may be updated.`}
         confirmLabel="Sync"
         loading={confirmLoading}
         onCancel={() => setConfirmSync(false)}

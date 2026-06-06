@@ -8,6 +8,7 @@ import { getErrorMessage, getListPayload } from '../../services/api'
 const UserList = () => {
   const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
@@ -19,6 +20,16 @@ const UserList = () => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load users')))
   }, [load])
 
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setSearch(searchInput.trim())
+  }
+
+  const resetSearch = () => {
+    setSearchInput('')
+    setSearch('')
+  }
+
   return (
     <div>
       <div className="page-toolbar">
@@ -29,11 +40,14 @@ const UserList = () => {
         {hasPermission('users', 'create') && <Link to="/users/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New user</Link>}
       </div>
 
-      <div className="filter-pill compact">
+      <form className="filter-pill compact" onSubmit={submitSearch}>
         <i className="bi bi-search"></i>
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search user" />
-        <button className="btn btn-dark" onClick={load}>Apply</button>
-      </div>
+        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search user" />
+        <button className="btn btn-dark" type="submit">Search</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
 
       <section className="table-panel">
         <table className="table app-table align-middle">

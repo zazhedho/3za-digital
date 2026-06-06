@@ -13,6 +13,10 @@ const AdminWallets = () => {
   const [pagination, setPagination] = useState(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [currencyInput, setCurrencyInput] = useState('')
+  const [currency, setCurrency] = useState('')
+  const [statusInput, setStatusInput] = useState('')
+  const [isActive, setIsActive] = useState('')
   const [activeWallet, setActiveWallet] = useState(null)
   const [confirmAdjust, setConfirmAdjust] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
@@ -22,14 +26,19 @@ const AdminWallets = () => {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await walletService.getWallets({ page, limit: 50 })
+      const response = await walletService.getWallets({
+        page,
+        limit: 50,
+        'filters[currency]': currency || undefined,
+        'filters[is_active]': isActive || undefined,
+      })
       const payload = getListPayload(response)
       setRows(payload.rows)
       setPagination(payload)
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [currency, isActive, page])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load wallets')))
@@ -67,6 +76,21 @@ const AdminWallets = () => {
     }
   }
 
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setCurrency(currencyInput)
+    setIsActive(statusInput)
+    setPage(1)
+  }
+
+  const resetSearch = () => {
+    setCurrencyInput('')
+    setCurrency('')
+    setStatusInput('')
+    setIsActive('')
+    setPage(1)
+  }
+
   return (
     <div>
       <div className="page-toolbar">
@@ -75,6 +99,23 @@ const AdminWallets = () => {
           <p>Wallet balances and manual adjustments.</p>
         </div>
       </div>
+
+      <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+        <i className="bi bi-funnel"></i>
+        <select value={currencyInput} onChange={(event) => setCurrencyInput(event.target.value)}>
+          <option value="">All currencies</option>
+          <option value="IDR">IDR</option>
+        </select>
+        <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
+          <option value="">All status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+        <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
 
       {activeWallet && (
         <div className="modal-backdrop-custom" role="dialog" aria-modal="true">

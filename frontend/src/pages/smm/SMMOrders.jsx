@@ -6,9 +6,11 @@ import { getErrorMessage, getListPayload } from '../../services/api'
 import PaginationBar from '../../components/common/PaginationBar'
 
 const SMMOrders = () => {
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const [rows, setRows] = useState([])
+  const [searchInput, setSearchInput] = useState(params.get('search') || '')
   const [search, setSearch] = useState(params.get('search') || '')
+  const [statusInput, setStatusInput] = useState('')
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
@@ -16,7 +18,9 @@ const SMMOrders = () => {
   const [refreshingId, setRefreshingId] = useState('')
 
   useEffect(() => {
-    setSearch(params.get('search') || '')
+    const nextSearch = params.get('search') || ''
+    setSearchInput(nextSearch)
+    setSearch(nextSearch)
     setPage(1)
   }, [params])
 
@@ -43,6 +47,22 @@ const SMMOrders = () => {
     load()
   }, [load])
 
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setSearch(searchInput.trim())
+    setStatus(statusInput)
+    setPage(1)
+  }
+
+  const resetSearch = () => {
+    setSearchInput('')
+    setSearch('')
+    setStatusInput('')
+    setStatus('')
+    setPage(1)
+    setParams({})
+  }
+
   const refresh = async (order) => {
     if (!order?.id) return
     setRefreshingId(order.id)
@@ -67,10 +87,10 @@ const SMMOrders = () => {
         <Link to="/smm/orders/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New order</Link>
       </div>
 
-      <div className="filter-pill compact status-filter">
+      <form className="filter-pill compact status-filter" onSubmit={submitSearch}>
         <i className="bi bi-funnel"></i>
-        <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder="Search ref, target, or service" />
-        <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1) }}>
+        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search ref, target, or service" />
+        <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
           <option value="">All status</option>
           <option value="pending">Pending</option>
           <option value="processing">Processing</option>
@@ -79,8 +99,11 @@ const SMMOrders = () => {
           <option value="failed">Failed</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <button className="btn btn-dark" onClick={load}>Apply</button>
-      </div>
+        <button className="btn btn-dark" type="submit" disabled={loading}>Search</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
 
       <section className="table-panel">
         <table className="table app-table align-middle">

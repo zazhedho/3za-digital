@@ -20,6 +20,8 @@ const AdminDeposits = () => {
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
   const [loading, setLoading] = useState(false)
+  const [statusInput, setStatusInput] = useState('')
+  const [status, setStatus] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -29,14 +31,18 @@ const AdminDeposits = () => {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await walletService.getDeposits({ page, limit: 50 })
+      const response = await walletService.getDeposits({
+        page,
+        limit: 50,
+        'filters[status]': status || undefined,
+      })
       const payload = getListPayload(response)
       setRows(payload.rows)
       setPagination(payload)
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, status])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposits')))
@@ -80,6 +86,18 @@ const AdminDeposits = () => {
     setConfirmAction({ type, deposit })
   }
 
+  const submitSearch = (event) => {
+    event.preventDefault()
+    setStatus(statusInput)
+    setPage(1)
+  }
+
+  const resetSearch = () => {
+    setStatusInput('')
+    setStatus('')
+    setPage(1)
+  }
+
   return (
     <div>
       <div className="page-toolbar">
@@ -88,6 +106,21 @@ const AdminDeposits = () => {
           <p>Review and approve user deposits.</p>
         </div>
       </div>
+      <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+        <i className="bi bi-funnel"></i>
+        <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
+          <option value="">All status</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="expired">Expired</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+          <i className="bi bi-x-lg me-2"></i>Reset
+        </button>
+      </form>
       <section className="table-panel">
         <table className="table app-table align-middle">
           <thead>
