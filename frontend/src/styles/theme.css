@@ -1622,6 +1622,44 @@ body {
   max-width: 480px;
 }
 
+.wallet-adjust-modal {
+  max-width: 520px;
+}
+
+.segmented-control {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.segmented-control button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  font-weight: 700;
+  min-height: 38px;
+}
+
+.segmented-control button:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+.segmented-control button.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.segmented-control button.active.danger {
+  background: #dc2626;
+  color: #fff;
+}
+
 .confirmation-modal {
   max-width: 460px;
 }
