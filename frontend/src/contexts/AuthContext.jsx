@@ -61,33 +61,47 @@ export const AuthProvider = ({ children }) => {
     fetchUser()
   }, [fetchUser, token])
 
+  const applyAuthResponse = async (authData) => {
+    const nextToken = authData.access_token || authData.token
+    const refreshToken = authData.refresh_token
+
+    if (!nextToken) {
+      return { success: false, error: 'Login response missing access token' }
+    }
+
+    localStorage.setItem('token', nextToken)
+    if (refreshToken) localStorage.setItem('refresh_token', refreshToken)
+    setToken(nextToken)
+    api.defaults.headers.common.Authorization = `Bearer ${nextToken}`
+    const fetchedAuth = await fetchUser()
+    if (!fetchedAuth?.user) {
+      clearSession()
+      return { success: false, error: 'Login succeeded but user session could not be loaded' }
+    }
+    return {
+      success: true,
+      user: fetchedAuth?.user,
+      permissions: fetchedAuth?.permissions || [],
+    }
+  }
+
   const login = async (email, password) => {
     try {
       const response = await authService.login({ email, password })
       const authData = response.data.data || {}
-      const nextToken = authData.access_token || authData.token
-      const refreshToken = authData.refresh_token
-
-      if (!nextToken) {
-        return { success: false, error: 'Login response missing access token' }
-      }
-
-      localStorage.setItem('token', nextToken)
-      if (refreshToken) localStorage.setItem('refresh_token', refreshToken)
-      setToken(nextToken)
-      api.defaults.headers.common.Authorization = `Bearer ${nextToken}`
-      const fetchedAuth = await fetchUser()
-      if (!fetchedAuth?.user) {
-        clearSession()
-        return { success: false, error: 'Login succeeded but user session could not be loaded' }
-      }
-      return {
-        success: true,
-        user: fetchedAuth?.user,
-        permissions: fetchedAuth?.permissions || [],
-      }
+      return await applyAuthResponse(authData)
     } catch (error) {
       return { success: false, error: getErrorMessage(error, 'Login failed') }
+    }
+  }
+
+  const loginWithGoogle = async (idToken) => {
+    try {
+      const response = await authService.googleLogin(idToken)
+      const authData = response.data.data || {}
+      return await applyAuthResponse(authData)
+    } catch (error) {
+      return { success: false, error: getErrorMessage(error, 'Google login failed') }
     }
   }
 
@@ -123,6 +137,7 @@ export const AuthProvider = ({ children }) => {
       loading,
       isAuthenticated: Boolean(user),
       login,
+      loginWithGoogle,
       register,
       logout,
       fetchUser,

@@ -197,9 +197,17 @@ func (h *HandlerUser) GetRegisterStatus(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, res)
 		return
 	}
+	otpEnabled, err := h.isRuntimeConfigEnabled(reqCtx, utils.GetEnv("CONFIG_REGISTER_OTP", defaultConfigRegisterOTPEnabled), false)
+	if err != nil {
+		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Config check ERROR: %s;", logPrefix, err.Error()))
+		res := response.InternalServerError(logId)
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
 
 	res := response.Response(http.StatusOK, "Get register status successfully", logId, map[string]interface{}{
-		"enabled": registerEnabled,
+		"enabled":     registerEnabled,
+		"otp_enabled": otpEnabled,
 	})
 	ctx.JSON(http.StatusOK, res)
 }

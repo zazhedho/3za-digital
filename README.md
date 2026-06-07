@@ -67,6 +67,24 @@ Default auth config rows are seeded by the existing app config migration:
 - `auth.register_otp_enabled`: active, value `false`
 - `auth.password_reset_email_enabled`: active, value `false`
 
+### Authentication Flow
+
+Email/phone login:
+- `POST /api/user/login` accepts either `identifier` or `email` plus `password`.
+- `identifier` can be an email address or phone number.
+- Successful responses return `access_token` and `refresh_token`.
+
+Google login:
+- `POST /api/user/google/login` accepts a Google Identity Services `id_token`.
+- Backend validates the token using `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_IDS`.
+- Existing Google-linked users can log in even when public registration is disabled.
+- First-time Google auto-registration is blocked when `auth.public_registration_enabled=false`.
+
+Public register:
+- Frontend displays email registration only when `auth.public_registration_enabled=true`.
+- When `auth.register_otp_enabled=true`, frontend requires `otp_code` and sends OTP through `POST /api/user/register/otp/send`.
+- Frontend enforces password requirements before submitting register: minimum 8 characters, lowercase, uppercase, number, and symbol.
+
 ## Current Modules
 
 System modules currently included:
