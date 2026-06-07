@@ -1274,6 +1274,106 @@ body {
   word-break: break-word;
 }
 
+.session-list {
+  display: grid;
+  gap: 14px;
+}
+
+.session-card {
+  align-items: flex-start;
+  background: var(--canvas);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 18px;
+}
+
+.session-card.current {
+  border-color: #a8d7bb;
+  box-shadow: 0 0 0 2px rgba(21, 115, 71, .08), var(--shadow-sm);
+}
+
+.session-card-icon {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 12px;
+  color: var(--primary);
+  display: flex;
+  font-size: 22px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.session-card-body {
+  min-width: 0;
+}
+
+.session-card-title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.session-card-title h2 {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.session-meta-grid {
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.session-meta-grid span {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.session-card-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.session-empty-panel {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+  min-height: 240px;
+  text-align: center;
+}
+
+.session-empty-panel > i {
+  color: var(--muted);
+  font-size: 42px;
+  margin-bottom: 10px;
+}
+
+.session-empty-panel h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.session-empty-panel p {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
 .wallet-filter.filter-only {
   width: fit-content;
 }
@@ -2165,6 +2265,18 @@ body {
 
   .audit-json-grid {
     grid-template-columns: 1fr;
+  }
+
+  .session-card {
+    grid-template-columns: 1fr;
+  }
+
+  .session-card-action {
+    justify-content: stretch;
+  }
+
+  .session-card-action .btn {
+    width: 100%;
   }
 
   .modal-panel {

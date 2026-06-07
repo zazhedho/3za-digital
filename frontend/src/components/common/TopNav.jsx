@@ -16,6 +16,7 @@ const titleMap = {
   configs: 'Configs',
   audits: 'Audit Trails',
   profile: 'Profile',
+  sessions: 'Active Sessions',
   edit: 'Edit',
 }
 
@@ -126,6 +127,7 @@ const TopNav = ({ onToggleMobileMenu, isMobileMenuOpen }) => {
         </button>
         <ul className="dropdown-menu dropdown-menu-end">
           <li><Link className="dropdown-item" to="/profile">Profile</Link></li>
+          <li><Link className="dropdown-item" to="/sessions">Active Sessions</Link></li>
           <li><button className="dropdown-item text-danger" type="button" onClick={handleLogout}>Logout</button></li>
         </ul>
       </div>

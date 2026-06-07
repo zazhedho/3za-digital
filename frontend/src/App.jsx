@@ -36,6 +36,7 @@ const MenuDetail = lazy(() => import('./pages/menus/MenuDetail'))
 const AuditList = lazy(() => import('./pages/audits/AuditList'))
 const AuditDetail = lazy(() => import('./pages/audits/AuditDetail'))
 const Profile = lazy(() => import('./pages/users/Profile'))
+const SessionList = lazy(() => import('./pages/sessions/SessionList'))
 
 const Guard = ({ resource, action, children }) => (
   <PermissionRoute resource={resource} action={action}>{children}</PermissionRoute>
@@ -90,6 +91,7 @@ function App() {
               <Route path="/audits" element={<Guard resource="audits" action="list"><AuditList /></Guard>} />
               <Route path="/audits/:id" element={<Guard resource="audits" action="view"><AuditDetail /></Guard>} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/sessions" element={<SessionList />} />
             </Route>
 
             <Route path="/unauthorized" element={<ErrorPage code="403" title="Unauthorized access" />} />
