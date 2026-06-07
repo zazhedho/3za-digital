@@ -74,16 +74,16 @@ const Login = () => {
         <div className="auth-visual-inner">
           <div className="brand-mark auth-brand-mark">3ZA</div>
           <div className="marketplace-tabs">
-            <span><i className="bi bi-stars"></i> SMM Services</span>
-            <span><i className="bi bi-receipt"></i> Orders</span>
-            <span><i className="bi bi-wallet2"></i> Wallet</span>
+            <span><i className="bi bi-stars"></i> Premium Services</span>
+            <span><i className="bi bi-receipt"></i> Easy Tracking</span>
+            <span><i className="bi bi-wallet2"></i> Secure Wallet</span>
           </div>
-          <h1>Operate digital orders with clearer control.</h1>
-          <p>Manage SMM services, deposits, wallet balances, and provider status from one focused workspace.</p>
+          <h1>Boost your digital presence.</h1>
+          <p>Access high-quality services, track your orders easily, and manage your balance all in one simple platform.</p>
           <div className="auth-signal-grid">
-            <div><strong>24/7</strong><span>Order monitoring</span></div>
-            <div><strong>QRIS</strong><span>Deposit support</span></div>
-            <div><strong>RBAC</strong><span>Permission based</span></div>
+            <div><strong>24/7</strong><span>Always online</span></div>
+            <div><strong>Instant</strong><span>Fast deposits</span></div>
+            <div><strong>Secure</strong><span>Safe transactions</span></div>
           </div>
         </div>
       </section>
@@ -98,18 +98,11 @@ const Login = () => {
         </div>
         <div className="auth-heading">
           <div>
+            <div className="auth-kicker"><i className="bi bi-shield-check"></i> Secure access</div>
             <h2>Welcome back</h2>
             <p>Sign in to continue managing your workspace.</p>
           </div>
         </div>
-
-        {googleClientId && (
-          <>
-            <div className="google-auth-button" ref={googleButtonRef}></div>
-            <div className="auth-divider"><span>or use email</span></div>
-          </>
-        )}
-
         <form className="auth-form" onSubmit={submit}>
           <label className="auth-field">
             <span>Email</span>
@@ -144,10 +137,24 @@ const Login = () => {
             </div>
           </label>
 
-          <button className="btn btn-primary w-100 mt-4" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+          <button className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" disabled={loading}>
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span>Signing in...</span>
+              </>
+            ) : (
+              'Sign in'
+            )}
           </button>
         </form>
+
+        {googleClientId && (
+          <>
+            <div className="auth-divider"><span>or continue with</span></div>
+            <div className="google-auth-button" ref={googleButtonRef}></div>
+          </>
+        )}
 
         <div className="auth-links">
           <Link to="/forgot-password">Forgot password?</Link>

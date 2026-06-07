@@ -125,16 +125,16 @@ const Register = () => {
         <div className="auth-visual-inner">
           <div className="brand-mark auth-brand-mark">3ZA</div>
           <div className="marketplace-tabs">
-            <span><i className="bi bi-shield-check"></i> Secure access</span>
-            <span><i className="bi bi-phone"></i> Mobile ready</span>
-            <span><i className="bi bi-key"></i> OTP support</span>
+            <span><i className="bi bi-rocket-takeoff"></i> Quick Setup</span>
+            <span><i className="bi bi-phone"></i> Mobile Friendly</span>
+            <span><i className="bi bi-shield-check"></i> Safe & Secure</span>
           </div>
-          <h1>Start with a verified account.</h1>
-          <p>Create your workspace access with strong credentials and optional email verification.</p>
+          <h1>Join us and get started.</h1>
+          <p>Create your account in seconds and get instant access to all our premium digital services.</p>
           <div className="auth-signal-grid">
-            <div><strong>OTP</strong><span>Config based</span></div>
-            <div><strong>Google</strong><span>One tap signup</span></div>
-            <div><strong>Secure</strong><span>Strong password</span></div>
+            <div><strong>Fast</strong><span>Quick verification</span></div>
+            <div><strong>Easy</strong><span>One-tap login</span></div>
+            <div><strong>Protected</strong><span>Secure data</span></div>
           </div>
         </div>
       </section>
@@ -149,16 +149,12 @@ const Register = () => {
         </div>
         <div className="auth-heading">
           <div>
+            <div className="auth-kicker"><i className="bi bi-person-check"></i> New account</div>
             <h2>Create account</h2>
             <p>Use Google or create a secured email account.</p>
           </div>
         </div>
-        {googleClientId && status.enabled && (
-          <>
-            <div className="google-auth-button" ref={googleButtonRef}></div>
-            <div className="auth-divider"><span>or use email</span></div>
-          </>
-        )}
+
         {!statusLoading && !status.enabled && (
           <div className="auth-alert">Public registration is currently disabled.</div>
         )}
@@ -241,6 +237,7 @@ const Register = () => {
               </button>
             </div>
           </label>
+
           {form.confirm_password && (
             <div className={`password-match-note ${passwordMatches ? 'valid' : ''}`}>
               <i className={`bi ${passwordMatches ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'}`}></i>
@@ -270,10 +267,23 @@ const Register = () => {
               </div>
             </>
           )}
-          <button className="btn btn-primary w-100 mt-4" disabled={loading || statusLoading || !status.enabled}>
-            {loading ? 'Creating...' : 'Create account'}
+          <button className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" disabled={loading || statusLoading || !status.enabled}>
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span>Creating...</span>
+              </>
+            ) : (
+              'Create account'
+            )}
           </button>
         </form>
+        {googleClientId && status.enabled && (
+          <>
+            <div className="auth-divider"><span>or continue with</span></div>
+            <div className="google-auth-button" ref={googleButtonRef}></div>
+          </>
+        )}
         <Link className="auth-return" to="/login">Back to login</Link>
       </section>
     </div>
