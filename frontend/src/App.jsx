@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedLayout from './components/common/ProtectedLayout'
+import GuestRoute from './components/common/GuestRoute'
 import PermissionRoute from './components/common/PermissionRoute'
 import Loading from './components/common/Loading'
 import ThemedToastContainer from './components/common/ThemedToastContainer'
@@ -56,10 +57,10 @@ function App() {
       <AuthProvider>
         <Suspense fallback={<Loading />}>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+            <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+            <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+            <Route path="/reset-password" element={<GuestRoute><ResetPassword /></GuestRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
             <Route element={<ProtectedLayout />}>
