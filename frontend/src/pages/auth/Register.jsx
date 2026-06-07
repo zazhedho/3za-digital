@@ -7,12 +7,22 @@ import { useAuth } from '../../contexts/AuthContext'
 import { getGoogleClientId, renderGoogleIdentityButton } from '../../utils/googleIdentity'
 import { isPasswordValid, passwordRequirements, passwordStrength, passwordStrengthLabel, validatePassword } from '../../utils/passwordValidation'
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const normalizeEmailInput = (value) => value.trim().toLowerCase()
+const sanitizePhoneInput = (value) => {
+  const trimmed = value.trim()
+  const prefix = trimmed.startsWith('+') ? '+' : ''
+  return prefix + trimmed.replace(/[^\d]/g, '')
+}
+const isValidPhone = (value) => /^\+?\d{9,15}$/.test(value)
+
 const Register = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm_password: '', phone: '', otp_code: '' })
   const [status, setStatus] = useState({ enabled: true, otp_enabled: false })
   const [statusLoading, setStatusLoading] = useState(true)
   const [loading, setLoading] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
+  const [otpStep, setOtpStep] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const googleButtonRef = useRef(null)
@@ -67,26 +77,71 @@ const Register = () => {
     })
   }, [googleClientId, handleGoogleCredential, status.enabled])
 
-  const submit = async (event) => {
-    event.preventDefault()
+  const validateRegistrationDetails = () => {
     if (!status.enabled) {
       toast.error('Registration is disabled')
+      return false
+    }
+    if (!emailPattern.test(form.email)) {
+      toast.error('Enter a valid email address')
+      return false
+    }
+    if (!isValidPhone(form.phone)) {
+      toast.error('Phone must contain 9 to 15 digits')
+      return false
+    }
+    if (!isPasswordValid(validation)) {
+      toast.error('Password does not meet all requirements')
+      return false
+    }
+    if (form.password !== form.confirm_password) {
+      toast.error('Passwords do not match')
+      return false
+    }
+    return true
+  }
+
+  const requestOTP = async () => {
+    const email = normalizeEmailInput(form.email)
+    if (!emailPattern.test(email)) {
+      toast.error('Enter a valid email address')
+      return false
+    }
+    if (!status.otp_enabled) {
+      toast.error('Registration OTP is disabled')
+      return false
+    }
+    setOtpLoading(true)
+    try {
+      await authService.sendRegisterOTP(email)
+      setForm((current) => ({ ...current, email }))
+      toast.success('OTP sent')
+      return true
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to send OTP'))
+      return false
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (!validateRegistrationDetails()) return
+
+    if (status.otp_enabled && !otpStep) {
+      const sent = await requestOTP()
+      if (sent) setOtpStep(true)
       return
     }
+
     if (status.otp_enabled && !form.otp_code.trim()) {
       toast.error('OTP code is required')
       return
     }
-    if (!isPasswordValid(validation)) {
-      toast.error('Password does not meet all requirements')
-      return
-    }
-    if (form.password !== form.confirm_password) {
-      toast.error('Passwords do not match')
-      return
-    }
+
     setLoading(true)
-    const payload = { ...form }
+    const payload = { ...form, email: normalizeEmailInput(form.email), phone: sanitizePhoneInput(form.phone) }
     delete payload.confirm_password
     if (!status.otp_enabled || !payload.otp_code) delete payload.otp_code
     const result = await register(payload)
@@ -100,23 +155,7 @@ const Register = () => {
   }
 
   const sendOTP = async () => {
-    if (!form.email) {
-      toast.error('Email is required')
-      return
-    }
-    if (!status.otp_enabled) {
-      toast.error('Registration OTP is disabled')
-      return
-    }
-    setOtpLoading(true)
-    try {
-      await authService.sendRegisterOTP(form.email)
-      toast.success('OTP sent')
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to send OTP'))
-    } finally {
-      setOtpLoading(false)
-    }
+    await requestOTP()
   }
 
   return (
@@ -159,94 +198,125 @@ const Register = () => {
           <div className="auth-alert">Public registration is currently disabled.</div>
         )}
         <form className="auth-form" onSubmit={submit}>
-          <div className="auth-two-col">
-            <label className="auth-field">
-              <span>Name</span>
-              <div className="auth-input">
-                <i className="bi bi-person"></i>
-                <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Full name" autoComplete="name" required />
-              </div>
-            </label>
-            <label className="auth-field">
-              <span>Phone</span>
-              <div className="auth-input">
-                <i className="bi bi-phone"></i>
-                <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="628..." autoComplete="tel" required />
-              </div>
-            </label>
-          </div>
-
-          <label className="auth-field">
-            <span>Email</span>
-            <div className="auth-input">
-              <i className="bi bi-envelope"></i>
-              <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="name@example.com" autoComplete="email" required />
-            </div>
-          </label>
-
-          <label className="auth-field">
-            <span>Password</span>
-            <div className="auth-input">
-              <i className="bi bi-lock"></i>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-                placeholder="Create password"
-                autoComplete="new-password"
-                required
-              />
-              <button type="button" className="auth-input-action" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-              </button>
-            </div>
-          </label>
-
-          {form.password && (
-            <div className="password-validation-card">
-              <div className="password-meter-row">
-                <div className="password-meter">
-                  <span style={{ width: `${(strength / 5) * 100}%` }}></span>
-                </div>
-                <strong>{passwordStrengthLabel(strength)}</strong>
-              </div>
-              <div className="password-requirements">
-                {passwordRequirements.map(([key, label]) => (
-                  <span className={validation[key] ? 'valid' : ''} key={key}>
-                    <i className={`bi ${validation[key] ? 'bi-check-circle-fill' : 'bi-circle'}`}></i>{label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <label className="auth-field">
-            <span>Confirm password</span>
-            <div className="auth-input">
-              <i className="bi bi-shield-lock"></i>
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={form.confirm_password}
-                onChange={(event) => setForm({ ...form, confirm_password: event.target.value })}
-                placeholder="Repeat password"
-                autoComplete="new-password"
-                required
-              />
-              <button type="button" className="auth-input-action" onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}>
-                <i className={`bi ${showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-              </button>
-            </div>
-          </label>
-
-          {form.confirm_password && (
-            <div className={`password-match-note ${passwordMatches ? 'valid' : ''}`}>
-              <i className={`bi ${passwordMatches ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'}`}></i>
-              {passwordMatches ? 'Passwords match' : 'Passwords do not match'}
-            </div>
-          )}
-
-          {status.otp_enabled && (
+          {!otpStep && (
             <>
+              <div className="auth-two-col">
+                <label className="auth-field">
+                  <span>Name</span>
+                  <div className="auth-input">
+                    <i className="bi bi-person"></i>
+                    <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Full name" autoComplete="name" required />
+                  </div>
+                </label>
+                <label className="auth-field">
+                  <span>Phone</span>
+                  <div className="auth-input">
+                    <i className="bi bi-phone"></i>
+                    <input
+                      value={form.phone}
+                      onChange={(event) => setForm({ ...form, phone: sanitizePhoneInput(event.target.value) })}
+                      placeholder="628..."
+                      autoComplete="tel"
+                      inputMode="tel"
+                      maxLength="16"
+                      pattern="^\+?\d{9,15}$"
+                      title="Phone must contain 9 to 15 digits"
+                      required
+                    />
+                  </div>
+                </label>
+              </div>
+
+              <label className="auth-field">
+                <span>Email</span>
+                <div className="auth-input">
+                  <i className="bi bi-envelope"></i>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onBlur={() => setForm({ ...form, email: normalizeEmailInput(form.email) })}
+                    onChange={(event) => setForm({ ...form, email: event.target.value.replace(/\s/g, '') })}
+                    placeholder="name@example.com"
+                    autoComplete="email"
+                    inputMode="email"
+                    pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                    required
+                  />
+                </div>
+              </label>
+
+              <label className="auth-field">
+                <span>Password</span>
+                <div className="auth-input">
+                  <i className="bi bi-lock"></i>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={(event) => setForm({ ...form, password: event.target.value })}
+                    placeholder="Create password"
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button type="button" className="auth-input-action" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                    <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                  </button>
+                </div>
+              </label>
+
+              {form.password && (
+                <div className="password-validation-card">
+                  <div className="password-meter-row">
+                    <div className="password-meter">
+                      <span style={{ width: `${(strength / 5) * 100}%` }}></span>
+                    </div>
+                    <strong>{passwordStrengthLabel(strength)}</strong>
+                  </div>
+                  <div className="password-requirements">
+                    {passwordRequirements.map(([key, label]) => (
+                      <span className={validation[key] ? 'valid' : ''} key={key}>
+                        <i className={`bi ${validation[key] ? 'bi-check-circle-fill' : 'bi-circle'}`}></i>{label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <label className="auth-field">
+                <span>Confirm password</span>
+                <div className="auth-input">
+                  <i className="bi bi-shield-lock"></i>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={form.confirm_password}
+                    onChange={(event) => setForm({ ...form, confirm_password: event.target.value })}
+                    placeholder="Repeat password"
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button type="button" className="auth-input-action" onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}>
+                    <i className={`bi ${showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                  </button>
+                </div>
+              </label>
+
+              {form.confirm_password && (
+                <div className={`password-match-note ${passwordMatches ? 'valid' : ''}`}>
+                  <i className={`bi ${passwordMatches ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'}`}></i>
+                  {passwordMatches ? 'Passwords match' : 'Passwords do not match'}
+                </div>
+              )}
+            </>
+          )}
+
+          {status.otp_enabled && otpStep && (
+            <div className="auth-otp-step">
+              <div className="auth-otp-summary">
+                <i className="bi bi-envelope-check"></i>
+                <div>
+                  <strong>Check your email</strong>
+                  <span>We sent a 6 digit OTP code to {form.email}.</span>
+                </div>
+              </div>
               <label className="auth-field">
                 <span>OTP code</span>
                 <div className="auth-input auth-input-with-button">
@@ -260,25 +330,31 @@ const Register = () => {
                   />
                 </div>
               </label>
-              <div className="auth-inline-action">
+              <div className="auth-step-actions">
                 <button className="btn btn-outline-dark" type="button" onClick={sendOTP} disabled={otpLoading || !form.email}>
-                  {otpLoading ? 'Sending...' : 'Send OTP'}
+                  {otpLoading ? 'Sending...' : 'Resend OTP'}
+                </button>
+                <button className="btn btn-link" type="button" onClick={() => {
+                  setOtpStep(false)
+                  setForm({ ...form, otp_code: '' })
+                }}>
+                  Change details
                 </button>
               </div>
-            </>
+            </div>
           )}
-          <button className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" disabled={loading || statusLoading || !status.enabled}>
-            {loading ? (
+          <button className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" disabled={loading || otpLoading || statusLoading || !status.enabled}>
+            {loading || otpLoading ? (
               <>
                 <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span>Creating...</span>
+                <span>{otpLoading ? 'Sending OTP...' : 'Creating...'}</span>
               </>
             ) : (
-              'Create account'
+              status.otp_enabled && otpStep ? 'Verify and create account' : 'Create account'
             )}
           </button>
         </form>
-        {googleClientId && status.enabled && (
+        {googleClientId && status.enabled && !otpStep && (
           <>
             <div className="auth-divider"><span>or continue with</span></div>
             <div className="google-auth-button" ref={googleButtonRef}></div>

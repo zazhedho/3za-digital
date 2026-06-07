@@ -715,6 +715,76 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+.auth-otp-step {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-otp-summary {
+  align-items: center;
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  color: #1d4ed8;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  padding: 14px;
+}
+
+.auth-otp-summary > i {
+  align-items: center;
+  background: #ffffff;
+  border-radius: 12px;
+  display: inline-flex;
+  font-size: 18px;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.auth-otp-summary strong,
+.auth-otp-summary span {
+  display: block;
+}
+
+.auth-otp-summary strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.auth-otp-summary span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.auth-step-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: -4px;
+}
+
+.auth-step-actions .btn-link {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  padding-left: 0;
+  padding-right: 0;
+  text-decoration: none;
+}
+
+.auth-step-actions .btn-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 /* ───────────────────────────────────────────────
    FOOTER LINKS
 ─────────────────────────────────────────────── */
