@@ -1925,6 +1925,22 @@ body {
   white-space: nowrap;
 }
 
+.app-table .table-config-value {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 8px;
+  color: var(--body);
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 6px 8px;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .app-table .table-actions {
   align-items: center;
   display: inline-flex;
