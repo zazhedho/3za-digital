@@ -29,7 +29,7 @@ const MenuForm = () => {
     try {
       await menuService.update(id, { ...form, order_index: Number(form.order_index) })
       toast.success('Menu updated')
-      navigate(`/menus/${id}`)
+      navigate(`/menus/${id}`, { replace: true })
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save menu'))
     }

@@ -25,7 +25,7 @@ const ConfigForm = () => {
     try {
       await appConfigService.update(id, form)
       toast.success('Config updated')
-      navigate(`/configs/${id}`)
+      navigate(`/configs/${id}`, { replace: true })
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save config'))
     }

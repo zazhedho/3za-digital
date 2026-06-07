@@ -105,7 +105,7 @@ const RoleForm = () => {
       }
       if (canAssignPermissions) await roleService.assignPermissions(roleId, { permission_ids: selectedPermissions })
       toast.success(isEdit ? 'Role updated' : 'Role created')
-      navigate(isEdit ? `/roles/${roleId}` : '/roles')
+      navigate(isEdit ? `/roles/${roleId}` : '/roles', { replace: isEdit })
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save role'))
     } finally {

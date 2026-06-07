@@ -40,7 +40,7 @@ const UserForm = () => {
       if (isEdit) await userService.update(id, payload)
       else await userService.create(payload)
       toast.success(isEdit ? 'User updated' : 'User created')
-      navigate(isEdit ? `/users/${id}` : '/users')
+      navigate(isEdit ? `/users/${id}` : '/users', { replace: isEdit })
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save user'))
     }
