@@ -1,13 +1,12 @@
 package repositoryprovider
 
 import (
-	"context"
-
 	domainprovider "3za-digital/internal/domain/provider"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
 	repositorygeneric "3za-digital/internal/repositories/generic"
 	"3za-digital/pkg/filter"
 	"3za-digital/utils"
+	"context"
 
 	"gorm.io/gorm"
 )
@@ -31,6 +30,7 @@ func (r *repo) StoreAPILog(ctx context.Context, log domainprovider.APILog) error
 	if log.Id == "" {
 		log.Id = utils.CreateUUID()
 	}
+	log.ResponseBody = sanitizeAPILogResponseBody(log.Endpoint, log.ResponseBody)
 	return r.db.WithContext(ctx).Create(&log).Error
 }
 
