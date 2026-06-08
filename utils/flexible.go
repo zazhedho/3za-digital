@@ -68,6 +68,15 @@ func (n FlexibleNumber) String() string {
 	return string(n)
 }
 
+func FirstFlexibleNumber(values ...FlexibleNumber) FlexibleNumber {
+	for _, value := range values {
+		if value.String() != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 type FlexibleInt int
 
 func (i *FlexibleInt) UnmarshalJSON(data []byte) error {

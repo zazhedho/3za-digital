@@ -8,7 +8,9 @@ import { getGoogleClientId, renderGoogleIdentityButton } from '../../utils/googl
 import { isPasswordValid, passwordRequirements, passwordStrength, passwordStrengthLabel, validatePassword } from '../../utils/passwordValidation'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const maxNameLength = 100
 const normalizeEmailInput = (value) => value.trim().toLowerCase()
+const normalizeNameInput = (value) => value.trim().replace(/\s+/g, ' ')
 const sanitizePhoneInput = (value) => {
   const trimmed = value.trim()
   const prefix = trimmed.startsWith('+') ? '+' : ''
@@ -82,6 +84,11 @@ const Register = () => {
       toast.error('Registration is disabled')
       return false
     }
+    const name = normalizeNameInput(form.name)
+    if (name.length < 3 || name.length > maxNameLength) {
+      toast.error('Name must contain 3 to 100 characters')
+      return false
+    }
     if (!emailPattern.test(form.email)) {
       toast.error('Enter a valid email address')
       return false
@@ -141,7 +148,12 @@ const Register = () => {
     }
 
     setLoading(true)
-    const payload = { ...form, email: normalizeEmailInput(form.email), phone: sanitizePhoneInput(form.phone) }
+    const payload = {
+      ...form,
+      name: normalizeNameInput(form.name),
+      email: normalizeEmailInput(form.email),
+      phone: sanitizePhoneInput(form.phone),
+    }
     delete payload.confirm_password
     if (!status.otp_enabled || !payload.otp_code) delete payload.otp_code
     const result = await register(payload)
@@ -205,7 +217,16 @@ const Register = () => {
                   <span>Name</span>
                   <div className="auth-input">
                     <i className="bi bi-person"></i>
-                    <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Full name" autoComplete="name" required />
+                    <input
+                      value={form.name}
+                      onBlur={() => setForm({ ...form, name: normalizeNameInput(form.name) })}
+                      onChange={(event) => setForm({ ...form, name: event.target.value.slice(0, maxNameLength) })}
+                      placeholder="Full name"
+                      autoComplete="name"
+                      maxLength={maxNameLength}
+                      minLength="3"
+                      required
+                    />
                   </div>
                 </label>
                 <label className="auth-field">

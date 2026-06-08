@@ -44,21 +44,16 @@ func (r *BalanceResponse) UnmarshalJSON(data []byte) error {
 		Balance utils.FlexibleNumber `json:"balance"`
 		Data    BalanceData          `json:"data"`
 	}
-
-	var wire wireBalanceResponse
-	if err := json.Unmarshal(data, &wire); err != nil {
-		return err
-	}
-
-	r.Status = wire.Status
-	r.Message = wire.Message
-	r.Data = wire.Data
-	if wire.Balance.String() != "" {
-		r.Balance = wire.Balance
-	} else {
-		r.Balance = wire.Data.Balance
-	}
-	return nil
+	return unmarshalWithWire(data, r, &wireBalanceResponse{}, func(target *BalanceResponse, wire *wireBalanceResponse) {
+		target.Status = wire.Status
+		target.Message = wire.Message
+		target.Data = wire.Data
+		if wire.Balance.String() != "" {
+			target.Balance = wire.Balance
+		} else {
+			target.Balance = wire.Data.Balance
+		}
+	})
 }
 
 type BalanceData struct {
@@ -121,6 +116,68 @@ type OrderStatusResponse struct {
 	StartCount     utils.FlexibleNumber `json:"start_count"`
 	Remains        utils.FlexibleNumber `json:"remains"`
 	Raw            json.RawMessage      `json:"-"`
+}
+
+func (r *OrderStatusResponse) UnmarshalJSON(data []byte) error {
+	type alias OrderStatusResponse
+	type wireOrderStatusResponse struct {
+		alias
+		RefIDSnake        string               `json:"ref_id"`
+		TransactionStatus string               `json:"transaction_status"`
+		StatusLabel       string               `json:"status_label"`
+		StatusDescription string               `json:"status_description"`
+		Price             utils.FlexibleNumber `json:"price"`
+		Data              *struct {
+			OrderNumber       string               `json:"order_number"`
+			RefID             string               `json:"ref_id"`
+			ProviderStatus    string               `json:"status_order"`
+			TransactionStatus string               `json:"transaction_status"`
+			StatusLabel       string               `json:"status_label"`
+			StatusDescription string               `json:"status_description"`
+			Price             utils.FlexibleNumber `json:"price"`
+			Charge            utils.FlexibleNumber `json:"charge"`
+			StartCount        utils.FlexibleNumber `json:"start_count"`
+			Remains           utils.FlexibleNumber `json:"remains"`
+		} `json:"data"`
+	}
+	return unmarshalWithWire(data, r, &wireOrderStatusResponse{}, func(target *OrderStatusResponse, decoded *wireOrderStatusResponse) {
+		*target = OrderStatusResponse(decoded.alias)
+		if target.RefID == "" {
+			target.RefID = decoded.RefIDSnake
+		}
+		if target.ProviderStatus == "" {
+			target.ProviderStatus = utils.FirstNonEmptyString(decoded.TransactionStatus, decoded.StatusLabel, decoded.StatusDescription)
+		}
+		if target.Charge.String() == "" && decoded.Price.String() != "" {
+			target.Charge = decoded.Price
+		}
+
+		if decoded.Data != nil {
+			if target.RefID == "" {
+				target.RefID = decoded.Data.RefID
+			}
+			if target.OrderID == "" {
+				target.OrderID = decoded.Data.OrderNumber
+			}
+			if target.ProviderStatus == "" {
+				target.ProviderStatus = utils.FirstNonEmptyString(
+					decoded.Data.TransactionStatus,
+					decoded.Data.ProviderStatus,
+					decoded.Data.StatusLabel,
+					decoded.Data.StatusDescription,
+				)
+			}
+			if target.Charge.String() == "" {
+				target.Charge = utils.FirstFlexibleNumber(decoded.Data.Charge, decoded.Data.Price)
+			}
+			if target.StartCount.String() == "" {
+				target.StartCount = decoded.Data.StartCount
+			}
+			if target.Remains.String() == "" {
+				target.Remains = decoded.Data.Remains
+			}
+		}
+	})
 }
 
 type APIError struct {

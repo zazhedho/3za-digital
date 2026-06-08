@@ -181,6 +181,53 @@ func TestClientGetOrderStatus(t *testing.T) {
 	}
 }
 
+func TestClientGetOrderStatusMapsNestedSMMResponse(t *testing.T) {
+	server := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assertAuth(t, r)
+		if r.URL.Path != "/status" {
+			t.Fatalf("expected /status path, got %s", r.URL.Path)
+		}
+
+		writeJSON(t, w, map[string]interface{}{
+			"status":  true,
+			"message": "Status order SMM",
+			"data": map[string]interface{}{
+				"order_number":       "SMM202606078390",
+				"ref_id":             "SMM-019EA1B3796975148556D64C28B103BA",
+				"service_name":       "Emergency Instagram Views - 200k-500k/Hr - 0.5$/k",
+				"target":             "https://www.instagram.com/reel/DWjNzLFC12g/?igsh=ZWNvdGNoazMxb3Qx",
+				"quantity":           978,
+				"price":              1526,
+				"balance":            3409,
+				"time":               "07/06 18:20",
+				"status_label":       "Dibatalkan",
+				"status_description": "Order SMM dibatalkan",
+				"transaction_status": "failed",
+				"is_refunded":        true,
+			},
+		})
+	})
+	defer server.Close()
+
+	client := newTestClient(t, server.URL)
+	response, err := client.GetOrderStatus(context.Background(), "SMM-019EA1B3796975148556D64C28B103BA")
+	if err != nil {
+		t.Fatalf("GetOrderStatus returned error: %v", err)
+	}
+	if response.RefID != "SMM-019EA1B3796975148556D64C28B103BA" {
+		t.Fatalf("expected nested ref_id, got %s", response.RefID)
+	}
+	if response.OrderID != "SMM202606078390" {
+		t.Fatalf("expected order number mapped to order id, got %s", response.OrderID)
+	}
+	if response.ProviderStatus != "failed" {
+		t.Fatalf("expected transaction_status failed, got %s", response.ProviderStatus)
+	}
+	if response.Charge.String() != "1526" {
+		t.Fatalf("expected price mapped to charge 1526, got %s", response.Charge.String())
+	}
+}
+
 func TestClientReturnsAPIErrorForFailedPayload(t *testing.T) {
 	server := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assertAuth(t, r)
