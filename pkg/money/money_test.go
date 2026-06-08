@@ -33,3 +33,31 @@ func TestMarkupAmount(t *testing.T) {
 		t.Fatalf("unexpected markup result: provider=%s amount=%s profit=%s", provider, amount, profit)
 	}
 }
+
+func TestPricePerThousandChargeCeilWhole(t *testing.T) {
+	got, err := PricePerThousandChargeCeilWhole("1525.68", 978)
+	if err != nil {
+		t.Fatalf("PricePerThousandChargeCeilWhole returned error: %v", err)
+	}
+	if got != "1493.00" {
+		t.Fatalf("expected 1493.00, got %s", got)
+	}
+
+	got, err = PricePerThousandChargeCeilWhole("1000", 2500)
+	if err != nil {
+		t.Fatalf("PricePerThousandChargeCeilWhole returned error: %v", err)
+	}
+	if got != "2500.00" {
+		t.Fatalf("expected 2500.00, got %s", got)
+	}
+}
+
+func TestMarkupAmountCeilWhole(t *testing.T) {
+	provider, amount, profit, err := MarkupAmountCeilWhole("1493", "10")
+	if err != nil {
+		t.Fatalf("MarkupAmountCeilWhole returned error: %v", err)
+	}
+	if provider != "1493.00" || amount != "1643.00" || profit != "150.00" {
+		t.Fatalf("unexpected markup result: provider=%s amount=%s profit=%s", provider, amount, profit)
+	}
+}

@@ -92,7 +92,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 	if err := validateService(service, productType, req.Quantity); err != nil {
 		return domainorder.Order{}, err
 	}
-	providerCharge, amount, profit, err := s.calculatePrice(ctx, productType, service.Price)
+	providerCharge, amount, profit, err := s.calculatePrice(ctx, productType, service.Price, req.Quantity)
 	if err != nil {
 		return domainorder.Order{}, err
 	}
@@ -370,7 +370,7 @@ func orderMetadata(raw json.RawMessage) map[string]string {
 	return metadata
 }
 
-func (s *OrderService) calculatePrice(ctx context.Context, productType string, providerPrice string) (string, string, string, error) {
+func (s *OrderService) calculatePrice(ctx context.Context, productType string, providerPrice string, quantity int64) (string, string, string, error) {
 	markupPercent := "0"
 	if s.ConfigService != nil {
 		productKey := "pricing.product_markup_percent." + productType
@@ -385,7 +385,16 @@ func (s *OrderService) calculatePrice(ctx context.Context, productType string, p
 		}
 	}
 
-	return money.MarkupAmount(providerPrice, markupPercent)
+	providerCharge := providerPrice
+	if productType == domaincatalog.ProductTypeSMM {
+		charge, err := money.PricePerThousandChargeCeilWhole(providerPrice, quantity)
+		if err != nil {
+			return "", "", "", err
+		}
+		providerCharge = charge
+	}
+
+	return money.MarkupAmountCeilWhole(providerCharge, markupPercent)
 }
 
 func IsPublicError(err error) bool {

@@ -108,6 +108,14 @@ func NormalizeOrTrim(value string) string {
 	return normalized
 }
 
+func CeilToWhole(value string) (string, error) {
+	cents, err := ParseCents(value)
+	if err != nil {
+		return "", err
+	}
+	return FormatCents(ceilCentsToWhole(cents)), nil
+}
+
 func NormalizePositive(value string) (string, error) {
 	cents, err := ParseCents(value)
 	if err != nil || cents <= 0 {
@@ -160,6 +168,33 @@ func MarkupAmount(providerCharge string, percent string) (string, string, string
 	markupCents := divRound(providerCents*basisPoints, 10000)
 	amountCents := providerCents + markupCents
 	return FormatCents(providerCents), FormatCents(amountCents), FormatCents(markupCents), nil
+}
+
+func MarkupAmountCeilWhole(providerCharge string, percent string) (string, string, string, error) {
+	providerCents, err := ParseCents(providerCharge)
+	if err != nil {
+		return "", "", "", err
+	}
+	providerCents = ceilCentsToWhole(providerCents)
+	basisPoints, err := ParsePercentBasisPoints(percent)
+	if err != nil {
+		return "", "", "", err
+	}
+	markupCents := divCeil(providerCents*basisPoints, 10000)
+	amountCents := ceilCentsToWhole(providerCents + markupCents)
+	return FormatCents(providerCents), FormatCents(amountCents), FormatCents(amountCents - providerCents), nil
+}
+
+func PricePerThousandChargeCeilWhole(pricePerThousand string, quantity int64) (string, error) {
+	priceCents, err := ParseCents(pricePerThousand)
+	if err != nil {
+		return "", err
+	}
+	if quantity <= 0 {
+		return "", ErrInvalidAmount
+	}
+	chargeCents := divCeil(priceCents*quantity, 1000)
+	return FormatCents(ceilCentsToWhole(chargeCents)), nil
 }
 
 func ParsePercentBasisPoints(value string) (int64, error) {
@@ -237,4 +272,21 @@ func divRound(numerator int64, denominator int64) int64 {
 		return (numerator + denominator/2) / denominator
 	}
 	return (numerator - denominator/2) / denominator
+}
+
+func divCeil(numerator int64, denominator int64) int64 {
+	if denominator == 0 {
+		return 0
+	}
+	if numerator >= 0 {
+		return (numerator + denominator - 1) / denominator
+	}
+	return numerator / denominator
+}
+
+func ceilCentsToWhole(cents int64) int64 {
+	if cents >= 0 {
+		return divCeil(cents, 100) * 100
+	}
+	return (cents / 100) * 100
 }

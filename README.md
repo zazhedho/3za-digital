@@ -327,10 +327,13 @@ Pricing config is stored in `app_configs`:
 Formula:
 
 ```text
-markup_amount = provider_charge * markup_percent / 100
-amount        = provider_charge + markup_amount
-profit        = amount - provider_charge
+provider_charge = ceil_to_whole(provider_price_per_1k * quantity / 1000)
+markup_amount   = provider_charge * markup_percent / 100
+amount          = ceil_to_whole(provider_charge + markup_amount)
+profit          = amount - provider_charge
 ```
+
+For SMM orders, provider service price is treated as price per 1,000 quantity. Order debit is calculated from requested quantity and rounded up to a whole amount to avoid undercharging.
 
 Wallet rules:
 - Every balance mutation must create `wallet_transactions`.

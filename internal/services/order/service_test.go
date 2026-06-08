@@ -37,7 +37,7 @@ func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 			Status:         true,
 			RefID:          "ref",
 			ProviderStatus: "processing",
-			Charge:         utils.FlexibleNumber("1200"),
+			Charge:         utils.FlexibleNumber("120"),
 			StartCount:     utils.FlexibleNumber("10"),
 			Remains:        utils.FlexibleNumber("90"),
 			Raw:            json.RawMessage(`{"status":true}`),
@@ -65,8 +65,11 @@ func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 	if order.Status != domainorder.StatusProcessing {
 		t.Fatalf("expected processing status, got %s", order.Status)
 	}
-	if order.ProviderCharge != "1200.00" {
-		t.Fatalf("expected provider charge 1200.00, got %s", order.ProviderCharge)
+	if order.ProviderCharge != "120.00" {
+		t.Fatalf("expected provider charge 120.00, got %s", order.ProviderCharge)
+	}
+	if repo.created.Amount != "120.00" || repo.created.ProviderCharge != "120.00" || repo.created.Profit != "0.00" {
+		t.Fatalf("expected initial debit from quantity pricing, amount=%s provider=%s profit=%s", repo.created.Amount, repo.created.ProviderCharge, repo.created.Profit)
 	}
 	if repo.created.Status != domainorder.StatusPending {
 		t.Fatalf("expected initial pending order, got %s", repo.created.Status)
