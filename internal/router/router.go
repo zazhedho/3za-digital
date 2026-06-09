@@ -394,6 +394,7 @@ func (r *Routes) WalletRoutes() {
 	svcWallet := walletSvc.NewWalletService(repoWallet, svcProvider).WithConfigService(svcAppConfig)
 	if qrisClient, err := qrisly.NewClient(qrisly.LoadConfigFromEnv()); err != nil {
 		logger.WriteLog(logger.LogLevelWarn, "QRISLY client not configured: ", err)
+		svcWallet.WithQRISInitError(err)
 	} else {
 		svcWallet.WithQRISProvider(qrisClient)
 	}

@@ -25,6 +25,7 @@ type WalletService struct {
 	MainBalanceProvider interfacewallet.MainBalanceProvider
 	ConfigService       interfaceappconfig.ServiceAppConfigInterface
 	QRISProvider        interfacewallet.QRISPaymentProvider
+	QRISInitError       error
 }
 
 func NewWalletService(repo interfacewallet.RepoWalletInterface, mainBalanceProviders ...interfacewallet.MainBalanceProvider) *WalletService {
@@ -42,6 +43,11 @@ func (s *WalletService) WithConfigService(configService interfaceappconfig.Servi
 
 func (s *WalletService) WithQRISProvider(provider interfacewallet.QRISPaymentProvider) *WalletService {
 	s.QRISProvider = provider
+	return s
+}
+
+func (s *WalletService) WithQRISInitError(err error) *WalletService {
+	s.QRISInitError = err
 	return s
 }
 
@@ -423,7 +429,11 @@ func (s *WalletService) prepareStaticQRISDeposit(ctx context.Context, deposit do
 
 func (s *WalletService) prepareDynamicQRISDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
 	if s.QRISProvider == nil {
-		return domainwallet.DepositRequest{}, domainwallet.ErrQRISProviderUnavailable
+		detail := s.QRISInitError
+		if detail == nil {
+			detail = domainwallet.ErrQRISProviderUnavailable
+		}
+		return domainwallet.DepositRequest{}, fmt.Errorf("%w: %v", domainwallet.ErrQRISProviderUnavailable, detail)
 	}
 
 	parts, err := s.qrisAmountParts(ctx, deposit)

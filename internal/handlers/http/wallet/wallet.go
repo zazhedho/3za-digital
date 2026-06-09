@@ -352,9 +352,25 @@ func walletPublicErrorMessage(err error) string {
 	case errors.Is(err, domainwallet.ErrMainBalanceUnavailable):
 		return "main provider balance unavailable; check H2H credentials/connectivity before approving deposit"
 	case errors.Is(err, domainwallet.ErrQRISProviderUnavailable):
-		return "qris payment provider unavailable; set QRISLY_API_KEY and QRISLY_QRIS_ID before creating QRIS deposit"
+		return qrisProviderUnavailableMessage(err)
 	default:
 		return err.Error()
+	}
+}
+
+func qrisProviderUnavailableMessage(err error) string {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "api key"):
+		return "QRIS payment is temporarily unavailable due to a configuration issue (invalid API key). Please contact support."
+	case strings.Contains(msg, "qris id"):
+		return "QRIS payment is temporarily unavailable due to a configuration issue (invalid QRIS ID). Please contact support."
+	case strings.Contains(msg, "base url"):
+		return "QRIS payment is temporarily unavailable due to a configuration issue (missing endpoint). Please contact support."
+	case strings.Contains(msg, "output type"):
+		return "QRIS payment is temporarily unavailable due to a configuration issue (invalid output format). Please contact support."
+	default:
+		return "QRIS payment is temporarily unavailable. Please try again later or contact support."
 	}
 }
 
