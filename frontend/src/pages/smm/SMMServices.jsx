@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import smmService from '../../services/smmService'
@@ -13,6 +13,13 @@ const formatMoney = (value) => new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 }).format(Number(value || 0))
 
+const serviceGroupName = (row) => row.category || row.brand || 'Uncategorized'
+
+const sortIconByDirection = (active, direction) => {
+  if (!active) return 'bi-arrow-down-up'
+  return direction === 'desc' ? 'bi-sort-down' : 'bi-sort-up'
+}
+
 const SMMServices = () => {
   const { hasPermission } = useAuth()
   const [params, setParams] = useSearchParams()
@@ -21,16 +28,36 @@ const SMMServices = () => {
   const [search, setSearch] = useState(params.get('search') || '')
   const [platformInput, setPlatformInput] = useState('')
   const [platform, setPlatform] = useState('')
+  const [sortBy, setSortBy] = useState('category')
+  const [sortDirection, setSortDirection] = useState('asc')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
   const [loading, setLoading] = useState(false)
   const [confirmSync, setConfirmSync] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
 
+  const groupedRows = useMemo(() => {
+    const groups = []
+    const groupIndex = new Map()
+
+    rows.forEach((row) => {
+      const name = serviceGroupName(row)
+      if (!groupIndex.has(name)) {
+        groupIndex.set(name, groups.length)
+        groups.push({ name, rows: [] })
+      }
+      groups[groupIndex.get(name)].rows.push(row)
+    })
+
+    return groups
+  }, [rows])
+
   useEffect(() => {
     const nextSearch = params.get('search') || ''
     setSearchInput(nextSearch)
     setSearch(nextSearch)
+    setSortBy(params.get('order_by') || 'category')
+    setSortDirection((params.get('order_direction') || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc')
     setPage(1)
   }, [params])
 
@@ -41,6 +68,8 @@ const SMMServices = () => {
         search,
         page,
         limit: 50,
+        order_by: sortBy,
+        order_direction: sortDirection,
         'filters[platform]': platform || undefined,
         'filters[is_active]': 'true',
       })
@@ -52,7 +81,7 @@ const SMMServices = () => {
     } finally {
       setLoading(false)
     }
-  }, [page, platform, search])
+  }, [page, platform, search, sortBy, sortDirection])
 
   useEffect(() => {
     load()
@@ -70,9 +99,34 @@ const SMMServices = () => {
     setSearch('')
     setPlatformInput('')
     setPlatform('')
+    setSortBy('category')
+    setSortDirection('asc')
     setPage(1)
     setParams({})
   }
+
+  const changeSort = (field) => {
+    setPage(1)
+    if (sortBy === field) {
+      setSortDirection((direction) => (direction === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortBy(field)
+    setSortDirection('asc')
+  }
+
+  const sortButton = (field, label) => (
+    <button
+      type="button"
+      className={`table-sort-trigger${sortBy === field ? ' active' : ''}`}
+      onClick={() => changeSort(field)}
+      aria-label={`Sort by ${label}`}
+      aria-pressed={sortBy === field}
+    >
+      <span>{label}</span>
+      <i className={`bi ${sortIconByDirection(sortBy === field, sortDirection)}`}></i>
+    </button>
+  )
 
   const sync = async () => {
     setConfirmLoading(true)
@@ -120,29 +174,43 @@ const SMMServices = () => {
         <table className="table app-table table-wide align-middle">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Service Name</th>
-              <th>Platform</th>
-              <th>Category</th>
-              <th>Min/Max</th>
-              <th>Price / 1k</th>
+              <th>{sortButton('provider_service_id', 'ID')}</th>
+              <th>{sortButton('name', 'Service Name')}</th>
+              <th>{sortButton('platform', 'Platform')}</th>
+              <th>{sortButton('min_quantity', 'Min/Max')}</th>
+              <th>{sortButton('price', 'Price / 1k')}</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td><span className="table-id">{row.provider_service_id}</span></td>
-                <td><span className="table-main"><strong>{row.name}</strong></span></td>
-                <td className="text-capitalize table-nowrap">{row.platform || '-'}</td>
-                <td><span className="table-subtext">{row.category || row.brand || '-'}</span></td>
-                <td className="table-number">{row.min_quantity || '-'} / {row.max_quantity || '-'}</td>
-                <td className="table-number">{formatMoney(row.price)}</td>
-                <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
-              </tr>
+            {groupedRows.map((group) => (
+              <Fragment key={group.name}>
+                <tr className="table-group-row">
+                  <td colSpan="6">
+                    <div className="table-group-head">
+                      <div className="table-group-meta">
+                        <span className="table-group-title">{group.name}</span>
+                        <span className="table-group-count">{group.rows.length} service{group.rows.length === 1 ? '' : 's'}</span>
+                        {platform && <span className="table-group-badge text-capitalize">{platform}</span>}
+                      </div>
+                      {sortButton('category', 'Category')}
+                    </div>
+                  </td>
+                </tr>
+                {group.rows.map((row) => (
+                  <tr key={row.id}>
+                    <td><span className="table-id">{row.provider_service_id}</span></td>
+                    <td><span className="table-main"><strong>{row.name}</strong></span></td>
+                    <td className="text-capitalize table-nowrap">{row.platform || '-'}</td>
+                    <td className="table-number">{row.min_quantity || '-'} / {row.max_quantity || '-'}</td>
+                    <td className="table-number">{formatMoney(row.price)}</td>
+                    <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
             {!rows.length && (
-              <tr><td colSpan="7" className="empty-cell">{loading ? 'Loading...' : 'No services found'}</td></tr>
+              <tr><td colSpan="6" className="empty-cell">{loading ? 'Loading...' : 'No services found'}</td></tr>
             )}
           </tbody>
         </table>

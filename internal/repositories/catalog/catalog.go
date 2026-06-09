@@ -33,6 +33,7 @@ func (r *repo) GetAll(ctx context.Context, params filter.BaseParams) ([]domainca
 		},
 		FilterSanitizer: filter.WhitelistStringFilter,
 		AllowedOrderColumns: []string{
+			"provider_service_id",
 			"name",
 			"category",
 			"brand",
