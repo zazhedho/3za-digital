@@ -85,6 +85,76 @@ func TestCatalogServiceSyncRejectsUnsupportedProductType(t *testing.T) {
 	}
 }
 
+func TestCatalogServiceEnsureFreshSyncsWhenStale(t *testing.T) {
+	stale := time.Now().Add(-25 * time.Hour)
+	repo := &mockCatalogRepo{
+		list: []domaincatalog.ProviderService{
+			{Id: "svc-1", ProductType: domaincatalog.ProductTypeSMM, Provider: domaincatalog.ProviderH2H, SyncedAt: &stale},
+		},
+		total: 1,
+	}
+	client := &mockProviderClient{
+		response: &h2h.PriceListResponse{
+			Status: true,
+			Total:  1,
+			Services: []h2h.Service{
+				mustH2HService(t, map[string]interface{}{
+					"id":           "1001",
+					"name":         "Instagram Followers",
+					"category":     "Followers",
+					"platform":     "instagram",
+					"price_per_1k": "1000",
+					"min":          "10",
+					"max":          "10000",
+					"status":       "active",
+				}),
+			},
+		},
+	}
+	service := NewCatalogService(repo, func() (interfaceprovider.Client, error) {
+		return client, nil
+	})
+
+	if err := service.EnsureFresh(context.Background(), domaincatalog.ProductTypeSMM); err != nil {
+		t.Fatalf("EnsureFresh returned error: %v", err)
+	}
+	if len(repo.upserted) != 1 {
+		t.Fatalf("expected sync to run once, got %d", len(repo.upserted))
+	}
+	if client.req.Type != domaincatalog.ProductTypeSMM {
+		t.Fatalf("expected lazy sync to request smm, got %s", client.req.Type)
+	}
+}
+
+func TestCatalogServiceEnsureFreshSkipsWhenFresh(t *testing.T) {
+	fresh := time.Now()
+	repo := &mockCatalogRepo{
+		list: []domaincatalog.ProviderService{
+			{Id: "svc-1", ProductType: domaincatalog.ProductTypeSMM, Provider: domaincatalog.ProviderH2H, SyncedAt: &fresh},
+		},
+		total: 1,
+	}
+	client := &mockProviderClient{
+		response: &h2h.PriceListResponse{
+			Status: true,
+			Total:  1,
+		},
+	}
+	service := NewCatalogService(repo, func() (interfaceprovider.Client, error) {
+		return client, nil
+	})
+
+	if err := service.EnsureFresh(context.Background(), domaincatalog.ProductTypeSMM); err != nil {
+		t.Fatalf("EnsureFresh returned error: %v", err)
+	}
+	if len(repo.upserted) != 0 {
+		t.Fatalf("expected no sync when fresh, got %d", len(repo.upserted))
+	}
+	if client.req.Type != "" {
+		t.Fatalf("expected no provider call when fresh, got %s", client.req.Type)
+	}
+}
+
 func TestCatalogServiceGetAllAppliesMarkupConfig(t *testing.T) {
 	service := NewCatalogService(
 		&mockCatalogRepo{

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"3za-digital/internal/authscope"
 	domaincatalog "3za-digital/internal/domain/catalog"
@@ -19,6 +20,7 @@ import (
 func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 	minQty := int64(10)
 	maxQty := int64(1000)
+	syncedAt := time.Now()
 	repo := &mockOrderRepo{
 		service: domaincatalog.ProviderService{
 			Id:                "service-id",
@@ -30,6 +32,7 @@ func TestOrderServiceCreateOrderWithSMMType(t *testing.T) {
 			MinQuantity:       &minQty,
 			MaxQuantity:       &maxQty,
 			IsActive:          true,
+			SyncedAt:          &syncedAt,
 		},
 	}
 	provider := &mockOrderProvider{
@@ -108,6 +111,56 @@ func TestOrderServiceCreateOrderProviderErrorKeepsProcessingWithoutRefund(t *tes
 	}
 }
 
+func TestOrderServiceCreateOrderLazySyncsStalePriceBeforeOrder(t *testing.T) {
+	stale := time.Now().Add(-25 * time.Hour)
+	fresh := time.Now()
+	repo := &mockOrderRepo{
+		service: domaincatalog.ProviderService{
+			Id:                "service-id",
+			Provider:          domaincatalog.ProviderH2H,
+			ProductType:       domaincatalog.ProductTypeSMM,
+			ProviderServiceID: "1001",
+			Name:              "Instagram Followers",
+			Price:             "1200",
+			MinQuantity:       ptrInt64(10),
+			MaxQuantity:       ptrInt64(1000),
+			IsActive:          true,
+			SyncedAt:          &stale,
+		},
+	}
+	catalog := &mockCatalogService{
+		ensureFreshFunc: func(ctx context.Context, productType string) error {
+			repo.service.SyncedAt = &fresh
+			return nil
+		},
+	}
+	provider := &mockOrderProvider{
+		createResp: &h2h.CreateOrderResponse{
+			Status:         true,
+			ProviderStatus: "processing",
+			Raw:            json.RawMessage(`{"status":true}`),
+		},
+	}
+	service := NewOrderService(repo, func() (interfaceprovider.Client, error) {
+		return provider, nil
+	}).WithCatalogService(catalog)
+
+	order, err := service.CreateOrder(orderTestActorContext("user-id"), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
+		ServiceID: "service-id",
+		Target:    "https://instagram.com/3zadigital",
+		Quantity:  100,
+	})
+	if err != nil {
+		t.Fatalf("CreateOrder returned error: %v", err)
+	}
+	if catalog.ensureFreshCalls != 1 {
+		t.Fatalf("expected one lazy sync call, got %d", catalog.ensureFreshCalls)
+	}
+	if order.Status != domainorder.StatusProcessing {
+		t.Fatalf("expected processing status, got %s", order.Status)
+	}
+}
+
 func TestOrderServiceCreateOrderFailedProviderStatusWaitsForRefreshWithoutRefund(t *testing.T) {
 	repo := &mockOrderRepo{service: validSMMTestService()}
 	provider := &mockOrderProvider{
@@ -177,6 +230,7 @@ func TestOrderServiceRefreshStatusFailedRefundsWallet(t *testing.T) {
 
 func TestOrderServiceCreateOrderRejectsBelowMinimum(t *testing.T) {
 	minQty := int64(10)
+	syncedAt := time.Now()
 	repo := &mockOrderRepo{
 		service: domaincatalog.ProviderService{
 			Id:                "service-id",
@@ -185,6 +239,7 @@ func TestOrderServiceCreateOrderRejectsBelowMinimum(t *testing.T) {
 			ProviderServiceID: "1001",
 			MinQuantity:       &minQty,
 			IsActive:          true,
+			SyncedAt:          &syncedAt,
 		},
 	}
 	service := NewOrderService(repo, func() (interfaceprovider.Client, error) {
@@ -198,6 +253,33 @@ func TestOrderServiceCreateOrderRejectsBelowMinimum(t *testing.T) {
 	})
 	if !errors.Is(err, ErrQuantityBelowMinimum) {
 		t.Fatalf("expected ErrQuantityBelowMinimum, got %v", err)
+	}
+}
+
+func TestOrderServiceCreateOrderRejectsStaleSMMPrice(t *testing.T) {
+	syncedAt := time.Now().Add(-25 * time.Hour)
+	repo := &mockOrderRepo{
+		service: domaincatalog.ProviderService{
+			Id:                "service-id",
+			Provider:          domaincatalog.ProviderH2H,
+			ProductType:       domaincatalog.ProductTypeSMM,
+			ProviderServiceID: "1001",
+			MinQuantity:       ptrInt64(10),
+			IsActive:          true,
+			SyncedAt:          &syncedAt,
+		},
+	}
+	service := NewOrderService(repo, func() (interfaceprovider.Client, error) {
+		return &mockOrderProvider{}, nil
+	})
+
+	_, err := service.CreateOrder(orderTestActorContext("user-id"), domaincatalog.ProductTypeSMM, dto.CreateOrderRequest{
+		ServiceID: "service-id",
+		Target:    "https://instagram.com/3zadigital",
+		Quantity:  100,
+	})
+	if !errors.Is(err, ErrServicePriceStale) {
+		t.Fatalf("expected ErrServicePriceStale, got %v", err)
 	}
 }
 
@@ -219,6 +301,7 @@ func TestOrderServiceCreateOrderRejectsInvalidSMMTargetURL(t *testing.T) {
 func validSMMTestService() domaincatalog.ProviderService {
 	minQty := int64(10)
 	maxQty := int64(1000)
+	syncedAt := time.Now()
 	return domaincatalog.ProviderService{
 		Id:                "service-id",
 		Provider:          domaincatalog.ProviderH2H,
@@ -229,7 +312,12 @@ func validSMMTestService() domaincatalog.ProviderService {
 		MinQuantity:       &minQty,
 		MaxQuantity:       &maxQty,
 		IsActive:          true,
+		SyncedAt:          &syncedAt,
 	}
+}
+
+func ptrInt64(value int64) *int64 {
+	return &value
 }
 
 func orderTestActorContext(userID string) context.Context {
@@ -259,6 +347,27 @@ func (m *mockOrderProvider) GetBalance(ctx context.Context) (*h2h.BalanceRespons
 
 func (m *mockOrderProvider) GetPriceList(ctx context.Context, req h2h.PriceListRequest) (*h2h.PriceListResponse, error) {
 	return nil, nil
+}
+
+type mockCatalogService struct {
+	ensureFreshCalls int
+	ensureFreshFunc  func(ctx context.Context, productType string) error
+}
+
+func (m *mockCatalogService) GetAll(ctx context.Context, params filter.BaseParams) ([]domaincatalog.ProviderService, int64, error) {
+	return nil, 0, nil
+}
+
+func (m *mockCatalogService) Sync(ctx context.Context, productType string, req dto.SyncCatalogRequest) (dto.SyncCatalogResponse, error) {
+	return dto.SyncCatalogResponse{}, nil
+}
+
+func (m *mockCatalogService) EnsureFresh(ctx context.Context, productType string) error {
+	m.ensureFreshCalls++
+	if m.ensureFreshFunc != nil {
+		return m.ensureFreshFunc(ctx, productType)
+	}
+	return nil
 }
 
 type mockOrderRepo struct {

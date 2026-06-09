@@ -127,6 +127,10 @@ func (h *SMMHandler) SyncServices(ctx *gin.Context) {
 			statusCode = http.StatusServiceUnavailable
 			publicMessage = err.Error()
 		}
+		if errors.Is(err, servicecatalog.ErrCatalogSyncLocked) {
+			statusCode = http.StatusConflict
+			publicMessage = err.Error()
+		}
 
 		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("%s; Service.Sync; Error: %+v", logPrefix, err))
 		res := response.Response(statusCode, messages.MsgSomethingWrong, logID, nil)

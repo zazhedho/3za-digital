@@ -323,6 +323,7 @@ Order flow:
 Pricing config is stored in `app_configs`:
 - `pricing.default_markup_percent`
 - `pricing.product_markup_percent.smm`
+- `pricing.smm_service_price_max_age`
 
 Formula:
 
@@ -334,6 +335,7 @@ profit          = amount - provider_charge
 ```
 
 For SMM orders, provider service price is treated as price per 1,000 quantity. Order debit is calculated from requested quantity and rounded up to a whole amount to avoid undercharging.
+Backend stores last successful SMM catalog sync time in Redis using a product-scoped key and checks that value for lazy sync decisions. Redis is used as a cache: when the key is missing, expired, malformed, or Redis is unavailable, backend falls back to `provider_services.synced_at` from the database and refills Redis when possible. If the sync time is older than `pricing.smm_service_price_max_age`, backend triggers lazy sync before list or order flow continues. A Redis lock per product type prevents concurrent requests from syncing the same catalog at the same time when Redis is available. `provider_services.synced_at` remains stored per row for fallback, data history, and display.
 
 Wallet rules:
 - Every balance mutation must create `wallet_transactions`.

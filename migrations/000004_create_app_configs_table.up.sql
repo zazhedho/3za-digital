@@ -82,6 +82,15 @@ VALUES
     ),
     (
         gen_random_uuid(),
+        'pricing.smm_service_price_max_age',
+        'SMM Service Price Max Age',
+        'pricing',
+        '24h',
+        'Maximum age for cached SMM service price before lazy sync is triggered.',
+        TRUE
+    ),
+    (
+        gen_random_uuid(),
         'payment.qris.fee_percent',
         'QRIS Topup Fee Percent',
         'payment',

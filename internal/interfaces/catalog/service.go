@@ -11,4 +11,5 @@ import (
 type ServiceCatalogInterface interface {
 	GetAll(ctx context.Context, params filter.BaseParams) ([]domaincatalog.ProviderService, int64, error)
 	Sync(ctx context.Context, productType string, req dto.SyncCatalogRequest) (dto.SyncCatalogResponse, error)
+	EnsureFresh(ctx context.Context, productType string) error
 }

@@ -355,14 +355,15 @@ func (r *Routes) SMMRoutes() {
 	providerFactory := func() (interfaceprovider.Client, error) {
 		return newObservedH2HClient(repoProvider)
 	}
-	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory, svcAppConfig)
-	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory, svcAppConfig).WithAuditService(svcAudit)
+	redisClient := database.GetRedisClient()
+	syncStateStore := catalogRepo.NewCatalogSyncStateStore(r.DB, redisClient)
+	svcCatalog := catalogSvc.NewCatalogService(repoCatalog, providerFactory, svcAppConfig).WithSyncStateStore(syncStateStore)
+	svcOrder := orderSvc.NewOrderService(repoOrder, providerFactory, svcAppConfig).WithAuditService(svcAudit).WithCatalogService(svcCatalog)
 	h := smmHandler.NewSMMHandler(svcCatalog, svcOrder, svcAudit)
 
 	blacklistRepo := authRepo.NewBlacklistRepo(r.DB)
 	pRepo := permissionRepo.NewPermissionRepo(r.DB)
 	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
-	redisClient := database.GetRedisClient()
 	orderLimiter := middlewares.IPRateLimitMiddleware(
 		redisClient,
 		"smm_order_create",

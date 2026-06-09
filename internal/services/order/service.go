@@ -16,6 +16,7 @@ import (
 	"3za-digital/internal/integrations/h2h"
 	interfaceappconfig "3za-digital/internal/interfaces/appconfig"
 	interfaceaudit "3za-digital/internal/interfaces/audit"
+	interfacecatalog "3za-digital/internal/interfaces/catalog"
 	interfaceorder "3za-digital/internal/interfaces/order"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
 	"3za-digital/pkg/filter"
@@ -32,6 +33,7 @@ var (
 	ErrQuantityBelowMinimum      = errors.New("quantity is below service minimum")
 	ErrQuantityAboveMaximum      = errors.New("quantity is above service maximum")
 	ErrOrderAlreadyFinal         = errors.New("order already has final status")
+	ErrServicePriceStale         = errors.New("service price is temporarily unavailable; please try again later")
 	ErrProviderClientUnavailable = errors.New("provider client unavailable")
 	ErrProviderEmptyResponse     = errors.New("provider returned empty response")
 )
@@ -41,6 +43,7 @@ type OrderService struct {
 	ProviderFactory interfaceprovider.ClientFactory
 	ConfigService   interfaceappconfig.ServiceAppConfigInterface
 	AuditService    interfaceaudit.ServiceAuditInterface
+	CatalogService  interfacecatalog.ServiceCatalogInterface
 }
 
 func NewOrderService(repo interfaceorder.RepoOrderInterface, providerFactory interfaceprovider.ClientFactory, configServices ...interfaceappconfig.ServiceAppConfigInterface) *OrderService {
@@ -56,6 +59,11 @@ func NewOrderService(repo interfaceorder.RepoOrderInterface, providerFactory int
 
 func (s *OrderService) WithAuditService(auditService interfaceaudit.ServiceAuditInterface) *OrderService {
 	s.AuditService = auditService
+	return s
+}
+
+func (s *OrderService) WithCatalogService(catalogService interfacecatalog.ServiceCatalogInterface) *OrderService {
+	s.CatalogService = catalogService
 	return s
 }
 
@@ -84,12 +92,20 @@ func (s *OrderService) CreateOrder(ctx context.Context, productType string, req 
 	if err := validateOrderTarget(productType, req.Target); err != nil {
 		return domainorder.Order{}, err
 	}
+	if productType == domaincatalog.ProductTypeSMM && s.CatalogService != nil {
+		if err := s.CatalogService.EnsureFresh(ctx, productType); err != nil {
+			return domainorder.Order{}, err
+		}
+	}
 
 	service, err := s.Repo.GetServiceByID(ctx, req.ServiceID)
 	if err != nil {
 		return domainorder.Order{}, err
 	}
 	if err := validateService(service, productType, req.Quantity); err != nil {
+		return domainorder.Order{}, err
+	}
+	if err := s.ensureServicePriceFresh(ctx, productType, service); err != nil {
 		return domainorder.Order{}, err
 	}
 	providerCharge, amount, profit, err := s.calculatePrice(ctx, productType, service.Price, req.Quantity)
@@ -397,6 +413,31 @@ func (s *OrderService) calculatePrice(ctx context.Context, productType string, p
 	return money.MarkupAmountCeilWhole(providerCharge, markupPercent)
 }
 
+func (s *OrderService) ensureServicePriceFresh(ctx context.Context, productType string, service domaincatalog.ProviderService) error {
+	if productType != domaincatalog.ProductTypeSMM {
+		return nil
+	}
+
+	maxAge := 24 * time.Hour
+	if s.ConfigService != nil {
+		value, err := s.ConfigService.GetDuration(ctx, "pricing.smm_service_price_max_age", maxAge)
+		if err != nil {
+			return err
+		}
+		if value > 0 {
+			maxAge = value
+		}
+	}
+
+	if service.SyncedAt == nil {
+		return ErrServicePriceStale
+	}
+	if time.Since(*service.SyncedAt) > maxAge {
+		return ErrServicePriceStale
+	}
+	return nil
+}
+
 func IsPublicError(err error) bool {
 	return errors.Is(err, ErrInvalidOrderRequest) ||
 		errors.Is(err, ErrInactiveService) ||
@@ -404,6 +445,7 @@ func IsPublicError(err error) bool {
 		errors.Is(err, ErrQuantityBelowMinimum) ||
 		errors.Is(err, ErrQuantityAboveMaximum) ||
 		errors.Is(err, ErrOrderAlreadyFinal) ||
+		errors.Is(err, ErrServicePriceStale) ||
 		errors.Is(err, domainwallet.ErrInactiveWallet) ||
 		errors.Is(err, domainwallet.ErrInsufficientBalance) ||
 		errors.Is(err, domainwallet.ErrInvalidAmount)
