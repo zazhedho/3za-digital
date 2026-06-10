@@ -140,3 +140,19 @@ func (h *AppConfigHandler) Update(ctx *gin.Context) {
 	res := response.Response(http.StatusOK, "Configuration updated successfully", logId, data)
 	ctx.JSON(http.StatusOK, res)
 }
+
+func (h *AppConfigHandler) GetSupportContact(ctx *gin.Context) {
+	logId := utils.GenerateLogId(ctx)
+	reqCtx := ctx.Request.Context()
+
+	data, err := h.Service.GetSupportContact(reqCtx)
+	if err != nil {
+		logger.WriteLogWithContext(ctx, logger.LogLevelError, fmt.Sprintf("[AppConfigHandler][GetSupportContact]; Service.GetSupportContact; Error: %+v", err))
+		res := response.InternalServerError(logId)
+		ctx.JSON(http.StatusInternalServerError, res)
+		return
+	}
+
+	res := response.Response(http.StatusOK, "Get support contact successfully", logId, data)
+	ctx.JSON(http.StatusOK, res)
+}

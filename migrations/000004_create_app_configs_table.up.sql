@@ -115,5 +115,32 @@ VALUES
         '',
         'Merchant name shown to users when creating a QRIS deposit.',
         TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'support.whatsapp_number',
+        'Support WhatsApp Number',
+        'support',
+        '6281234567890',
+        'WhatsApp number for customer support. Format: 628xxx (no plus sign).',
+        TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'support.telegram_username',
+        'Support Telegram Username',
+        'support',
+        '',
+        'Telegram username for customer support (without @).',
+        TRUE
+    ),
+    (
+        gen_random_uuid(),
+        'support.email_address',
+        'Support Email Address',
+        'support',
+        'support@3zadigital.com',
+        'Email address for customer support inquiries.',
+        TRUE
     )
 ON CONFLICT (config_key) DO NOTHING;

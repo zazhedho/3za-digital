@@ -127,6 +127,31 @@ func TestIsEnabledReturnsValueWhenConfigActive(t *testing.T) {
 	}
 }
 
+func TestGetSupportContact(t *testing.T) {
+	repo := &appConfigRepoMock{
+		byKey: map[string]domainappconfig.AppConfig{
+			"support.whatsapp_number": {ConfigKey: "support.whatsapp_number", Value: "6281234567890", IsActive: true},
+			"support.email_address":   {ConfigKey: "support.email_address", Value: "support@test.com", IsActive: true},
+		},
+	}
+	service := NewAppConfigService(repo)
+
+	contact, err := service.GetSupportContact(context.Background())
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+
+	if contact.WhatsApp != "6281234567890" {
+		t.Fatalf("expected whatsapp 6281234567890, got %s", contact.WhatsApp)
+	}
+	if contact.Email != "support@test.com" {
+		t.Fatalf("expected email support@test.com, got %s", contact.Email)
+	}
+	if contact.Telegram != "" {
+		t.Fatalf("expected empty telegram, got %s", contact.Telegram)
+	}
+}
+
 func TestGetBoolParsesFeatureFlagValue(t *testing.T) {
 	service := NewAppConfigService(&appConfigRepoMock{
 		byKey: map[string]domainappconfig.AppConfig{

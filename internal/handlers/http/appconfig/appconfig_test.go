@@ -74,6 +74,9 @@ func (m *appConfigServiceTestDouble) DecodeJSON(ctx context.Context, configKey s
 func (m *appConfigServiceTestDouble) IsEnabled(ctx context.Context, configKey string, fallback bool) (bool, error) {
 	return fallback, nil
 }
+func (m *appConfigServiceTestDouble) GetSupportContact(ctx context.Context) (dto.SupportContactResponse, error) {
+	return dto.SupportContactResponse{}, nil
+}
 
 type auditServiceAppConfigTestDouble struct {
 	events []domainaudit.AuditEvent

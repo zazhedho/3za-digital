@@ -213,6 +213,10 @@ func (s appConfigServiceStub) IsEnabled(ctx context.Context, configKey string, f
 	return fallback, nil
 }
 
+func (s appConfigServiceStub) GetSupportContact(ctx context.Context) (dto.SupportContactResponse, error) {
+	return dto.SupportContactResponse{}, nil
+}
+
 func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 	repo := &walletRepoStub{}
 	service := NewWalletService(repo)

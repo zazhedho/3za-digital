@@ -330,6 +330,10 @@ func (m *mockCatalogConfigService) IsEnabled(ctx context.Context, configKey stri
 	return fallback, nil
 }
 
+func (m *mockCatalogConfigService) GetSupportContact(ctx context.Context) (dto.SupportContactResponse, error) {
+	return dto.SupportContactResponse{}, nil
+}
+
 func mustH2HService(t *testing.T, payload map[string]interface{}) h2h.Service {
 	t.Helper()
 

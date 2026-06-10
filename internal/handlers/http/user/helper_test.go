@@ -54,6 +54,9 @@ func (m *appConfigServiceUserTestDouble) IsEnabled(ctx context.Context, configKe
 	}
 	return m.enabled, nil
 }
+func (m *appConfigServiceUserTestDouble) GetSupportContact(ctx context.Context) (dto.SupportContactResponse, error) {
+	return dto.SupportContactResponse{}, nil
+}
 
 func TestBuildAuthTokenResponse(t *testing.T) {
 	t.Setenv("JWT_EXP", "12")

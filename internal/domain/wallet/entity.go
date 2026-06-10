@@ -28,7 +28,7 @@ const (
 	DepositProviderQRIS   = "qris"
 	DepositProviderQRISLY = "qrisly"
 
-	DepositMinimumAmount = "10000.00"
+	DepositMinimumAmount = "1000.00"
 )
 
 func (Wallet) TableName() string {

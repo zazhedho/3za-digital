@@ -111,6 +111,18 @@ func (s *AppConfigService) IsEnabled(ctx context.Context, configKey string, fall
 	return s.GetBool(ctx, configKey, fallback)
 }
 
+func (s *AppConfigService) GetSupportContact(ctx context.Context) (dto.SupportContactResponse, error) {
+	wa, _ := s.GetString(ctx, "support.whatsapp_number", "")
+	tg, _ := s.GetString(ctx, "support.telegram_username", "")
+	email, _ := s.GetString(ctx, "support.email_address", "")
+
+	return dto.SupportContactResponse{
+		WhatsApp: wa,
+		Telegram: tg,
+		Email:    email,
+	}, nil
+}
+
 func (s *AppConfigService) getActiveConfigByKey(ctx context.Context, configKey string) (domainappconfig.AppConfig, bool, error) {
 	config, err := s.Repo.GetByKey(ctx, configKey)
 	if err != nil {

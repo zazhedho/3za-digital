@@ -267,6 +267,7 @@ func (r *Routes) AppConfigRoutes() {
 	pRepo := permissionRepo.NewPermissionRepo(r.DB)
 	mdw := middlewares.NewMiddleware(blacklistRepo, pRepo)
 
+	r.App.GET("/api/support", h.GetSupportContact)
 	r.App.GET("/api/configs", mdw.AuthMiddleware(), mdw.PermissionMiddleware("configs", "list"), h.GetAll)
 
 	appConfig := r.App.Group("/api/config").Use(mdw.AuthMiddleware())

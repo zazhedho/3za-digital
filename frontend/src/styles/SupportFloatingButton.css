@@ -1,0 +1,189 @@
+.support-hub-wrapper {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: 'Airbnb Cereal VF', Circular, -apple-system, sans-serif;
+}
+
+/* Premium Trigger Button */
+.support-hub-trigger-circle {
+  width: 52px;
+  height: 52px;
+  background: #ffffff;
+  border: 1px solid #ebebeb;
+  border-radius: 50%;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2002;
+  padding: 0;
+}
+
+/* Subtle Pulse Animation */
+.support-hub-trigger-circle::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 56, 92, 0.2); /* Rausch Pulse */
+  z-index: -1;
+  animation: support-pulse 2.5s infinite;
+}
+
+@keyframes support-pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  70% { transform: scale(1.4); opacity: 0; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+.support-hub-trigger-circle:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
+  border-color: #ff385c;
+}
+
+.trigger-icon-stack {
+  font-size: 22px;
+  color: #222222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s ease;
+}
+
+/* Glassmorphism Panel Design */
+.support-panel {
+  position: absolute;
+  bottom: 68px;
+  right: 0;
+  width: 240px;
+  background: rgba(255, 255, 255, 0.85); /* Translucent White */
+  backdrop-filter: blur(12px); /* Glass Effect */
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.04);
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px) scale(0.9);
+  transform-origin: bottom right;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  z-index: 2001;
+}
+
+/* Open States */
+.is-open .support-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.is-open .support-hub-trigger-circle {
+  background: #ff385c; /* Rausch background when open */
+  border-color: #ff385c;
+}
+
+.is-open .support-hub-trigger-circle::after {
+  animation: none;
+}
+
+.is-open .trigger-icon-stack {
+  color: #ffffff;
+  transform: rotate(180deg);
+}
+
+/* Panel Content */
+.support-panel-header {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.support-panel-header strong {
+  display: block;
+  font-size: 17px;
+  color: #222222;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.support-panel-header p {
+  font-size: 13px;
+  color: #484848;
+  margin: 2px 0 0 0;
+  font-weight: 400;
+}
+
+.support-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.support-opt-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.support-opt-item:hover {
+  background: #ffffff;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.opt-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px; /* Soft Squircle icons */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.wa .opt-icon { background: #e8f9ee; color: #25d366; }
+.tg .opt-icon { background: #e5f3f9; color: #0088cc; }
+.mail .opt-icon { background: #fff1f3; color: #ff385c; }
+
+.opt-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.opt-text span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222222;
+}
+
+.opt-text small {
+  font-size: 11px;
+  color: #717171;
+}
+
+@media (max-width: 768px) {
+  .support-hub-wrapper {
+    bottom: 20px;
+    right: 20px;
+  }
+  .support-panel {
+    width: 220px;
+  }
+}

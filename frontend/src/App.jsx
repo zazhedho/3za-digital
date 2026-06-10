@@ -5,6 +5,7 @@ import GuestRoute from './components/common/GuestRoute'
 import PermissionRoute from './components/common/PermissionRoute'
 import Loading from './components/common/Loading'
 import ThemedToastContainer from './components/common/ThemedToastContainer'
+import SupportFloatingButton from './components/common/SupportFloatingButton'
 import { AuthProvider } from './contexts/AuthContext'
 
 const Login = lazy(() => import('./pages/auth/Login'))
@@ -99,6 +100,7 @@ function App() {
             <Route path="*" element={<ErrorPage code="404" title="Page not found" />} />
           </Routes>
         </Suspense>
+        <SupportFloatingButton />
         <ThemedToastContainer />
       </AuthProvider>
     </BrowserRouter>

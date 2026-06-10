@@ -19,4 +19,5 @@ type ServiceAppConfigInterface interface {
 	GetDuration(ctx context.Context, configKey string, fallback time.Duration) (time.Duration, error)
 	DecodeJSON(ctx context.Context, configKey string, target interface{}) error
 	IsEnabled(ctx context.Context, configKey string, fallback bool) (bool, error)
+	GetSupportContact(ctx context.Context) (dto.SupportContactResponse, error)
 }
