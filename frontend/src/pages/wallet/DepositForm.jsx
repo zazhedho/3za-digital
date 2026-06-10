@@ -65,8 +65,8 @@ const DepositForm = ({ onClose, onCreated }) => {
       <div className="modal-panel deposit-modal">
         <div className="modal-heading">
           <div>
-            <h5>{createdDeposit ? 'Scan QRIS' : 'Create Deposit'}</h5>
-            <p>{createdDeposit ? 'Pay the exact amount shown.' : 'Choose static QRIS, dynamic QRIS, or manual review for wallet topup.'}</p>
+            <h5>{createdDeposit ? (createdIsQRIS ? 'Scan QRIS' : 'Deposit Requested') : 'Create Deposit'}</h5>
+            <p>{createdDeposit ? (createdIsQRIS ? 'Pay the exact amount shown.' : 'Please wait for admin approval.') : 'Choose static QRIS, dynamic QRIS, or manual review for wallet topup.'}</p>
           </div>
           <button className="modal-close" type="button" onClick={onClose} aria-label="Close">
             <i className="bi bi-x-lg"></i>
@@ -91,9 +91,22 @@ const DepositForm = ({ onClose, onCreated }) => {
                 </div>
               </>
             ) : (
-              <div className="payment-summary">
-                <div><span>Deposit request</span><strong>{formatMoney(createdDeposit.amount)}</strong></div>
-                <div><span>Status</span><strong>{createdDeposit.status || '-'}</strong></div>
+              <div className="deposit-manual-success">
+                <div className="manual-success-icon">
+                  <i className="bi bi-headset"></i>
+                </div>
+                <h3>Action Required</h3>
+                <p>To complete your {form.provider === 'qris' ? 'Static QRIS' : 'Manual'} deposit, please transfer the exact amount and <strong>contact our Admin</strong> via the Support Center.</p>
+                <div className="manual-success-details">
+                  <div className="detail-row">
+                    <span>Amount</span>
+                    <strong>{formatMoney(createdDeposit.amount)}</strong>
+                  </div>
+                  <div className="detail-row">
+                    <span>Status</span>
+                    <span className="status-badge warning">{createdDeposit.status || 'Pending'}</span>
+                  </div>
+                </div>
               </div>
             )}
             <div className="toolbar-actions justify-content-end mt-4">
@@ -102,44 +115,57 @@ const DepositForm = ({ onClose, onCreated }) => {
             </div>
           </div>
         ) : (
-        <form onSubmit={submit}>
-          <label className="form-label">Payment Method</label>
-          <select
-            className="form-select"
-            value={form.provider}
-            onChange={(event) => setForm({ ...form, provider: event.target.value })}
-          >
-            <option value="qris" disabled={!staticQRISReady}>Static QRIS</option>
-            <option value="qrisly">Dynamic QRIS</option>
-            <option value="">Manual review</option>
-          </select>
-          {form.provider === 'qris' && !staticQRISReady && <div className="form-hint text-danger">Static QRIS image URL is not configured.</div>}
+        <form onSubmit={submit} className="deposit-form-modern">
+          <div className="deposit-input-group">
+            <label>Payment Method</label>
+            <div className="deposit-select-wrapper">
+              <i className="bi bi-wallet2"></i>
+              <select
+                value={form.provider}
+                onChange={(event) => setForm({ ...form, provider: event.target.value })}
+              >
+                <option value="qris" disabled={!settingsLoading && !staticQRISReady}>Static QRIS</option>
+                <option value="qrisly">Dynamic QRIS</option>
+                <option value="">Manual review</option>
+              </select>
+            </div>
+            {form.provider === 'qris' && !staticQRISReady && !settingsLoading && <div className="form-hint text-danger mt-1"><i className="bi bi-exclamation-circle"></i> Static QRIS image URL is not configured.</div>}
+          </div>
 
-          <label className="form-label mt-3">Amount</label>
-          <input
-            className="form-control"
-            type="number"
-            min={minimumAmount}
-            placeholder={`Minimum ${minimumAmount}`}
-            value={form.amount}
-            onChange={(event) => setForm({ ...form, amount: event.target.value })}
-            required
-          />
-          {belowMinimum && <div className="form-hint text-danger">Minimum deposit {formatMoney(minimumAmount)}</div>}
+          <div className="deposit-input-group">
+            <label>Amount</label>
+            <div className="deposit-amount-wrapper">
+              <span className="deposit-amount-currency">Rp</span>
+              <input
+                type="number"
+                min={minimumAmount}
+                placeholder={minimumAmount.toLocaleString('id-ID')}
+                value={form.amount}
+                onChange={(event) => setForm({ ...form, amount: event.target.value })}
+                required
+              />
+            </div>
+            {belowMinimum && <div className="form-hint text-danger mt-1"><i className="bi bi-exclamation-circle"></i> Minimum deposit {formatMoney(minimumAmount)}</div>}
+          </div>
+
           {isQRISProvider && (
-            <div className="payment-summary mt-3">
-              <div><span>Wallet credit</span><strong>{formatMoney(amount)}</strong></div>
-              <div>
-                <span>Topup Fee</span>
-                <strong>{settingsLoading ? 'Loading...' : (qrisFeeKnown ? formatMoney(estimatedFee) : 'Calculated after create')}</strong>
+            <div className="deposit-fee-card">
+              <div className="deposit-fee-row">
+                <span>Wallet credit</span>
+                <strong>{formatMoney(amount)}</strong>
               </div>
-              <div>
+              <div className="deposit-fee-row">
+                <span>Topup Fee</span>
+                <strong>{settingsLoading ? 'Loading...' : (qrisFeeKnown ? formatMoney(estimatedFee) : 'TBD')}</strong>
+              </div>
+              <div className="deposit-fee-row total">
                 <span>Estimated payment</span>
-                <strong>{qrisFeeKnown ? `${formatMoney(estimatedPayable)} + unique code` : 'Calculated after create'}</strong>
+                <strong>{qrisFeeKnown ? `${formatMoney(estimatedPayable)} + code` : 'TBD'}</strong>
               </div>
             </div>
           )}
-          <div className="toolbar-actions justify-content-end mt-4">
+          
+          <div className="deposit-modal-actions">
             <button className="btn btn-outline-dark" type="button" onClick={onClose}>Cancel</button>
             <button className="btn btn-primary" disabled={loading || belowMinimum || (form.provider === 'qris' && !staticQRISReady)}>{loading ? 'Creating...' : 'Create deposit'}</button>
           </div>
