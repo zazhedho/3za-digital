@@ -206,8 +206,9 @@ func (h *HandlerUser) GetRegisterStatus(ctx *gin.Context) {
 	}
 
 	res := response.Response(http.StatusOK, "Get register status successfully", logId, map[string]interface{}{
-		"enabled":     registerEnabled,
-		"otp_enabled": otpEnabled,
+		"enabled":      registerEnabled,
+		"otp_enabled":  otpEnabled,
+		"otp_cooldown": utils.GetEnv("OTP_COOLDOWN_SECONDS", 60),
 	})
 	ctx.JSON(http.StatusOK, res)
 }
@@ -265,6 +266,16 @@ func (h *HandlerUser) SendRegisterOTP(ctx *gin.Context) {
 		res.Error = response.Errors{Code: http.StatusBadRequest, Message: "email already exists"}
 		ctx.JSON(http.StatusBadRequest, res)
 		return
+	}
+
+	if req.Phone != "" {
+		normalizedPhone := utils.NormalizePhoneTo62(req.Phone)
+		if data, err := h.Service.GetUserByPhone(reqCtx, normalizedPhone); err == nil && data.Id != "" {
+			res := response.Response(http.StatusBadRequest, messages.MsgExists, logId, nil)
+			res.Error = response.Errors{Code: http.StatusBadRequest, Message: "phone number already exists"}
+			ctx.JSON(http.StatusBadRequest, res)
+			return
+		}
 	}
 
 	if err := h.OTPService.SendRegisterOTP(ctx.Request.Context(), normalizedEmail, utils.FirstNonEmptyString(utils.GetEnv("AUTH_EMAIL_APP_NAME", ""), utils.GetEnv("APP_NAME", "3ZA Digital"))); err != nil {

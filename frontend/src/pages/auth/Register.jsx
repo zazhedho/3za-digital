@@ -20,14 +20,16 @@ const isValidPhone = (value) => /^\+?\d{9,15}$/.test(value)
 
 const Register = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm_password: '', phone: '', otp_code: '' })
-  const [status, setStatus] = useState({ enabled: true, otp_enabled: false })
+  const [status, setStatus] = useState({ enabled: true, otp_enabled: false, otp_cooldown: 60 })
   const [statusLoading, setStatusLoading] = useState(true)
   const [loading, setLoading] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpStep, setOtpStep] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [countdown, setCountdown] = useState(0)
   const googleButtonRef = useRef(null)
+  const otpInputRefs = useRef([])
   const { register, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const googleClientId = getGoogleClientId()
@@ -36,10 +38,41 @@ const Register = () => {
   const passwordMatches = form.confirm_password && form.password === form.confirm_password
 
   useEffect(() => {
+    let timer
+    if (countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((current) => {
+          if (current <= 1) {
+            localStorage.removeItem('3za_otp_expiry')
+            return 0
+          }
+          return current - 1
+        })
+      }, 1000)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [countdown])
+
+  useEffect(() => {
     let mounted = true
+    
+    // Restore countdown from localStorage
+    const expiry = localStorage.getItem('3za_otp_expiry')
+    if (expiry) {
+      const remaining = Math.ceil((parseInt(expiry, 10) - Date.now()) / 1000)
+      if (remaining > 0) {
+        setCountdown(remaining)
+        setOtpStep(true) // If there's an active timer, user should be in OTP step
+      } else {
+        localStorage.removeItem('3za_otp_expiry')
+      }
+    }
+
     authService.registerStatus()
       .then((response) => {
-        if (mounted) setStatus({ enabled: true, otp_enabled: false, ...(response.data.data || {}) })
+        if (mounted) setStatus({ enabled: true, otp_enabled: false, otp_cooldown: 60, ...(response.data.data || {}) })
       })
       .catch((error) => toast.error(getErrorMessage(error, 'Failed to load registration settings')))
       .finally(() => {
@@ -110,6 +143,8 @@ const Register = () => {
 
   const requestOTP = async () => {
     const email = normalizeEmailInput(form.email)
+    const phone = sanitizePhoneInput(form.phone)
+    
     if (!emailPattern.test(email)) {
       toast.error('Enter a valid email address')
       return false
@@ -120,8 +155,11 @@ const Register = () => {
     }
     setOtpLoading(true)
     try {
-      await authService.sendRegisterOTP(email)
-      setForm((current) => ({ ...current, email }))
+      await authService.sendRegisterOTP(email, phone)
+      setForm((current) => ({ ...current, email, phone }))
+      const cooldownSeconds = status.otp_cooldown || 60
+      setCountdown(cooldownSeconds)
+      localStorage.setItem('3za_otp_expiry', (Date.now() + cooldownSeconds * 1000).toString())
       toast.success('OTP sent')
       return true
     } catch (error) {
@@ -133,7 +171,7 @@ const Register = () => {
   }
 
   const submit = async (event) => {
-    event.preventDefault()
+    if (event) event.preventDefault()
     if (!validateRegistrationDetails()) return
 
     if (status.otp_enabled && !otpStep) {
@@ -162,12 +200,44 @@ const Register = () => {
       toast.error(result.error)
       return
     }
+    localStorage.removeItem('3za_otp_expiry')
     toast.success('Account created')
     navigate('/login')
   }
 
-  const sendOTP = async () => {
-    await requestOTP()
+  const handleOtpChange = (index, value) => {
+    const cleanValue = value.replace(/\D/g, '').slice(-1)
+    if (!cleanValue && value !== '') return
+
+    const newOtpArray = form.otp_code.split('')
+    // Pad with empty strings if length is less than index
+    while (newOtpArray.length <= index) newOtpArray.push('')
+    newOtpArray[index] = cleanValue
+    const newOtp = newOtpArray.join('').slice(0, 6)
+    
+    setForm({ ...form, otp_code: newOtp })
+
+    // Move to next input
+    if (cleanValue && index < 5) {
+      otpInputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === 'Backspace' && !form.otp_code[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleOtpPaste = (event) => {
+    event.preventDefault()
+    const pastedData = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (pastedData) {
+      setForm({ ...form, otp_code: pastedData })
+      // Focus the last filled input or the next one
+      const nextFocus = Math.min(pastedData.length, 5)
+      otpInputRefs.current[nextFocus]?.focus()
+    }
   }
 
   return (
@@ -201,8 +271,8 @@ const Register = () => {
         <div className="auth-heading">
           <div>
             <div className="auth-kicker"><i className="bi bi-person-check"></i> New account</div>
-            <h2>Create account</h2>
-            <p>Use Google or create a secured email account.</p>
+            <h2>{otpStep ? 'Verify Email' : 'Create account'}</h2>
+            <p>{otpStep ? 'Enter the code we just sent to you.' : 'Use Google or create a secured email account.'}</p>
           </div>
         </div>
 
@@ -210,7 +280,7 @@ const Register = () => {
           <div className="auth-alert">Public registration is currently disabled.</div>
         )}
         <form className="auth-form" onSubmit={submit}>
-          {!otpStep && (
+          {!otpStep ? (
             <>
               <div className="auth-two-col">
                 <label className="auth-field">
@@ -327,55 +397,77 @@ const Register = () => {
                 </div>
               )}
             </>
-          )}
-
-          {status.otp_enabled && otpStep && (
-            <div className="auth-otp-step">
-              <div className="auth-otp-summary">
-                <i className="bi bi-envelope-check"></i>
-                <div>
-                  <strong>Check your email</strong>
-                  <span>We sent a 6 digit OTP code to {form.email}.</span>
-                </div>
+          ) : (
+            <div className="auth-otp-modern-container">
+              <div className="auth-otp-visual-info">
+                <div className="otp-icon-luxe"><i className="bi bi-shield-lock"></i></div>
+                <p>We've sent a 6-digit code to <strong>{form.email}</strong></p>
               </div>
-              <label className="auth-field">
-                <span>OTP code</span>
-                <div className="auth-input auth-input-with-button">
-                  <i className="bi bi-key"></i>
+              
+              <div className="otp-segmented-input" onPaste={handleOtpPaste}>
+                {[...Array(6)].map((_, i) => (
                   <input
-                    value={form.otp_code}
-                    onChange={(event) => setForm({ ...form, otp_code: event.target.value })}
-                    maxLength="6"
-                    placeholder="Enter OTP"
-                    required
+                    key={i}
+                    ref={(el) => (otpInputRefs.current[i] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength="1"
+                    value={form.otp_code[i] || ''}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    className={form.otp_code[i] ? 'has-value' : ''}
                   />
-                </div>
-              </label>
-              <div className="auth-step-actions">
-                <button className="btn btn-outline-dark" type="button" onClick={sendOTP} disabled={otpLoading || !form.email}>
-                  {otpLoading ? 'Sending...' : 'Resend OTP'}
-                </button>
-                <button className="btn btn-link" type="button" onClick={() => {
-                  setOtpStep(false)
-                  setForm({ ...form, otp_code: '' })
-                }}>
-                  Change details
+                ))}
+              </div>
+
+              <div className="otp-countdown-luxe">
+                {countdown > 0 ? (
+                  <div className="otp-timer-row">
+                    <span className="timer-text">Resend code in</span>
+                    <span className="timer-value">{countdown}s</span>
+                  </div>
+                ) : (
+                  <button 
+                    type="button" 
+                    className="otp-resend-link" 
+                    onClick={requestOTP} 
+                    disabled={otpLoading}
+                  >
+                    {otpLoading ? 'Sending...' : "Didn't receive code? Resend"}
+                  </button>
+                )}
+              </div>
+
+              <div className="otp-change-email-row">
+                <button 
+                  type="button" 
+                  className="btn btn-link btn-sm" 
+                  onClick={() => {
+                    setOtpStep(false)
+                    setForm({ ...form, otp_code: '' })
+                  }}
+                >
+                  Change email address
                 </button>
               </div>
             </div>
           )}
-          <button className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" disabled={loading || otpLoading || statusLoading || !status.enabled}>
-            {loading || otpLoading ? (
-              <>
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span>{otpLoading ? 'Sending OTP...' : 'Creating...'}</span>
-              </>
-            ) : (
-              status.otp_enabled && otpStep ? 'Verify and create account' : 'Create account'
-            )}
-          </button>
+
+          <div className="auth-submit-area">
+            <button className="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" disabled={loading || otpLoading || statusLoading || !status.enabled}>
+              {loading || otpLoading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  <span>{otpLoading ? 'Processing...' : 'Loading...'}</span>
+                </>
+              ) : (
+                otpStep ? 'Verify and Create Account' : 'Create account'
+              )}
+            </button>
+          </div>
         </form>
-        {googleClientId && status.enabled && !otpStep && (
+        
+        {!otpStep && googleClientId && status.enabled && (
           <>
             <div className="auth-divider"><span>or continue with</span></div>
             <div className="google-auth-button" ref={googleButtonRef}></div>
