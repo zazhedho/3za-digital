@@ -31,16 +31,19 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.me()
       const fetchedUser = response.data.data
-      setUser(fetchedUser)
 
       let fetchedPermissions = []
       try {
         const permissionResponse = await permissionService.getUserPermissions()
         fetchedPermissions = permissionResponse.data.data || []
-        setPermissions(fetchedPermissions)
       } catch {
-        setPermissions([])
+        fetchedPermissions = []
       }
+      
+      // Batch state updates to prevent race conditions during routing
+      setPermissions(fetchedPermissions)
+      setUser(fetchedUser)
+
       return { user: fetchedUser, permissions: fetchedPermissions }
     } catch (error) {
       if ([401, 403].includes(error.response?.status)) {

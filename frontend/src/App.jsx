@@ -6,6 +6,7 @@ import PermissionRoute from './components/common/PermissionRoute'
 import Loading from './components/common/Loading'
 import ThemedToastContainer from './components/common/ThemedToastContainer'
 import SupportFloatingButton from './components/common/SupportFloatingButton'
+import ScrollToTop from './components/common/ScrollToTop'
 import { AuthProvider } from './contexts/AuthContext'
 
 const Login = lazy(() => import('./pages/auth/Login'))
@@ -55,6 +56,7 @@ const ErrorPage = ({ code, title }) => (
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Suspense fallback={<Loading />}>
           <Routes>
