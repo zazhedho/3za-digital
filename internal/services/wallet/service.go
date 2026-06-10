@@ -433,7 +433,7 @@ func (s *WalletService) prepareDynamicQRISDeposit(ctx context.Context, deposit d
 		if detail == nil {
 			detail = domainwallet.ErrQRISProviderUnavailable
 		}
-		return domainwallet.DepositRequest{}, fmt.Errorf("%w: %v", domainwallet.ErrQRISProviderUnavailable, detail)
+		return domainwallet.DepositRequest{}, fmt.Errorf("%w: %w", domainwallet.ErrQRISProviderUnavailable, detail)
 	}
 
 	parts, err := s.qrisAmountParts(ctx, deposit)
