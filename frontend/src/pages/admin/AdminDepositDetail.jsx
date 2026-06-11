@@ -1,17 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import { useAuth } from '../../contexts/AuthContext'
 import walletService from '../../services/walletService'
 import { getErrorMessage } from '../../services/api'
 import BackButton from '../../components/common/BackButton'
-import QRISPaymentBox from '../../components/common/QRISPaymentBox'
 import ConfirmationModal from '../../components/common/ConfirmationModal'
 import { depositMetadata, depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney, isQRISDeposit, qrisImageURL, qrisString } from '../../utils/deposit'
-import { useAuth } from '../../contexts/AuthContext'
 
 const methodLabel = (method) => {
-  if (method === 'manual_admin') return 'Manual deposit'
-  if (method === 'payment_gateway') return 'Payment gateway'
+  if (method === 'manual_admin') return 'Manual'
+  if (method === 'payment_gateway') return 'Payment Gateway'
   return method || '-'
 }
 
@@ -19,125 +18,188 @@ const AdminDepositDetail = () => {
   const { id } = useParams()
   const { hasPermission } = useAuth()
   const [deposit, setDeposit] = useState(null)
-  const [confirmAction, setConfirmAction] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [confirmAction, setConfirmAction] = useState(null) // 'approve' or 'cancel'
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
-  const canApproveDeposit = hasPermission('admin_deposits', 'approve')
-  const canCancelDeposit = hasPermission('admin_deposits', 'cancel')
+
   const metadata = depositMetadata(deposit)
   const qris = isQRISDeposit(deposit)
-  const qrisImage = qrisImageURL(deposit)
-  const qrisPayload = qrisString(deposit)
+  const canApproveDeposit = hasPermission('admin_deposits', 'approve')
+  const canCancelDeposit = hasPermission('admin_deposits', 'cancel')
 
-  const load = useCallback(async () => {
-    const response = await walletService.getDepositById(id)
-    setDeposit(response.data.data)
-  }, [id])
+  const fetchData = async () => {
+    try {
+      const response = await walletService.getDepositById(id)
+      setDeposit(response.data.data)
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to load deposit'))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load deposit')))
-  }, [load])
+    fetchData()
+  }, [id])
 
-  const approve = async () => {
+  const handleConfirm = async () => {
     setConfirmLoading(true)
     try {
-      await walletService.updateDepositStatus(id, { status: 'paid', amount: deposit.amount, description: 'Approved from frontend' })
-      toast.success('Deposit approved')
+      if (confirmAction === 'approve') {
+        await walletService.approveDeposit(id, { amount: deposit.amount })
+        toast.success('Deposit approved successfully')
+      } else if (confirmAction === 'cancel') {
+        if (!cancelReason.trim()) {
+          toast.error('Cancellation reason is required')
+          return
+        }
+        await walletService.cancelDeposit(id, { reason: cancelReason })
+        toast.success('Deposit cancelled')
+      }
       setConfirmAction(null)
-      await load()
+      fetchData()
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Approve failed'))
+      toast.error(getErrorMessage(error, 'Action failed'))
     } finally {
       setConfirmLoading(false)
     }
   }
 
-  const cancel = async () => {
-    setConfirmLoading(true)
-    try {
-      await walletService.updateDepositStatus(id, { status: 'cancelled', reason: cancelReason.trim() })
-      toast.success('Deposit cancelled')
-      setConfirmAction(null)
-      setCancelReason('')
-      await load()
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Cancel failed'))
-    } finally {
-      setConfirmLoading(false)
-    }
-  }
-
-  const isCancelAction = confirmAction === 'cancel'
-  const openConfirm = (type) => {
-    setCancelReason('')
-    setConfirmAction(type)
-  }
+  if (loading) return <div className="loading-fade">Loading...</div>
 
   return (
-    <div>
+    <div className="luxe-page-fade">
       <div className="page-toolbar">
-        <div><h1>Admin Deposit Detail</h1><p>{deposit ? `${methodLabel(deposit.method)} - ${depositStatus(deposit)}` : 'Loading deposit'}</p></div>
+        <div>
+          <h1>Admin Deposit Detail</h1>
+          <p>Review and process user deposit request</p>
+        </div>
         <div className="toolbar-actions">
           <BackButton fallback="/admin/deposits" />
         </div>
       </div>
-      <section className="panel">
-        <div className="detail-grid detail-grid-compact">
-          <span>ID</span><strong>{deposit?.id || '-'}</strong>
-          <span>User</span><strong>{deposit?.user?.name || deposit?.user?.email || '-'}</strong>
-          <span>Wallet Credit</span><strong>{formatMoney(deposit?.amount)}</strong>
-          {qris && <><span>Topup Fee</span><strong>{formatMoney(metadata.fee_amount)}</strong></>}
-          {qris && <><span>Unique Code</span><strong>{formatMoney(metadata.unique_code_amount)}</strong></>}
-          {qris && <><span>Total Payment</span><strong>{formatMoney(depositPayableAmount(deposit))}</strong></>}
-          <span>Status</span><div className="detail-value"><span className={`status-badge status-badge-detail ${depositStatusClass(deposit)} text-capitalize`}>{depositStatus(deposit)}</span></div>
-          <span>Action</span>
-          <strong className="detail-action-cell">
-            <div className="detail-actions">
-              {canApproveDeposit && <button className="btn btn-sm btn-primary" disabled={deposit?.status !== 'pending'} onClick={() => openConfirm('approve')}>Approve</button>}
-              {canCancelDeposit && <button className="btn btn-sm btn-outline-danger" disabled={deposit?.status !== 'pending'} onClick={() => openConfirm('cancel')}>Cancel</button>}
-              {!canApproveDeposit && !canCancelDeposit && <span className="table-subtext">No action available</span>}
-            </div>
-          </strong>
-          <span>Method</span><strong>{methodLabel(deposit?.method)}</strong>
-          <span>Provider</span><strong>{depositProviderLabel(deposit)}</strong>
-          {deposit?.payment_reference && <><span>Reference</span><strong>{deposit.payment_reference}</strong></>}
-          {qris && metadata.qris_merchant_name && <><span>Merchant</span><strong>{metadata.qris_merchant_name}</strong></>}
-          {metadata.cancel_reason && <><span>Cancel Reason</span><strong>{metadata.cancel_reason}</strong></>}
-          {metadata.cancelled_at && <><span>Cancelled At</span><strong>{new Date(metadata.cancelled_at).toLocaleString('id-ID')}</strong></>}
-          <span>Created</span><strong>{deposit?.created_at ? new Date(deposit.created_at).toLocaleString('id-ID') : '-'}</strong>
+
+      <div className="luxe-detail-hero">
+        <div className="luxe-hero-content">
+          <div className="luxe-hero-kicker">
+            <i className="bi bi-shield-lock"></i> Admin Review - {methodLabel(deposit?.method)}
+          </div>
+          <h2 className="luxe-hero-title">{formatMoney(deposit?.amount)}</h2>
+          <p className="luxe-hero-subtitle">Requester: <strong>{deposit?.user?.name || deposit?.user?.email}</strong></p>
         </div>
-        {qris && (
-          <QRISPaymentBox
-            amount={formatMoney(depositPayableAmount(deposit))}
-            description={`Wallet credit ${formatMoney(deposit?.amount)} after payment confirmation.`}
-            image={qrisImage}
-            payload={qrisPayload}
-          />
-        )}
-      </section>
+        <div className="luxe-hero-badge">
+          <span className={`status-badge ${depositStatusClass(deposit)}`}>
+            {depositStatus(deposit)}
+          </span>
+        </div>
+      </div>
+
+      <div className="content-grid two">
+        <section className="luxe-detail-card">
+          <div className="luxe-card-header">
+            <h3><i className="bi bi-info-circle"></i> Request Details</h3>
+          </div>
+          <div className="luxe-card-body">
+            <div className="luxe-grid">
+              <div className="luxe-item">
+                <span className="luxe-label">Transaction ID</span>
+                <span className="luxe-value-code">{deposit?.id}</span>
+              </div>
+              <div className="luxe-item">
+                <span className="luxe-label">User Email</span>
+                <span className="luxe-value">{deposit?.user?.email || '-'}</span>
+              </div>
+              <div className="luxe-item">
+                <span className="luxe-label">Payment Provider</span>
+                <span className="luxe-value">{depositProviderLabel(deposit)}</span>
+              </div>
+              <div className="luxe-item">
+                <span className="luxe-label">Reference Code</span>
+                <span className="luxe-value">{deposit?.payment_reference || '-'}</span>
+              </div>
+              <div className="luxe-item">
+                <span className="luxe-label">Created At</span>
+                <span className="luxe-value">{new Date(deposit?.created_at).toLocaleString('id-ID')}</span>
+              </div>
+              {deposit?.paid_at && (
+                <div className="luxe-item">
+                   <span className="luxe-label">Settled At</span>
+                   <span className="luxe-value">{new Date(deposit.paid_at).toLocaleString('id-ID')}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="luxe-detail-card">
+          <div className="luxe-card-header">
+            <h3><i className="bi bi-gear-wide-connected"></i> Admin Actions</h3>
+          </div>
+          <div className="luxe-card-body">
+             <div className="luxe-grid">
+                <div className="luxe-item">
+                   <span className="luxe-label">Current Status</span>
+                   <span className="luxe-value text-capitalize">{depositStatus(deposit)}</span>
+                </div>
+                <div className="luxe-item">
+                   <span className="luxe-label">Verification</span>
+                   <span className="luxe-value">
+                      {deposit?.status === 'pending' ? (
+                        <span className="text-warning"><i className="bi bi-hourglass-split"></i> Awaiting Approval</span>
+                      ) : (
+                        <span className="text-success"><i className="bi bi-check-all"></i> Processed</span>
+                      )}
+                   </span>
+                </div>
+             </div>
+
+             {deposit?.status === 'pending' && (
+               <div className="toolbar-actions mt-4 pt-4 border-top">
+                  {canApproveDeposit && (
+                    <button className="btn btn-primary d-flex align-items-center gap-2" onClick={() => setConfirmAction('approve')}>
+                       <i className="bi bi-check-circle"></i> Approve Deposit
+                    </button>
+                  )}
+                  {canCancelDeposit && (
+                    <button className="btn btn-outline-danger d-flex align-items-center gap-2" onClick={() => setConfirmAction('cancel')}>
+                       <i className="bi bi-x-circle"></i> Reject / Cancel
+                    </button>
+                  )}
+               </div>
+             )}
+             
+             {metadata.cancel_reason && (
+                <div className="auth-alert mt-4">
+                   <strong>Reason for rejection:</strong>
+                   <p className="mb-0">{metadata.cancel_reason}</p>
+                </div>
+             )}
+          </div>
+        </section>
+      </div>
+
       <ConfirmationModal
         show={Boolean(confirmAction)}
-        title={isCancelAction ? 'Cancel Deposit' : 'Approve Deposit'}
-        message={`${isCancelAction ? 'Cancel' : 'Approve'} this deposit for ${deposit?.user?.name || deposit?.user?.email || 'this user'}?`}
-        confirmLabel={isCancelAction ? 'Cancel deposit' : 'Approve'}
-        confirmClassName={isCancelAction ? 'btn-danger' : 'btn-primary'}
+        title={confirmAction === 'approve' ? 'Approve Deposit' : 'Reject Deposit'}
+        message={confirmAction === 'approve' ? `Are you sure you want to approve this deposit of ${formatMoney(deposit?.amount)}? This will credit the user wallet immediately.` : 'Please provide a reason for rejecting this deposit.'}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmAction(null)}
         loading={confirmLoading}
-        confirmDisabled={isCancelAction && !cancelReason.trim()}
-        onCancel={() => {
-          setConfirmAction(null)
-          setCancelReason('')
-        }}
-        onConfirm={isCancelAction ? cancel : approve}
+        confirmLabel={confirmAction === 'approve' ? 'Approve Now' : 'Reject Now'}
+        confirmClassName={confirmAction === 'approve' ? 'btn-primary' : 'btn-danger'}
       >
-        {isCancelAction && (
-          <div>
+        {confirmAction === 'cancel' && (
+          <div className="mt-3">
             <label className="form-label">Reason</label>
             <textarea
               className="form-control"
-              placeholder="Example: duplicate payment request"
+              rows="3"
+              placeholder="E.g. Payment not found, invalid proof, etc."
               value={cancelReason}
-              onChange={(event) => setCancelReason(event.target.value)}
-            />
+              onChange={(e) => setCancelReason(e.target.value)}
+              required
+            ></textarea>
           </div>
         )}
       </ConfirmationModal>

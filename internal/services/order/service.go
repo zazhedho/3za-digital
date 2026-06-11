@@ -210,6 +210,7 @@ func (s *OrderService) applyCreateOrderResponse(ctx context.Context, order domai
 		order.ProviderCharge = money.NormalizeOrZero(charge)
 		order.Profit = money.SubOrZero(order.Amount, order.ProviderCharge)
 	}
+	order.CustomerNo = providerResp.OrderID
 	order.StartCount = utils.Int64PtrFromString(providerResp.StartCount.String())
 	order.Remains = utils.Int64PtrFromString(providerResp.Remains.String())
 	order.ProviderResponse = providerResp.Raw
@@ -243,6 +244,9 @@ func (s *OrderService) applyStatusResponse(ctx context.Context, order domainorde
 	if providerResp.Charge.String() != "" {
 		order.ProviderCharge = money.NormalizeOrZero(providerResp.Charge.String())
 		order.Profit = money.SubOrZero(order.Amount, order.ProviderCharge)
+	}
+	if id := utils.FirstNonEmptyString(providerResp.OrderID, order.CustomerNo); id != "" {
+		order.CustomerNo = id
 	}
 	if startCount := utils.Int64PtrFromString(providerResp.StartCount.String()); startCount != nil {
 		order.StartCount = startCount

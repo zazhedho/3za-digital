@@ -128,6 +128,14 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 			return domainwallet.DepositRequest{}, err
 		}
 		deposit = qrisDeposit
+	default:
+		// Fallback for manual review or unknown providers
+		if deposit.Provider == "" {
+			deposit.Provider = "manual"
+		}
+		if deposit.PaymentReference == "" {
+			deposit.PaymentReference = "MAN-" + strings.ToUpper(strings.ReplaceAll(deposit.Id, "-", "")[:12])
+		}
 	}
 	return s.Repo.CreateDepositRequest(ctx, deposit)
 }

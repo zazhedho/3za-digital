@@ -123,7 +123,7 @@ const SMMOrders = () => {
                 <td>
                   <span className="table-main">
                     <strong>{row.ref_id || row.id}</strong>
-                    <span className="table-subtext">{row.provider_order_id || '-'}</span>
+                    <span className="table-subtext">{row.customer_no || '-'}</span>
                   </span>
                 </td>
                 <td><span className="table-subtext">{row.service?.name || row.service_name || row.provider_service_id || '-'}</span></td>

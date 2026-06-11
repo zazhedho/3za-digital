@@ -94,16 +94,37 @@ func (s Service) ProviderServiceID() string {
 }
 
 type CreateOrderResponse struct {
-	Status          bool                 `json:"status"`
-	Message         string               `json:"message"`
-	RefID           string               `json:"refID"`
-	OrderID         string               `json:"order_id"`
-	ProviderOrderID string               `json:"id"`
-	ProviderStatus  string               `json:"status_order"`
-	Charge          utils.FlexibleNumber `json:"charge"`
-	StartCount      utils.FlexibleNumber `json:"start_count"`
-	Remains         utils.FlexibleNumber `json:"remains"`
-	Raw             json.RawMessage      `json:"-"`
+	Status         bool                 `json:"status"`
+	Message        string               `json:"message"`
+	RefID          string               `json:"refID"`
+	OrderID        string               `json:"order_id"`
+	ProviderStatus string               `json:"status_order"`
+	Charge         utils.FlexibleNumber `json:"charge"`
+	StartCount     utils.FlexibleNumber `json:"start_count"`
+	Remains        utils.FlexibleNumber `json:"remains"`
+	Raw            json.RawMessage      `json:"-"`
+}
+
+func (r *CreateOrderResponse) UnmarshalJSON(data []byte) error {
+	type alias CreateOrderResponse
+	type wireCreateOrderResponse struct {
+		alias
+		OrderNumber string `json:"order_number"`
+		Data        *struct {
+			OrderNumber string `json:"order_number"`
+			OrderID     string `json:"order_id"`
+			RefID       string `json:"refID"`
+		} `json:"data"`
+	}
+	return unmarshalWithWire(data, r, &wireCreateOrderResponse{}, func(target *CreateOrderResponse, decoded *wireCreateOrderResponse) {
+		*target = CreateOrderResponse(decoded.alias)
+		if target.OrderID == "" {
+			target.OrderID = utils.FirstNonEmptyString(decoded.OrderNumber, decoded.Data.OrderNumber, decoded.Data.OrderID)
+		}
+		if target.RefID == "" && decoded.Data != nil {
+			target.RefID = decoded.Data.RefID
+		}
+	})
 }
 
 type OrderStatusResponse struct {
