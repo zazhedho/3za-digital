@@ -82,14 +82,14 @@ const SMMOrders = () => {
       <div className="page-toolbar">
         <div>
           <h1>SMM Orders</h1>
-          <p>Order status, target, quantity, and provider references.</p>
+          <p>Order status, target, quantity, and references.</p>
         </div>
         <Link to="/smm/orders/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New order</Link>
       </div>
 
       <form className="filter-pill compact status-filter" onSubmit={submitSearch}>
         <i className="bi bi-funnel"></i>
-        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search ref, target, or service" />
+        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search order ref, target, or service" />
         <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
           <option value="">All status</option>
           <option value="pending">Pending</option>

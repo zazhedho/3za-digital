@@ -1,6 +1,10 @@
 package serviceorder
 
 import (
+	domainwallet "3za-digital/internal/domain/wallet"
+	"3za-digital/internal/integrations/h2h"
+	"encoding/json"
+	"errors"
 	"net/url"
 
 	domaincatalog "3za-digital/internal/domain/catalog"
@@ -8,6 +12,8 @@ import (
 	"3za-digital/utils"
 	"fmt"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 func validateService(service domaincatalog.ProviderService, productType string, quantity int64) error {
@@ -93,4 +99,45 @@ func isFinalStatus(status string) bool {
 func generateRefID(productType string) string {
 	id := strings.ToUpper(strings.ReplaceAll(utils.CreateUUID(), "-", ""))
 	return fmt.Sprintf("%s-%s", strings.ToUpper(productType), id)
+}
+
+func providerErrorRaw(err error) json.RawMessage {
+	if apiErr, ok := errors.AsType[*h2h.APIError](err); ok && len(apiErr.Raw) > 0 {
+		return apiErr.Raw
+	}
+	return utils.EmptyJSON()
+}
+
+func mergeOrderMetadata(raw json.RawMessage, values map[string]string) json.RawMessage {
+	metadata := orderMetadata(raw)
+	for key, value := range values {
+		metadata[key] = value
+	}
+	return utils.MustJSON(metadata)
+}
+
+func orderMetadata(raw json.RawMessage) map[string]string {
+	metadata := map[string]string{}
+	if len(raw) == 0 {
+		return metadata
+	}
+	_ = json.Unmarshal(raw, &metadata)
+	return metadata
+}
+
+func IsPublicError(err error) bool {
+	return errors.Is(err, ErrInvalidOrderRequest) ||
+		errors.Is(err, ErrInactiveService) ||
+		errors.Is(err, ErrUnsupportedService) ||
+		errors.Is(err, ErrQuantityBelowMinimum) ||
+		errors.Is(err, ErrQuantityAboveMaximum) ||
+		errors.Is(err, ErrOrderAlreadyFinal) ||
+		errors.Is(err, ErrServicePriceStale) ||
+		errors.Is(err, domainwallet.ErrInactiveWallet) ||
+		errors.Is(err, domainwallet.ErrInsufficientBalance) ||
+		errors.Is(err, domainwallet.ErrInvalidAmount)
+}
+
+func IsNotFound(err error) bool {
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }

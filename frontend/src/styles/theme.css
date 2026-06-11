@@ -1274,6 +1274,26 @@ body {
   margin: 0;
 }
 
+.timeline-json {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 10px;
+  color: var(--body);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 6px 0 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.order-json-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 768px) {
   .luxe-detail-hero {
     flex-direction: column;

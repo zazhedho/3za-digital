@@ -11,7 +11,6 @@ import (
 	domainaudit "3za-digital/internal/domain/audit"
 	domaincatalog "3za-digital/internal/domain/catalog"
 	domainorder "3za-digital/internal/domain/order"
-	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
 	"3za-digital/internal/integrations/h2h"
 	interfaceappconfig "3za-digital/internal/interfaces/appconfig"
@@ -22,8 +21,6 @@ import (
 	"3za-digital/pkg/filter"
 	"3za-digital/pkg/money"
 	"3za-digital/utils"
-
-	"gorm.io/gorm"
 )
 
 var (
@@ -365,31 +362,6 @@ func (s *OrderService) markOrderFailed(ctx context.Context, order domainorder.Or
 	})
 }
 
-func providerErrorRaw(err error) json.RawMessage {
-	var apiErr *h2h.APIError
-	if errors.As(err, &apiErr) && len(apiErr.Raw) > 0 {
-		return apiErr.Raw
-	}
-	return utils.EmptyJSON()
-}
-
-func mergeOrderMetadata(raw json.RawMessage, values map[string]string) json.RawMessage {
-	metadata := orderMetadata(raw)
-	for key, value := range values {
-		metadata[key] = value
-	}
-	return utils.MustJSON(metadata)
-}
-
-func orderMetadata(raw json.RawMessage) map[string]string {
-	metadata := map[string]string{}
-	if len(raw) == 0 {
-		return metadata
-	}
-	_ = json.Unmarshal(raw, &metadata)
-	return metadata
-}
-
 func (s *OrderService) calculatePrice(ctx context.Context, productType string, providerPrice string, quantity int64) (string, string, string, error) {
 	markupPercent := "0"
 	if s.ConfigService != nil {
@@ -440,23 +412,6 @@ func (s *OrderService) ensureServicePriceFresh(ctx context.Context, productType 
 		return ErrServicePriceStale
 	}
 	return nil
-}
-
-func IsPublicError(err error) bool {
-	return errors.Is(err, ErrInvalidOrderRequest) ||
-		errors.Is(err, ErrInactiveService) ||
-		errors.Is(err, ErrUnsupportedService) ||
-		errors.Is(err, ErrQuantityBelowMinimum) ||
-		errors.Is(err, ErrQuantityAboveMaximum) ||
-		errors.Is(err, ErrOrderAlreadyFinal) ||
-		errors.Is(err, ErrServicePriceStale) ||
-		errors.Is(err, domainwallet.ErrInactiveWallet) ||
-		errors.Is(err, domainwallet.ErrInsufficientBalance) ||
-		errors.Is(err, domainwallet.ErrInvalidAmount)
-}
-
-func IsNotFound(err error) bool {
-	return errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 var _ interfaceorder.ServiceOrderInterface = (*OrderService)(nil)

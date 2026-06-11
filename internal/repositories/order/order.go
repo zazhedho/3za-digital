@@ -56,6 +56,30 @@ func (r *repo) GetAll(ctx context.Context, params filter.BaseParams) ([]domainor
 	})
 }
 
+func (r *repo) GetByID(ctx context.Context, id string) (domainorder.Order, error) {
+	var order domainorder.Order
+	err := r.db.WithContext(ctx).
+		Where("id = ?", id).
+		First(&order).
+		Error
+	if err != nil {
+		return domainorder.Order{}, err
+	}
+	if order.ServiceID == nil || *order.ServiceID == "" {
+		return order, nil
+	}
+	var service domaincatalog.ProviderService
+	if serviceErr := r.db.WithContext(ctx).
+		Select("name", "category", "platform").
+		Where("id = ?", *order.ServiceID).
+		First(&service).Error; serviceErr == nil {
+		order.ServiceName = service.Name
+		order.ServiceCategory = service.Category
+		order.ServicePlatform = service.Platform
+	}
+	return order, nil
+}
+
 func (r *repo) GetServiceByID(ctx context.Context, id string) (domaincatalog.ProviderService, error) {
 	var service domaincatalog.ProviderService
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&service).Error

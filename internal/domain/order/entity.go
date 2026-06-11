@@ -26,6 +26,9 @@ type Order struct {
 	ProductType       string          `json:"product_type" gorm:"column:product_type"`
 	RefID             string          `json:"ref_id" gorm:"column:ref_id"`
 	ServiceID         *string         `json:"service_id,omitempty" gorm:"column:service_id"`
+	ServiceName       string          `json:"service_name,omitempty" gorm:"-"`
+	ServiceCategory   string          `json:"service_category,omitempty" gorm:"-"`
+	ServicePlatform   string          `json:"service_platform,omitempty" gorm:"-"`
 	ProviderServiceID string          `json:"provider_service_id" gorm:"column:provider_service_id"`
 	Target            string          `json:"target,omitempty" gorm:"column:target"`
 	Quantity          *int64          `json:"quantity,omitempty" gorm:"column:quantity"`
