@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
@@ -6,7 +6,7 @@ import walletService from '../../services/walletService'
 import { getErrorMessage } from '../../services/api'
 import BackButton from '../../components/common/BackButton'
 import ConfirmationModal from '../../components/common/ConfirmationModal'
-import { depositMetadata, depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney, isQRISDeposit, qrisImageURL, qrisString } from '../../utils/deposit'
+import { depositMetadata, depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney } from '../../utils/deposit'
 
 const methodLabel = (method) => {
   if (method === 'manual_admin') return 'Manual'
@@ -24,11 +24,10 @@ const AdminDepositDetail = () => {
   const [cancelReason, setCancelReason] = useState('')
 
   const metadata = depositMetadata(deposit)
-  const qris = isQRISDeposit(deposit)
   const canApproveDeposit = hasPermission('admin_deposits', 'approve')
   const canCancelDeposit = hasPermission('admin_deposits', 'cancel')
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const response = await walletService.getDepositById(id)
       setDeposit(response.data.data)
@@ -37,11 +36,11 @@ const AdminDepositDetail = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     fetchData()
-  }, [id])
+  }, [fetchData])
 
   const handleConfirm = async () => {
     setConfirmLoading(true)
@@ -134,6 +133,34 @@ const AdminDepositDetail = () => {
 
         <section className="luxe-detail-card">
           <div className="luxe-card-header">
+            <h3><i className="bi bi-receipt"></i> Payment Summary</h3>
+          </div>
+          <div className="luxe-card-body">
+            <div className="luxe-grid">
+              <div className="luxe-item">
+                <span className="luxe-label">Wallet Credit</span>
+                <span className="luxe-value">{formatMoney(deposit?.amount)}</span>
+              </div>
+              <div className="luxe-item">
+                <span className="luxe-label">Topup Fee</span>
+                <span className="luxe-value">{formatMoney(metadata.fee_amount)}</span>
+              </div>
+              {metadata.unique_code_amount && (
+                <div className="luxe-item">
+                  <span className="luxe-label">Unique Code</span>
+                  <span className="luxe-value">{formatMoney(metadata.unique_code_amount)}</span>
+                </div>
+              )}
+              <div className="luxe-item">
+                <span className="luxe-label">Total Payment</span>
+                <span className="luxe-value-strong text-primary">{formatMoney(depositPayableAmount(deposit))}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="luxe-detail-card">
+          <div className="luxe-card-header">
             <h3><i className="bi bi-gear-wide-connected"></i> Admin Actions</h3>
           </div>
           <div className="luxe-card-body">
@@ -182,7 +209,7 @@ const AdminDepositDetail = () => {
       <ConfirmationModal
         show={Boolean(confirmAction)}
         title={confirmAction === 'approve' ? 'Approve Deposit' : 'Reject Deposit'}
-        message={confirmAction === 'approve' ? `Are you sure you want to approve this deposit of ${formatMoney(deposit?.amount)}? This will credit the user wallet immediately.` : 'Please provide a reason for rejecting this deposit.'}
+        message={confirmAction === 'approve' ? `Are you sure you want to approve this payment of ${formatMoney(depositPayableAmount(deposit))}? Wallet will be credited ${formatMoney(deposit?.amount)}.` : 'Please provide a reason for rejecting this deposit.'}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmAction(null)}
         loading={confirmLoading}

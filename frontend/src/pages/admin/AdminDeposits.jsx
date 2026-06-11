@@ -4,7 +4,7 @@ import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import ConfirmationModal from '../../components/common/ConfirmationModal'
 import TableActionMenu from '../../components/common/TableActionMenu'
-import { depositMetadata, depositPayableAmount, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
+import { depositMetadata, depositPayableAmount, depositStatus, depositStatusClass, formatMoney } from '../../utils/deposit'
 import { useAuth } from '../../contexts/AuthContext'
 import PaginationBar from '../../components/common/PaginationBar'
 
@@ -165,7 +165,7 @@ const AdminDeposits = () => {
                   <td className="table-number"><strong>{formatMoney(row.amount)}</strong></td>
                   <td className="table-number">
                      <span className="luxe-value-strong text-primary">
-                        {isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : formatMoney(row.amount)}
+                        {formatMoney(depositPayableAmount(row))}
                      </span>
                   </td>
                   <td>
@@ -206,7 +206,7 @@ const AdminDeposits = () => {
         title={isCancelAction ? 'Reject Deposit Request' : 'Approve Payment'}
         message={isCancelAction 
            ? `Are you sure you want to reject the deposit for ${confirmDeposit?.user?.name}? This action cannot be undone.`
-           : `Confirm receipt of ${formatMoney(confirmDeposit?.amount)} from ${confirmDeposit?.user?.name}? Wallet will be credited immediately.`
+           : `Confirm receipt of ${formatMoney(depositPayableAmount(confirmDeposit))} from ${confirmDeposit?.user?.name}? Wallet will be credited ${formatMoney(confirmDeposit?.amount)}.`
         }
         confirmLabel={isCancelAction ? 'Reject Now' : 'Approve Now'}
         confirmClassName={isCancelAction ? 'btn-danger' : 'btn-primary'}

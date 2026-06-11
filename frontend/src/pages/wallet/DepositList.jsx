@@ -5,7 +5,7 @@ import walletService from '../../services/walletService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import DepositForm from './DepositForm'
 import { useAuth } from '../../contexts/AuthContext'
-import { depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
+import { depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney } from '../../utils/deposit'
 import PaginationBar from '../../components/common/PaginationBar'
 import TableActionMenu from '../../components/common/TableActionMenu'
 
@@ -135,7 +135,7 @@ const DepositList = () => {
                 <td className="table-number"><strong>{formatMoney(row.amount)}</strong></td>
                 <td className="table-number">
                    <span className="luxe-value-strong text-primary">
-                      {isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : formatMoney(row.amount)}
+                      {formatMoney(depositPayableAmount(row))}
                    </span>
                 </td>
                 <td className="table-nowrap"><span className="status-badge status-badge-sm info text-capitalize">{depositProviderLabel(row)}</span></td>

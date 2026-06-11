@@ -129,13 +129,11 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 		}
 		deposit = qrisDeposit
 	default:
-		// Fallback for manual review or unknown providers
-		if deposit.Provider == "" {
-			deposit.Provider = "manual"
+		manualDeposit, err := s.prepareManualReviewDeposit(ctx, deposit)
+		if err != nil {
+			return domainwallet.DepositRequest{}, err
 		}
-		if deposit.PaymentReference == "" {
-			deposit.PaymentReference = "MAN-" + strings.ToUpper(strings.ReplaceAll(deposit.Id, "-", "")[:12])
-		}
+		deposit = manualDeposit
 	}
 	return s.Repo.CreateDepositRequest(ctx, deposit)
 }
@@ -362,23 +360,23 @@ func (s *WalletService) currentMainBalance(ctx context.Context) (string, error) 
 	return balance, nil
 }
 
-func (s *WalletService) qrisAmountParts(ctx context.Context, deposit domainwallet.DepositRequest) (qrisAmountParts, error) {
-	feePercent, err := s.qrisFeePercent(ctx)
+func (s *WalletService) depositAmountParts(ctx context.Context, deposit domainwallet.DepositRequest) (depositAmountParts, error) {
+	feePercent, err := s.topupFeePercent(ctx)
 	if err != nil {
-		return qrisAmountParts{}, err
+		return depositAmountParts{}, err
 	}
 	_, amountWithFee, feeAmount, err := money.MarkupAmount(deposit.Amount, feePercent)
 	if err != nil {
-		return qrisAmountParts{}, err
+		return depositAmountParts{}, err
 	}
 	amountWithFeeRupiah, err := wholeRupiahAmount(amountWithFee)
 	if err != nil {
-		return qrisAmountParts{}, err
+		return depositAmountParts{}, err
 	}
 	if amountWithFeeRupiah < 1000 {
-		return qrisAmountParts{}, domainwallet.ErrInvalidAmount
+		return depositAmountParts{}, domainwallet.ErrInvalidAmount
 	}
-	return qrisAmountParts{
+	return depositAmountParts{
 		FeePercent:          feePercent,
 		AmountWithFee:       amountWithFee,
 		FeeAmount:           feeAmount,
@@ -387,7 +385,7 @@ func (s *WalletService) qrisAmountParts(ctx context.Context, deposit domainwalle
 }
 
 func (s *WalletService) prepareStaticQRISDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
-	parts, err := s.qrisAmountParts(ctx, deposit)
+	parts, err := s.depositAmountParts(ctx, deposit)
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
@@ -444,7 +442,7 @@ func (s *WalletService) prepareDynamicQRISDeposit(ctx context.Context, deposit d
 		return domainwallet.DepositRequest{}, fmt.Errorf("%w: %w", domainwallet.ErrQRISProviderUnavailable, detail)
 	}
 
-	parts, err := s.qrisAmountParts(ctx, deposit)
+	parts, err := s.depositAmountParts(ctx, deposit)
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
@@ -500,7 +498,30 @@ func (s *WalletService) prepareDynamicQRISDeposit(ctx context.Context, deposit d
 	return deposit, nil
 }
 
-func (s *WalletService) qrisFeePercent(ctx context.Context) (string, error) {
+func (s *WalletService) prepareManualReviewDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
+	parts, err := s.depositAmountParts(ctx, deposit)
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+	if deposit.Provider == "" {
+		deposit.Provider = "manual"
+	}
+	if deposit.PaymentReference == "" {
+		deposit.PaymentReference = "MAN-" + strings.ToUpper(strings.ReplaceAll(deposit.Id, "-", "")[:12])
+	}
+	deposit.Method = domainwallet.DepositMethodManualAdmin
+	deposit.Metadata = utils.MustJSON(map[string]string{
+		"payment_channel":     "manual",
+		"credit_amount":       deposit.Amount,
+		"fee_percent":         parts.FeePercent,
+		"fee_amount":          parts.FeeAmount,
+		"payable_amount":      parts.AmountWithFee,
+		"payment_instruction": "manual_review",
+	})
+	return deposit, nil
+}
+
+func (s *WalletService) topupFeePercent(ctx context.Context) (string, error) {
 	feePercent := defaultQRISFeePercent
 	if s.ConfigService == nil {
 		return feePercent, nil
@@ -512,7 +533,7 @@ func (s *WalletService) qrisFeePercent(ctx context.Context) (string, error) {
 	return strings.TrimSpace(value), nil
 }
 
-type qrisAmountParts struct {
+type depositAmountParts struct {
 	FeePercent          string
 	AmountWithFee       string
 	FeeAmount           string

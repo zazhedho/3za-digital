@@ -23,6 +23,7 @@ export const depositProviderLabel = (deposit) => {
   const qrisType = metadata.qris_type
   if (provider === 'qrisly' || qrisType === 'dynamic') return 'Dynamic QRIS'
   if (provider === 'qris' || qrisType === 'static') return 'Static QRIS'
+  if (provider === 'manual') return 'Manual Review'
   return provider || '-'
 }
 

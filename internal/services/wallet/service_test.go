@@ -219,7 +219,9 @@ func (s appConfigServiceStub) GetSupportContact(ctx context.Context) (dto.Suppor
 
 func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 	repo := &walletRepoStub{}
-	service := NewWalletService(repo)
+	service := NewWalletService(repo).WithConfigService(appConfigServiceStub{values: map[string]string{
+		"payment.qris.fee_percent": "10",
+	}})
 
 	_, err := service.CreateDeposit(context.Background(), "user-1", dto.CreateDepositRequest{Amount: "10000"})
 	if err != nil {
@@ -230,6 +232,22 @@ func TestCreateDepositUsesManualAdminPendingMethod(t *testing.T) {
 	}
 	if repo.createdDeposit.Method != domainwallet.DepositMethodManualAdmin {
 		t.Fatalf("expected manual_admin method, got %q", repo.createdDeposit.Method)
+	}
+	if repo.createdDeposit.Provider != "manual" {
+		t.Fatalf("expected manual provider, got %q", repo.createdDeposit.Provider)
+	}
+	var metadata map[string]string
+	if err := json.Unmarshal(repo.createdDeposit.Metadata, &metadata); err != nil {
+		t.Fatalf("unmarshal metadata: %v", err)
+	}
+	if metadata["fee_amount"] != "1000.00" {
+		t.Fatalf("expected fee amount 1000.00, got %q", metadata["fee_amount"])
+	}
+	if metadata["payable_amount"] != "11000.00" {
+		t.Fatalf("expected payable amount 11000.00, got %q", metadata["payable_amount"])
+	}
+	if metadata["credit_amount"] != "10000.00" {
+		t.Fatalf("expected credit amount 10000.00, got %q", metadata["credit_amount"])
 	}
 }
 

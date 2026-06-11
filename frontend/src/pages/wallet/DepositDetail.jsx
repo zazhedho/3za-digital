@@ -86,75 +86,67 @@ const DepositDetail = () => {
           </div>
         </section>
 
-        {qris ? (
-          <section className="luxe-detail-card">
-            <div className="luxe-card-header">
-              <h3><i className="bi bi-qr-code-scan"></i> Payment Summary</h3>
-            </div>
-            <div className="luxe-card-body">
-              <div className="luxe-grid">
-                <div className="luxe-item">
-                  <span className="luxe-label">Topup Amount</span>
-                  <span className="luxe-value">{formatMoney(deposit?.amount)}</span>
-                </div>
-                <div className="luxe-item">
-                  <span className="luxe-label">Service Fee</span>
-                  <span className="luxe-value">{formatMoney(metadata.fee_amount)}</span>
-                </div>
+        <section className="luxe-detail-card">
+          <div className="luxe-card-header">
+            <h3><i className="bi bi-receipt"></i> Payment Summary</h3>
+          </div>
+          <div className="luxe-card-body">
+            <div className="luxe-grid">
+              <div className="luxe-item">
+                <span className="luxe-label">Wallet Credit</span>
+                <span className="luxe-value">{formatMoney(deposit?.amount)}</span>
+              </div>
+              <div className="luxe-item">
+                <span className="luxe-label">Topup Fee</span>
+                <span className="luxe-value">{formatMoney(metadata.fee_amount)}</span>
+              </div>
+              {metadata.unique_code_amount && (
                 <div className="luxe-item">
                   <span className="luxe-label">Unique Code</span>
                   <span className="luxe-value">{formatMoney(metadata.unique_code_amount)}</span>
                 </div>
-                <div className="luxe-item">
-                  <span className="luxe-label">Total Payable</span>
-                  <span className="luxe-value-strong text-primary">{formatMoney(depositPayableAmount(deposit))}</span>
-                </div>
+              )}
+              <div className="luxe-item">
+                <span className="luxe-label">Total Payment</span>
+                <span className="luxe-value-strong text-primary">{formatMoney(depositPayableAmount(deposit))}</span>
               </div>
-              
+              <div className="luxe-item">
+                <span className="luxe-label">Current Status</span>
+                <span className="luxe-value text-capitalize">{depositStatus(deposit)}</span>
+              </div>
+              {metadata.cancel_reason && (
+                <div className="luxe-item">
+                  <span className="luxe-label">Cancellation Reason</span>
+                  <span className="luxe-value text-danger">{metadata.cancel_reason}</span>
+                </div>
+              )}
+              {deposit?.paid_at && (
+                <div className="luxe-item">
+                  <span className="luxe-label">Paid At</span>
+                  <span className="luxe-value">{new Date(deposit.paid_at).toLocaleString('id-ID')}</span>
+                </div>
+              )}
+            </div>
+
+            {qris && (
               <div className="mt-4">
                 <QRISPaymentBox
                   amount={formatMoney(depositPayableAmount(deposit))}
-                  description={`Please pay the exact amount to confirm your deposit.`}
+                  description="Please pay the exact amount to confirm your deposit."
                   image={qrisImage}
                   payload={qrisPayload}
                 />
               </div>
-            </div>
-          </section>
-        ) : (
-          <section className="luxe-detail-card">
-            <div className="luxe-card-header">
-              <h3><i className="bi bi-patch-check"></i> Status & Notes</h3>
-            </div>
-            <div className="luxe-card-body">
-               <div className="luxe-grid">
-                  <div className="luxe-item">
-                    <span className="luxe-label">Current Status</span>
-                    <span className="luxe-value text-capitalize">{depositStatus(deposit)}</span>
-                  </div>
-                  {metadata.cancel_reason && (
-                    <div className="luxe-item">
-                      <span className="luxe-label">Cancellation Reason</span>
-                      <span className="luxe-value text-danger">{metadata.cancel_reason}</span>
-                    </div>
-                  )}
-                  {deposit?.paid_at && (
-                    <div className="luxe-item">
-                      <span className="luxe-label">Paid At</span>
-                      <span className="luxe-value">{new Date(deposit.paid_at).toLocaleString('id-ID')}</span>
-                    </div>
-                  )}
-               </div>
-               
-               {deposit?.status === 'pending' && (
-                 <div className="auth-alert mt-4">
-                    <i className="bi bi-info-circle me-2"></i>
-                    For manual review, please contact our support team after making the payment.
-                 </div>
-               )}
-            </div>
-          </section>
-        )}
+            )}
+
+            {!qris && deposit?.status === 'pending' && (
+              <div className="auth-alert mt-4">
+                <i className="bi bi-info-circle me-2"></i>
+                For manual review, please contact our support team after making the payment.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )

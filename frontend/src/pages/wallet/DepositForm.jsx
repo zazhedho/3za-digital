@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { toast } from 'react-toastify'
 import walletService from '../../services/walletService'
 import { getErrorMessage } from '../../services/api'
-import { depositPayableAmount, formatMoney, isQRISDeposit, qrisImageURL, qrisString } from '../../utils/deposit'
+import { depositMetadata, depositPayableAmount, formatMoney, isQRISDeposit, qrisImageURL, qrisString } from '../../utils/deposit'
 
 const DepositForm = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({ amount: '', provider: 'qris' })
@@ -19,7 +19,7 @@ const DepositForm = ({ onClose, onCreated }) => {
   const belowMinimum = amount > 0 && amount < minimumAmount
   const isQRISProvider = ['qris', 'qrisly'].includes(form.provider)
   const staticQRISReady = Boolean(settings.qrisStaticImageURL)
-  const estimatedFee = isQRISProvider && qrisFeeKnown ? amount * (feePercent / 100) : 0
+  const estimatedFee = qrisFeeKnown ? amount * (feePercent / 100) : 0
   const estimatedPayable = amount + estimatedFee
   const createdIsQRIS = isQRISDeposit(createdDeposit)
   const createdQRISImage = qrisImageURL(createdDeposit)
@@ -99,8 +99,16 @@ const DepositForm = ({ onClose, onCreated }) => {
                 <p>To complete your {form.provider === 'qris' ? 'Static QRIS' : 'Manual'} deposit, please transfer the exact amount and <strong>contact our Admin</strong> via the Support Center.</p>
                 <div className="manual-success-details">
                   <div className="detail-row">
-                    <span>Amount</span>
+                    <span>Wallet credit</span>
                     <strong>{formatMoney(createdDeposit.amount)}</strong>
+                  </div>
+                  <div className="detail-row">
+                    <span>Topup Fee</span>
+                    <strong>{formatMoney(depositMetadata(createdDeposit).fee_amount)}</strong>
+                  </div>
+                  <div className="detail-row">
+                    <span>Total Payment</span>
+                    <strong>{formatMoney(depositPayableAmount(createdDeposit))}</strong>
                   </div>
                   <div className="detail-row">
                     <span>Status</span>
@@ -148,22 +156,20 @@ const DepositForm = ({ onClose, onCreated }) => {
             {belowMinimum && <div className="form-hint text-danger mt-1"><i className="bi bi-exclamation-circle"></i> Minimum deposit {formatMoney(minimumAmount)}</div>}
           </div>
 
-          {isQRISProvider && (
-            <div className="deposit-fee-card">
-              <div className="deposit-fee-row">
-                <span>Wallet credit</span>
-                <strong>{formatMoney(amount)}</strong>
-              </div>
-              <div className="deposit-fee-row">
-                <span>Topup Fee</span>
-                <strong>{settingsLoading ? 'Loading...' : (qrisFeeKnown ? formatMoney(estimatedFee) : 'TBD')}</strong>
-              </div>
-              <div className="deposit-fee-row total">
-                <span>Estimated payment</span>
-                <strong>{qrisFeeKnown ? `${formatMoney(estimatedPayable)} + code` : 'TBD'}</strong>
-              </div>
+          <div className="deposit-fee-card">
+            <div className="deposit-fee-row">
+              <span>Wallet credit</span>
+              <strong>{formatMoney(amount)}</strong>
             </div>
-          )}
+            <div className="deposit-fee-row">
+              <span>Topup Fee</span>
+              <strong>{settingsLoading ? 'Loading...' : (qrisFeeKnown ? formatMoney(estimatedFee) : 'TBD')}</strong>
+            </div>
+            <div className="deposit-fee-row total">
+              <span>Estimated payment</span>
+              <strong>{qrisFeeKnown ? `${formatMoney(estimatedPayable)}${isQRISProvider ? ' + code' : ''}` : 'TBD'}</strong>
+            </div>
+          </div>
           
           <div className="deposit-modal-actions">
             <button className="btn btn-outline-dark" type="button" onClick={onClose}>Cancel</button>
