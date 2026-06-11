@@ -21,7 +21,7 @@ func NewAuditRepo(db *gorm.DB) interfaceaudit.RepoAuditInterface {
 func (r *repo) GetAll(ctx context.Context, params filter.BaseParams) (ret []domainaudit.AuditTrail, totalData int64, err error) {
 	return r.GenericRepository.GetAll(ctx, params, repositorygeneric.QueryOptions{
 		Search:         repositorygeneric.BuildSearchFunc("action", "resource", "status", "actor_role", "message", "error_message", "request_id", "ip_address"),
-		AllowedFilters: []string{"actor_user_id", "actor_role", "action", "resource", "status", "request_id"},
+		AllowedFilters: []string{"actor_user_id", "actor_role", "action", "resource", "resource_id", "status", "request_id"},
 		AllowedOrderColumns: []string{
 			"occurred_at",
 			"created_at",

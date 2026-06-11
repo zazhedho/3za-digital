@@ -54,7 +54,7 @@ const ConfigList = () => {
         </div>
       </div>
 
-      <div className="toolbar-actions mb-4">
+      <div className="toolbar-actions list-filter-bar">
         <form className="filter-pill filter-only" onSubmit={submitSearch}>
           <i className="bi bi-search"></i>
           <input 

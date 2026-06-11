@@ -101,8 +101,8 @@ const AdminWallets = () => {
         </div>
       </div>
 
-      <div className="toolbar-actions mb-4">
-        <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+      <div className="toolbar-actions list-filter-bar">
+        <form className="filter-pill filter-only compact-filter status-filter" onSubmit={submitSearch}>
           <i className="bi bi-funnel"></i>
           <select value={currencyInput} onChange={(event) => setCurrencyInput(event.target.value)}>
             <option value="">All Currencies</option>
@@ -208,7 +208,7 @@ const AdminWallets = () => {
           <thead>
             <tr>
               <th>Member Account</th>
-              <th className="text-end">Current Balance</th>
+              <th>Current Balance</th>
               <th>Currency</th>
               <th>Status</th>
               {canAdjust && <th className="text-end">Actions</th>}

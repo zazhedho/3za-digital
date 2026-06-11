@@ -51,7 +51,7 @@ const MenuList = () => {
         )}
       </div>
 
-      <div className="toolbar-actions mb-4">
+      <div className="toolbar-actions list-filter-bar">
         <form className="filter-pill filter-only" onSubmit={submitSearch}>
           <i className="bi bi-search"></i>
           <input 
@@ -73,7 +73,7 @@ const MenuList = () => {
               <th>Display Label</th>
               <th>Route Path</th>
               <th>Icon</th>
-              <th className="text-end">Sort Order</th>
+              <th>Sort Order</th>
               <th>Status</th>
               <th className="text-end">Actions</th>
             </tr>

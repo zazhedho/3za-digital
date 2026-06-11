@@ -29,6 +29,8 @@ const AuditList = () => {
   const [status, setStatus] = useState('')
   const [actionInput, setActionInput] = useState('')
   const [action, setAction] = useState('')
+  const [resourceFilter, setResourceFilter] = useState(params.get('filters[resource]') || '')
+  const [resourceIdFilter, setResourceIdFilter] = useState(params.get('filters[resource_id]') || '')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 })
   const [loading, setLoading] = useState(false)
@@ -37,6 +39,8 @@ const AuditList = () => {
     const nextSearch = params.get('search') || ''
     setSearchInput(nextSearch)
     setSearch(nextSearch)
+    setResourceFilter(params.get('filters[resource]') || '')
+    setResourceIdFilter(params.get('filters[resource_id]') || '')
     setPage(1)
   }, [params])
 
@@ -49,6 +53,8 @@ const AuditList = () => {
         limit: 20,
         'filters[status]': status || undefined,
         'filters[action]': action || undefined,
+        'filters[resource]': resourceFilter || undefined,
+        'filters[resource_id]': resourceIdFilter || undefined,
       })
       const payload = getListPayload(response)
       setRows(payload.rows)
@@ -56,7 +62,7 @@ const AuditList = () => {
     } finally {
       setLoading(false)
     }
-  }, [action, page, search, status])
+  }, [action, page, resourceFilter, resourceIdFilter, search, status])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load audit trails')))
@@ -69,7 +75,11 @@ const AuditList = () => {
     setStatus(statusInput)
     setAction(actionInput)
     setPage(1)
-    setParams(nextSearch ? { search: nextSearch } : {})
+    const nextParams = {}
+    if (nextSearch) nextParams.search = nextSearch
+    if (resourceFilter) nextParams['filters[resource]'] = resourceFilter
+    if (resourceIdFilter) nextParams['filters[resource_id]'] = resourceIdFilter
+    setParams(nextParams)
   }
 
   const resetSearch = () => {
@@ -92,14 +102,13 @@ const AuditList = () => {
         </div>
       </div>
 
-      <div className="toolbar-actions mb-4">
+      <div className="toolbar-actions list-filter-bar">
         <form className="filter-pill filter-only" onSubmit={submitSearch}>
           <i className="bi bi-funnel"></i>
           <input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search message or request ID..."
-            style={{ minWidth: '240px' }}
           />
           <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
             <option value="">All Status</option>
@@ -119,6 +128,11 @@ const AuditList = () => {
           <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
             <i className="bi bi-x-lg me-2"></i>Reset
           </button>
+          {resourceFilter && (
+            <span className="filter-context-badge">
+              <i className="bi bi-link-45deg"></i>{resourceFilter}
+            </span>
+          )}
         </form>
       </div>
 

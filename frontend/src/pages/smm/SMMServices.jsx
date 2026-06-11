@@ -156,7 +156,7 @@ const SMMServices = () => {
         )}
       </div>
 
-      <div className="toolbar-actions mb-4">
+      <div className="toolbar-actions list-filter-bar">
         <form className="filter-pill filter-only" onSubmit={submitSearch}>
           <i className="bi bi-search"></i>
           <input 
@@ -185,8 +185,8 @@ const SMMServices = () => {
               <th style={{ width: '80px' }}>{sortButton('provider_service_id', 'ID')}</th>
               <th>{sortButton('name', 'Service Name')}</th>
               <th>{sortButton('platform', 'Platform')}</th>
-              <th className="text-end">Min / Max</th>
-              <th className="text-end">{sortButton('price', 'Price / 1k')}</th>
+              <th>Min / Max</th>
+              <th>{sortButton('price', 'Price / 1k')}</th>
               <th className="text-end">Status</th>
             </tr>
           </thead>

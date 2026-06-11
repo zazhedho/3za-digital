@@ -99,8 +99,8 @@ const Wallet = () => {
         </div>
       </div>
 
-      <div className="toolbar-actions mb-4">
-        <form className="filter-pill filter-only wallet-filter" onSubmit={submitSearch}>
+      <div className="toolbar-actions list-filter-bar">
+        <form className="filter-pill filter-only compact-filter wallet-filter" onSubmit={submitSearch}>
           <i className="bi bi-funnel"></i>
           <select value={typeInput} onChange={(event) => setTypeInput(event.target.value)}>
             <option value="">All Transaction Types</option>
@@ -121,13 +121,13 @@ const Wallet = () => {
         </form>
       </div>
 
-      <section className="table-panel mt-4">
+      <section className="table-panel">
         <table className="table app-table align-middle">
           <thead>
             <tr>
               <th>Type & Reference</th>
               <th>Flow</th>
-              <th className="text-end">Amount</th>
+              <th>Amount</th>
               <th>Transaction Date</th>
             </tr>
           </thead>

@@ -92,8 +92,8 @@ const DepositList = () => {
         <DepositForm onClose={() => setShowCreate(false)} onCreated={handleCreated} />
       )}
 
-      <div className="toolbar-actions mb-4">
-        <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+      <div className="toolbar-actions list-filter-bar">
+        <form className="filter-pill filter-only compact-filter status-filter" onSubmit={submitSearch}>
           <i className="bi bi-funnel"></i>
           <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
             <option value="">All Payment Status</option>
@@ -115,8 +115,8 @@ const DepositList = () => {
           <thead>
             <tr>
               <th>Reference & Method</th>
-              <th className="text-end">Amount</th>
-              <th className="text-end">Final Payable</th>
+              <th>Amount</th>
+              <th>Final Payable</th>
               <th>Provider</th>
               <th>Status</th>
               <th>Date</th>

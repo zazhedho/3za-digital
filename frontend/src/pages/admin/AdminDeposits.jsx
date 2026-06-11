@@ -107,8 +107,8 @@ const AdminDeposits = () => {
         </div>
       </div>
 
-      <div className="toolbar-actions mb-4">
-        <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+      <div className="toolbar-actions list-filter-bar">
+        <form className="filter-pill filter-only compact-filter status-filter" onSubmit={submitSearch}>
           <i className="bi bi-funnel"></i>
           <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
             <option value="">All Payment Status</option>
@@ -131,8 +131,8 @@ const AdminDeposits = () => {
             <tr>
               <th>Requesting User</th>
               <th>Reference & Method</th>
-              <th className="text-end">Base Amount</th>
-              <th className="text-end">Final Payable</th>
+              <th>Base Amount</th>
+              <th>Final Payable</th>
               <th>Status</th>
               <th className="text-end">Actions</th>
             </tr>

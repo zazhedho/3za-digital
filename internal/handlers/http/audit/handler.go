@@ -34,7 +34,7 @@ func (h *AuditHandler) GetAll(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}
-	params.Filters = filter.WhitelistStringFilter(params.Filters, []string{"actor_user_id", "actor_role", "action", "resource", "status", "request_id"})
+	params.Filters = filter.WhitelistStringFilter(params.Filters, []string{"actor_user_id", "actor_role", "action", "resource", "resource_id", "status", "request_id"})
 
 	data, total, err := h.Service.GetAll(reqCtx, params)
 	if err != nil {

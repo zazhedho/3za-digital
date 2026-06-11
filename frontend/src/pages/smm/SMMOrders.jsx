@@ -107,7 +107,7 @@ const SMMOrders = () => {
         </Link>
       </div>
 
-      <div className="toolbar-actions mb-4">
+      <div className="toolbar-actions list-filter-bar">
         <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
           <i className="bi bi-funnel"></i>
           <input 
@@ -138,7 +138,7 @@ const SMMOrders = () => {
               <th>Order ID</th>
               <th>Service Item</th>
               <th>Target Link</th>
-              <th className="text-end">Quantity</th>
+              <th>Quantity</th>
               <th>Status</th>
               <th className="text-end">Actions</th>
             </tr>
