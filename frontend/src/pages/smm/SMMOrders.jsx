@@ -6,6 +6,23 @@ import { getErrorMessage, getListPayload } from '../../services/api'
 import PaginationBar from '../../components/common/PaginationBar'
 import TableActionMenu from '../../components/common/TableActionMenu'
 
+const parseJSONValue = (value) => {
+  if (!value) return {}
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return {}
+    }
+  }
+  return value
+}
+
+const getExternalReference = (order) => {
+  const providerResponse = parseJSONValue(order?.provider_response)
+  return providerResponse?.data?.order_number || order?.customer_no || ''
+}
+
 const SMMOrders = () => {
   const [params, setParams] = useSearchParams()
   const [rows, setRows] = useState([])
@@ -69,7 +86,7 @@ const SMMOrders = () => {
     setRefreshingId(order.id)
     try {
       await smmService.refreshOrderStatus(order.id)
-      toast.success('Status refreshed from provider')
+      toast.success('Order status refreshed')
       load()
     } catch (error) {
       toast.error(getErrorMessage(error, 'Refresh failed'))
@@ -127,14 +144,16 @@ const SMMOrders = () => {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>
-                  <span className="table-main">
-                    <strong>{row.ref_id || row.id}</strong>
-                    <span className="table-subtext">{row.customer_no ? `ID: ${row.customer_no}` : 'Waiting for ID...'}</span>
-                  </span>
-                </td>
+            {rows.map((row) => {
+              const externalReference = getExternalReference(row)
+              return (
+                <tr key={row.id}>
+                  <td>
+                    <span className="table-main">
+                      <strong>{row.ref_id || row.id}</strong>
+                      {externalReference && <span className="table-subtext">External ref: {externalReference}</span>}
+                    </span>
+                  </td>
                 <td>
                    <div className="table-main">
                       <span className="table-subtext d-block">{row.service?.name || row.service_name || row.provider_service_id || '-'}</span>
@@ -158,7 +177,8 @@ const SMMOrders = () => {
                    />
                 </td>
               </tr>
-            ))}
+              )
+            })}
             {!rows.length && (
               <tr>
                 <td colSpan="6" className="empty-cell py-5">
