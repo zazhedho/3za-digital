@@ -4,20 +4,20 @@ import { toast } from 'react-toastify'
 import auditService from '../../services/auditService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import PaginationBar from '../../components/common/PaginationBar'
+import TableActionMenu from '../../components/common/TableActionMenu'
 
 const formatDate = (value) => {
   if (!value) return '-'
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('id-ID', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
 }
 
 const statusClass = (status) => {
-  if (status === 'success') return 'status-paid'
-  if (status === 'failed') return 'status-failed'
-  if (status === 'pending') return 'status-pending'
-  return 'status-default'
+  if (status === 'success') return 'success'
+  if (status === 'failed') return 'danger'
+  return 'warning'
 }
 
 const AuditList = () => {
@@ -84,53 +84,54 @@ const AuditList = () => {
   }
 
   return (
-    <div>
+    <div className="luxe-page-fade">
       <div className="page-toolbar">
         <div>
           <h1>Audit Trails</h1>
-          <p>System activity history and request outcomes.</p>
+          <p>System activity tracking and security forensic logs.</p>
         </div>
       </div>
 
-      <form className="filter-pill" onSubmit={submitSearch}>
-        <i className="bi bi-search"></i>
-        <input
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search action, resource, request ID, or message"
-        />
-        <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
-          <option value="">All status</option>
-          <option value="success">Success</option>
-          <option value="failed">Failed</option>
-          <option value="pending">Pending</option>
-        </select>
-        <select value={actionInput} onChange={(event) => setActionInput(event.target.value)}>
-          <option value="">All actions</option>
-          <option value="create">Create</option>
-          <option value="update">Update</option>
-          <option value="delete">Delete</option>
-          <option value="login">Login</option>
-          <option value="logout">Logout</option>
-          <option value="refresh">Refresh</option>
-          <option value="assign">Assign</option>
-        </select>
-        <button className="btn btn-dark" type="submit" disabled={loading}>Search</button>
-        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
-          <i className="bi bi-x-lg me-2"></i>Reset
-        </button>
-      </form>
+      <div className="toolbar-actions mb-4">
+        <form className="filter-pill filter-only" onSubmit={submitSearch}>
+          <i className="bi bi-funnel"></i>
+          <input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search message or request ID..."
+            style={{ minWidth: '240px' }}
+          />
+          <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
+            <option value="">All Status</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
+            <option value="pending">Pending</option>
+          </select>
+          <select value={actionInput} onChange={(event) => setActionInput(event.target.value)}>
+            <option value="">All Actions</option>
+            <option value="create">Create</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+            <option value="login">Login</option>
+            <option value="logout">Logout</option>
+          </select>
+          <button className="btn btn-dark" type="submit" disabled={loading}>Search</button>
+          <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+            <i className="bi bi-x-lg me-2"></i>Reset
+          </button>
+        </form>
+      </div>
 
       <section className="table-panel">
         <table className="table app-table table-wide align-middle">
           <thead>
             <tr>
-              <th>Summary</th>
-              <th>Actor</th>
-              <th>Resource</th>
+              <th>Event Summary</th>
+              <th>System Actor</th>
+              <th>Resource Context</th>
               <th>Status</th>
-              <th>Occurred</th>
-              <th className="text-end">Action</th>
+              <th>Occurred At</th>
+              <th className="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -138,32 +139,45 @@ const AuditList = () => {
               <tr key={row.id}>
                 <td>
                   <span className="table-main">
-                    <strong>{row.summary || row.message || 'Audit event'}</strong>
-                    <span className="table-subtext">{row.request_id ? `Request ${row.request_id}` : row.ip_address || '-'}</span>
+                    <strong className="d-block text-truncate" style={{ maxWidth: '280px' }}>{row.summary || row.message || 'Audit event'}</strong>
+                    <code className="table-subtext" style={{ fontSize: '11px' }}>ID: {row.request_id || row.id.split('-')[0]}</code>
                   </span>
                 </td>
                 <td>
                   <span className="table-main">
-                    <strong>{row.actor?.role || 'User'}</strong>
-                    <span className="table-subtext">{row.actor?.user_id || 'System'}</span>
+                    <strong>{row.actor?.role || 'System'}</strong>
+                    <span className="table-subtext d-block">{row.actor?.user_id || 'Internal'}</span>
                   </span>
                 </td>
                 <td>
-                  <span className="table-main">
-                    <strong>{row.resource_label || row.resource || '-'}</strong>
-                    <span className="table-subtext">{row.action_label || row.action || '-'}</span>
-                  </span>
+                   <div className="table-main">
+                      <span className="table-subtext d-block"><strong>{row.resource_label || row.resource || '-'}</strong></span>
+                      <small className="status-badge status-badge-sm info text-capitalize">{row.action_label || row.action || '-'}</small>
+                   </div>
                 </td>
-                <td><span className={`status-badge ${statusClass(row.status)}`}>{row.status_label || row.status || '-'}</span></td>
-                <td className="table-date">{formatDate(row.occurred_at)}</td>
+                <td><span className={`status-badge ${statusClass(row.status)} text-capitalize`}>{row.status_label || row.status || '-'}</span></td>
+                <td className="table-date"><i className="bi bi-clock me-1 text-muted"></i> {formatDate(row.occurred_at)}</td>
                 <td className="text-end">
-                  <Link className="btn btn-outline-dark btn-sm" to={`/audits/${row.id}`}>
-                    Detail
-                  </Link>
+                   <TableActionMenu
+                      label="Audit actions"
+                      items={[
+                        { label: 'View Forensic Detail', to: `/audits/${row.id}` },
+                        { label: 'View Actor Profile', to: row.actor?.user_id ? `/users/${row.actor.user_id}` : null, hidden: !row.actor?.user_id },
+                      ]}
+                   />
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="6" className="empty-cell">{loading ? 'Loading...' : 'No audit trails found'}</td></tr>}
+            {!rows.length && (
+               <tr>
+                  <td colSpan="6" className="empty-cell py-5">
+                    <div className="text-center">
+                       <i className="bi bi-shield-shaded text-muted display-4"></i>
+                       <p className="mt-3 text-muted">{loading ? 'Scanning logs...' : 'No audit records found.'}</p>
+                    </div>
+                  </td>
+               </tr>
+            )}
           </tbody>
         </table>
       </section>

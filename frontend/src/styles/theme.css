@@ -1672,7 +1672,7 @@ body {
 
 .content-area {
   min-width: 0;
-  padding: 32px;
+  padding: 32px 32px 100px; /* Added 100px bottom padding for floating button safety */
 }
 
 .page-hero,
@@ -1731,28 +1731,57 @@ body {
 }
 
 .metric-card {
-  background: var(--canvas);
+  background: #ffffff;
   border: 1px solid var(--hairline-soft);
-  border-radius: 14px;
+  border-radius: 20px;
   box-shadow: var(--shadow-sm);
-  display: grid;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
   padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.metric-card i {
-  color: var(--primary);
-  font-size: 22px;
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
 }
 
-.metric-card span {
+.metric-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.metric-icon-box.primary { background: #fff4f6; color: var(--primary); }
+.metric-icon-box.success { background: #e8f9ee; color: #198754; }
+.metric-icon-box.warning { background: #fffbeb; color: #d97706; }
+.metric-icon-box.info { background: #f0f9ff; color: #0284c7; }
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-info span {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.metric-card strong {
-  font-size: 28px;
-  line-height: 1.2;
+.metric-info strong {
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
 }
 
 .content-grid {
@@ -2776,74 +2805,82 @@ body {
 
 .status-badge {
   align-items: center;
-  background: var(--canvas);
+  background: #f7f8f9;
   border: 1px solid var(--hairline-soft);
   border-radius: 999px;
   display: inline-flex;
-  font-size: 12px;
-  font-weight: 650;
-  gap: 7px;
+  font-size: 11px;
+  font-weight: 750;
   line-height: 1;
-  min-height: 28px;
-  padding: 6px 10px 6px 8px;
+  min-height: 24px;
+  padding: 4px 12px;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
 }
 
+/* Remove the dot */
 .status-badge::before {
-  background: currentColor;
-  border-radius: 999px;
-  content: "";
-  display: inline-block;
-  height: 7px;
-  width: 7px;
+  display: none;
 }
 
-.status-badge-detail {
-  font-size: 13px;
-  min-height: 30px;
-  padding: 7px 12px 7px 9px;
-}
-
-.status-paid {
-  background: #f3fbf6;
+/* Semantic Status Colors */
+.status-badge.success,
+.status-badge.status-paid,
+.status-badge.completed {
+  background: #e8f9ee;
   border-color: #cdeed9;
   color: #157347;
 }
 
-.status-unpaid {
+.status-badge.warning,
+.status-badge.pending,
+.status-badge.processing,
+.status-badge.status-pending {
   background: #fffbeb;
   border-color: #f3df9d;
   color: #a16207;
 }
 
-.status-pending {
-  background: #f3f7ff;
-  border-color: #ccdcff;
-  color: #1b5dbf;
-}
-
-.status-expired {
-  background: #f7f8f9;
-  border-color: #dfe3e7;
-  color: #667085;
-}
-
-.status-failed {
+.status-badge.danger,
+.status-badge.failed,
+.status-badge.cancelled,
+.status-badge.status-failed,
+.status-badge.status-cancelled {
   background: #fff5f5;
   border-color: #f2c7c7;
   color: #b42318;
 }
 
-.status-cancelled {
-  background: #faf5ff;
-  border-color: #e7d2fe;
-  color: #7e22ce;
+.status-badge.info,
+.status-badge.status-info {
+  background: #f0f9ff;
+  border-color: #ccdcff;
+  color: #0284c7;
 }
 
-.status-default {
-  background: var(--canvas);
-  border-color: var(--hairline-soft);
+.status-badge.status-expired {
+  background: #f7f8f9;
+  border-color: #dfe3e7;
+  color: #667085;
+}
+
+.status-badge.status-default {
+  background: #f7f8f9;
+  border-color: #ebebeb;
   color: var(--muted);
+}
+
+.status-badge-sm {
+  font-size: 10px;
+  padding: 3px 8px;
+  min-height: 20px;
+}
+
+.status-badge-detail {
+  font-size: 13px;
+  min-height: 30px;
+  padding: 6px 16px;
 }
 
 .app-table .empty-cell {
@@ -3575,7 +3612,7 @@ body {
   }
 
   .content-area {
-    padding: 20px 16px;
+    padding: 20px 16px 80px; /* Added bottom padding for floating button */
   }
 
   .page-hero,
@@ -3726,7 +3763,7 @@ body {
   }
 
   .content-area {
-    padding: 16px 12px 24px;
+    padding: 16px 12px 80px; /* Added bottom padding for floating button */
   }
 
   .metric-grid,

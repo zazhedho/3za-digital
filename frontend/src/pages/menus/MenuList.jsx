@@ -4,16 +4,23 @@ import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
 import menuService from '../../services/menuService'
 import { getErrorMessage, getListPayload } from '../../services/api'
+import TableActionMenu from '../../components/common/TableActionMenu'
 
 const MenuList = () => {
   const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
-    const response = await menuService.getAll({ search, limit: 100 })
-    setRows(getListPayload(response).rows)
+    setLoading(true)
+    try {
+      const response = await menuService.getAll({ search, limit: 100 })
+      setRows(getListPayload(response).rows)
+    } finally {
+      setLoading(false)
+    }
   }, [search])
 
   useEffect(() => {
@@ -31,33 +38,89 @@ const MenuList = () => {
   }
 
   return (
-    <div>
+    <div className="luxe-page-fade">
       <div className="page-toolbar">
-        <div><h1>Menus</h1><p>Backend-driven navigation entries.</p></div>
+        <div>
+          <h1>Navigation Menus</h1>
+          <p>Configure sidebar navigation and application route visibility.</p>
+        </div>
+        {hasPermission('menus', 'create') && (
+          <Link to="/menus/new" className="btn btn-primary d-flex align-items-center gap-2">
+            <i className="bi bi-layout-sidebar-inset"></i> New Menu
+          </Link>
+        )}
       </div>
-      <form className="filter-pill compact" onSubmit={submitSearch}>
-        <i className="bi bi-search"></i>
-        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search menu" />
-        <button className="btn btn-dark" type="submit">Search</button>
-        <button className="btn btn-outline-dark" type="button" onClick={resetSearch}>
-          <i className="bi bi-x-lg me-2"></i>Reset
-        </button>
-      </form>
+
+      <div className="toolbar-actions mb-4">
+        <form className="filter-pill filter-only" onSubmit={submitSearch}>
+          <i className="bi bi-search"></i>
+          <input 
+             value={searchInput} 
+             onChange={(event) => setSearchInput(event.target.value)} 
+             placeholder="Search by label or path..." 
+          />
+          <button className="btn btn-dark" type="submit" disabled={loading}>Search</button>
+          <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+            <i className="bi bi-x-lg me-2"></i>Reset
+          </button>
+        </form>
+      </div>
+
       <section className="table-panel">
         <table className="table app-table align-middle">
-          <thead><tr><th>Name</th><th>Path</th><th>Icon</th><th>Order</th><th>Active</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th>Display Label</th>
+              <th>Route Path</th>
+              <th>Icon</th>
+              <th className="text-end">Sort Order</th>
+              <th>Status</th>
+              <th className="text-end">Actions</th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td><span className="table-main"><strong>{row.display_name}</strong></span></td>
-                <td><span className="table-subtext">{row.path}</span></td>
-                <td className="table-nowrap"><i className={`bi ${row.icon || 'bi-circle'} me-2`}></i>{row.icon || '-'}</td>
-                <td className="table-number">{row.order_index}</td>
-                <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
-                <td className="text-end"><span className="table-actions">{hasPermission('menus', 'view') && <Link className="btn btn-sm btn-outline-dark" to={`/menus/${row.id}`}>Detail</Link>}</span></td>
+                <td>
+                   <span className="table-main">
+                      <strong>{row.display_name}</strong>
+                      <code className="table-subtext d-block">{row.name}</code>
+                   </span>
+                </td>
+                <td><span className="luxe-value-code">{row.path || '-'}</span></td>
+                <td>
+                   <div className="d-flex align-items-center gap-2">
+                      <i className={`bi bi-${row.icon || 'circle'} text-primary`}></i>
+                      <span className="table-subtext">{row.icon || '-'}</span>
+                   </div>
+                </td>
+                <td className="table-number"><strong>{row.order_index}</strong></td>
+                <td>
+                   <span className={`status-badge ${row.is_active ? 'success' : 'danger'}`}>
+                      {row.is_active ? 'Visible' : 'Hidden'}
+                   </span>
+                </td>
+                <td className="text-end">
+                  <TableActionMenu
+                    label="Menu actions"
+                    items={[
+                      { label: 'View Detail', to: `/menus/${row.id}`, hidden: !hasPermission('menus', 'view') },
+                      { label: 'Edit Menu', to: `/menus/${row.id}/edit`, hidden: !hasPermission('menus', 'update') },
+                    ]}
+                  />
+                </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="6" className="empty-cell">No menus found</td></tr>}
+            {!rows.length && (
+               <tr>
+                  <td colSpan="6" className="empty-cell py-5">
+                    <div className="text-center">
+                       <i className="bi bi-list-ul text-muted display-4"></i>
+                       <p className="mt-3 text-muted">{loading ? 'Loading menus...' : 'No menu entries found.'}</p>
+                    </div>
+                  </td>
+               </tr>
+            )}
           </tbody>
         </table>
       </section>

@@ -7,11 +7,12 @@ import DepositForm from './DepositForm'
 import { useAuth } from '../../contexts/AuthContext'
 import { depositPayableAmount, depositProviderLabel, depositStatus, depositStatusClass, formatMoney, isQRISDeposit } from '../../utils/deposit'
 import PaginationBar from '../../components/common/PaginationBar'
+import TableActionMenu from '../../components/common/TableActionMenu'
 
 const methodLabel = (method) => {
-  if (method === 'manual_admin') return 'Manual deposit'
-  if (method === 'payment_gateway') return 'Payment gateway'
-  return method || 'Deposit request'
+  if (method === 'manual_admin') return 'Manual Deposit'
+  if (method === 'payment_gateway') return 'Payment Gateway'
+  return method || 'Deposit Request'
 }
 
 const DepositList = () => {
@@ -67,21 +68,21 @@ const DepositList = () => {
   }
 
   return (
-    <div>
+    <div className="luxe-page-fade">
       <div className="page-toolbar">
         <div>
-          <h1>Deposits</h1>
-          <p>Create deposit requests and track status.</p>
+          <h1>My Deposits</h1>
+          <p>Create and track your wallet top-up requests.</p>
         </div>
         <div className="toolbar-actions">
           {canViewAllDeposits && (
             <Link className="btn btn-outline-dark" to="/admin/deposits">
-              <i className="bi bi-bank me-2"></i>Admin Deposits
+              <i className="bi bi-bank me-2"></i>Admin Review
             </Link>
           )}
           {canCreateDeposit && (
-            <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
-              <i className="bi bi-plus-lg me-2"></i>Create deposit
+            <button className="btn btn-primary d-flex align-items-center gap-2" type="button" onClick={() => setShowCreate(true)}>
+              <i className="bi bi-plus-circle-fill"></i> New Deposit
             </button>
           )}
         </div>
@@ -91,33 +92,35 @@ const DepositList = () => {
         <DepositForm onClose={() => setShowCreate(false)} onCreated={handleCreated} />
       )}
 
-      <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
-        <i className="bi bi-funnel"></i>
-        <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
-          <option value="">All status</option>
-          <option value="pending">Pending</option>
-          <option value="paid">Paid</option>
-          <option value="expired">Expired</option>
-          <option value="failed">Failed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
-        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
-          <i className="bi bi-x-lg me-2"></i>Reset
-        </button>
-      </form>
+      <div className="toolbar-actions mb-4">
+        <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+          <i className="bi bi-funnel"></i>
+          <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
+            <option value="">All Payment Status</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid / Settled</option>
+            <option value="expired">Expired</option>
+            <option value="failed">Failed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+          <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+            <i className="bi bi-x-lg me-2"></i>Reset
+          </button>
+        </form>
+      </div>
 
       <section className="table-panel">
         <table className="table app-table align-middle">
           <thead>
             <tr>
-              <th>Reference</th>
-              <th>Amount</th>
-              <th>Pay</th>
+              <th>Reference & Method</th>
+              <th className="text-end">Amount</th>
+              <th className="text-end">Final Payable</th>
               <th>Provider</th>
               <th>Status</th>
               <th>Date</th>
-              <th></th>
+              <th className="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -126,22 +129,42 @@ const DepositList = () => {
                 <td>
                   <span className="table-main">
                     <strong>{methodLabel(row.method)}</strong>
-                    <span className="table-subtext">{row.payment_reference ? `Ref ${row.payment_reference}` : 'Waiting for reference'}</span>
+                    <span className="table-subtext d-block"><i className="bi bi-hash"></i> {row.payment_reference || 'Ref pending...'}</span>
                   </span>
                 </td>
-                <td className="table-number">{formatMoney(row.amount)}</td>
-                <td className="table-number">{isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : '-'}</td>
-                <td className="table-nowrap">{depositProviderLabel(row)}</td>
-                <td><span className={`status-badge ${depositStatusClass(row)} text-capitalize`}>{depositStatus(row)}</span></td>
-                <td className="table-date">{row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
+                <td className="table-number"><strong>{formatMoney(row.amount)}</strong></td>
+                <td className="table-number">
+                   <span className="luxe-value-strong text-primary">
+                      {isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : formatMoney(row.amount)}
+                   </span>
+                </td>
+                <td className="table-nowrap"><span className="status-badge status-badge-sm info text-capitalize">{depositProviderLabel(row)}</span></td>
+                <td>
+                   <span className={`status-badge ${depositStatusClass(row)} text-capitalize`}>
+                      {depositStatus(row)}
+                   </span>
+                </td>
+                <td className="table-date"><i className="bi bi-clock me-1 text-muted"></i> {row.created_at ? new Date(row.created_at).toLocaleString('id-ID') : '-'}</td>
                 <td className="text-end">
-                  <span className="table-actions">
-                    <Link className="btn btn-sm btn-outline-dark" to={`/deposits/${row.id}`}>Detail</Link>
-                  </span>
+                  <TableActionMenu
+                    label="Deposit actions"
+                    items={[
+                      { label: 'View Details', to: `/deposits/${row.id}` },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="7" className="empty-cell">{loading ? 'Loading...' : 'No deposits found'}</td></tr>}
+            {!rows.length && (
+              <tr>
+                <td colSpan="7" className="empty-cell py-5">
+                   <div className="text-center">
+                      <i className="bi bi-wallet2 text-muted display-4"></i>
+                      <p className="mt-3 text-muted">{loading ? 'Scanning history...' : 'No deposits found.'}</p>
+                   </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </section>

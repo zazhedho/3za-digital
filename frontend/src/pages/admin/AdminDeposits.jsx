@@ -9,9 +9,9 @@ import { useAuth } from '../../contexts/AuthContext'
 import PaginationBar from '../../components/common/PaginationBar'
 
 const methodLabel = (method) => {
-  if (method === 'manual_admin') return 'Manual deposit'
-  if (method === 'payment_gateway') return 'Payment gateway'
-  return method || 'Deposit request'
+  if (method === 'manual_admin') return 'Manual Review'
+  if (method === 'payment_gateway') return 'Payment Gateway'
+  return method || 'Deposit Request'
 }
 
 const AdminDeposits = () => {
@@ -52,8 +52,8 @@ const AdminDeposits = () => {
     if (!confirmAction?.deposit) return
     setConfirmLoading(true)
     try {
-      await walletService.updateDepositStatus(confirmAction.deposit.id, { status: 'paid', amount: confirmAction.deposit.amount, description: 'Approved from frontend' })
-      toast.success('Deposit approved')
+      await walletService.approveDeposit(confirmAction.deposit.id, { amount: confirmAction.deposit.amount })
+      toast.success('Deposit approved successfully')
       setConfirmAction(null)
       await load()
     } catch (error) {
@@ -67,8 +67,8 @@ const AdminDeposits = () => {
     if (!confirmAction?.deposit) return
     setConfirmLoading(true)
     try {
-      await walletService.updateDepositStatus(confirmAction.deposit.id, { status: 'cancelled', reason: cancelReason.trim() })
-      toast.success('Deposit cancelled')
+      await walletService.cancelDeposit(confirmAction.deposit.id, { reason: cancelReason.trim() })
+      toast.success('Deposit rejected')
       setConfirmAction(null)
       setCancelReason('')
       await load()
@@ -99,39 +99,42 @@ const AdminDeposits = () => {
   }
 
   return (
-    <div>
+    <div className="luxe-page-fade">
       <div className="page-toolbar">
         <div>
           <h1>Admin Deposits</h1>
-          <p>Review and approve user deposits.</p>
+          <p>Review and process user wallet top-up requests.</p>
         </div>
       </div>
-      <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
-        <i className="bi bi-funnel"></i>
-        <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
-          <option value="">All status</option>
-          <option value="pending">Pending</option>
-          <option value="paid">Paid</option>
-          <option value="expired">Expired</option>
-          <option value="failed">Failed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
-        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
-          <i className="bi bi-x-lg me-2"></i>Reset
-        </button>
-      </form>
+
+      <div className="toolbar-actions mb-4">
+        <form className="filter-pill filter-only status-filter" onSubmit={submitSearch}>
+          <i className="bi bi-funnel"></i>
+          <select value={statusInput} onChange={(event) => setStatusInput(event.target.value)}>
+            <option value="">All Payment Status</option>
+            <option value="pending">Pending Review</option>
+            <option value="paid">Settled / Paid</option>
+            <option value="expired">Expired</option>
+            <option value="failed">Failed</option>
+            <option value="cancelled">Rejected / Cancelled</option>
+          </select>
+          <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+          <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+            <i className="bi bi-x-lg me-2"></i>Reset
+          </button>
+        </form>
+      </div>
+
       <section className="table-panel">
         <table className="table app-table align-middle">
           <thead>
             <tr>
-              <th>User</th>
-              <th>Reference</th>
-              <th>Amount</th>
-              <th>Pay</th>
+              <th>Requesting User</th>
+              <th>Reference & Method</th>
+              <th className="text-end">Base Amount</th>
+              <th className="text-end">Final Payable</th>
               <th>Status</th>
-              <th>Reason</th>
-              <th className="text-end">Action</th>
+              <th className="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -140,44 +143,72 @@ const AdminDeposits = () => {
               return (
                 <tr key={row.id}>
                   <td>
-                    <span className="table-main">
-                      <strong>{row.user?.name || row.user?.email || 'User'}</strong>
-                      {row.user?.email && row.user?.name && <span className="table-subtext">{row.user.email}</span>}
-                    </span>
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="user-avatar-luxe" style={{ width: '36px', height: '36px', borderRadius: '10px' }}>
+                         <div className="avatar-placeholder" style={{ fontSize: '14px' }}>{row.user?.name?.charAt(0) || '?'}</div>
+                      </div>
+                      <span className="table-main">
+                        <strong>{row.user?.name || 'Unknown'}</strong>
+                        <span className="table-subtext d-block">{row.user?.email}</span>
+                      </span>
+                    </div>
                   </td>
                   <td>
                     <span className="table-main">
                       <strong>{methodLabel(row.method)}</strong>
-                      <span className="table-subtext">{row.payment_reference ? `Ref ${row.payment_reference}` : 'Waiting for reference'}</span>
+                      <span className="table-subtext d-block">
+                         <i className="bi bi-hash"></i> {row.payment_reference || 'NO-REF'}
+                         {metadata.cancel_reason && <span className="text-danger ms-2">• {metadata.cancel_reason}</span>}
+                      </span>
                     </span>
                   </td>
-                  <td className="table-number">{formatMoney(row.amount)}</td>
-                  <td className="table-number">{isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : '-'}</td>
-                  <td><span className={`status-badge ${depositStatusClass(row)} text-capitalize`}>{depositStatus(row)}</span></td>
-                  <td><span className="table-subtext">{metadata.cancel_reason || '-'}</span></td>
+                  <td className="table-number"><strong>{formatMoney(row.amount)}</strong></td>
+                  <td className="table-number">
+                     <span className="luxe-value-strong text-primary">
+                        {isQRISDeposit(row) ? formatMoney(depositPayableAmount(row)) : formatMoney(row.amount)}
+                     </span>
+                  </td>
+                  <td>
+                     <span className={`status-badge ${depositStatusClass(row)} text-capitalize`}>
+                        {depositStatus(row)}
+                     </span>
+                  </td>
                   <td className="text-end">
                     <TableActionMenu
-                      label="Open deposit actions"
+                      label="Deposit actions"
                       items={[
-                        { label: 'Detail', to: `/admin/deposits/${row.id}` },
-                        { label: 'Approve', hidden: !canApproveDeposit, disabled: row.status !== 'pending', onClick: () => openConfirm('approve', row) },
-                        { label: 'Cancel', hidden: !canCancelDeposit, disabled: row.status !== 'pending', danger: true, onClick: () => openConfirm('cancel', row) },
+                        { label: 'Review Details', to: `/admin/deposits/${row.id}` },
+                        { label: 'Approve Payment', hidden: !canApproveDeposit || row.status !== 'pending', onClick: () => openConfirm('approve', row) },
+                        { label: 'Reject Request', hidden: !canCancelDeposit || row.status !== 'pending', danger: true, onClick: () => openConfirm('cancel', row) },
                       ]}
                     />
                   </td>
                 </tr>
               )
             })}
-            {!rows.length && <tr><td colSpan="7" className="empty-cell">{loading ? 'Loading...' : 'No deposits found'}</td></tr>}
+            {!rows.length && (
+               <tr>
+                  <td colSpan="6" className="empty-cell py-5">
+                    <div className="text-center">
+                       <i className="bi bi-wallet2 text-muted display-4"></i>
+                       <p className="mt-3 text-muted">{loading ? 'Scanning deposits...' : 'No deposit requests found.'}</p>
+                    </div>
+                  </td>
+               </tr>
+            )}
           </tbody>
         </table>
       </section>
       <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
+      
       <ConfirmationModal
         show={Boolean(confirmAction)}
-        title={isCancelAction ? 'Cancel Deposit' : 'Approve Deposit'}
-        message={`${isCancelAction ? 'Cancel' : 'Approve'} deposit ${formatMoney(confirmDeposit?.amount)} for ${confirmDeposit?.user?.name || confirmDeposit?.user?.email || 'this user'}?`}
-        confirmLabel={isCancelAction ? 'Cancel deposit' : 'Approve'}
+        title={isCancelAction ? 'Reject Deposit Request' : 'Approve Payment'}
+        message={isCancelAction 
+           ? `Are you sure you want to reject the deposit for ${confirmDeposit?.user?.name}? This action cannot be undone.`
+           : `Confirm receipt of ${formatMoney(confirmDeposit?.amount)} from ${confirmDeposit?.user?.name}? Wallet will be credited immediately.`
+        }
+        confirmLabel={isCancelAction ? 'Reject Now' : 'Approve Now'}
         confirmClassName={isCancelAction ? 'btn-danger' : 'btn-primary'}
         loading={confirmLoading}
         confirmDisabled={isCancelAction && !cancelReason.trim()}
@@ -188,13 +219,16 @@ const AdminDeposits = () => {
         onConfirm={isCancelAction ? cancel : approve}
       >
         {isCancelAction && (
-          <div>
-            <label className="form-label">Reason</label>
+          <div className="mt-3">
+            <label className="form-label">Rejection Reason</label>
             <textarea
               className="form-control"
-              placeholder="Example: duplicate payment request"
+              rows="3"
+              placeholder="e.g., Payment not found, incorrect amount, etc."
               value={cancelReason}
               onChange={(event) => setCancelReason(event.target.value)}
+              required
+              style={{ borderRadius: '12px' }}
             />
           </div>
         )}

@@ -132,7 +132,7 @@ const SMMServices = () => {
     setConfirmLoading(true)
     try {
       await smmService.syncServices({ platform: platformInput })
-      toast.success('Services synced')
+      toast.success('Provider services synced successfully')
       setConfirmSync(false)
       load()
     } catch (error) {
@@ -143,43 +143,51 @@ const SMMServices = () => {
   }
 
   return (
-    <div>
+    <div className="luxe-page-fade">
       <div className="page-toolbar">
         <div>
           <h1>SMM Services</h1>
-          <p>Provider catalog for SMM orders.</p>
+          <p>Global service catalog and real-time pricing.</p>
         </div>
         {hasPermission('smm_services', 'sync') && (
-          <button className="btn btn-primary" onClick={() => setConfirmSync(true)}><i className="bi bi-cloud-arrow-down me-2"></i>Sync</button>
+          <button className="btn btn-primary d-flex align-items-center gap-2" onClick={() => setConfirmSync(true)}>
+             <i className="bi bi-cloud-arrow-down-fill"></i> Sync Provider
+          </button>
         )}
       </div>
 
-      <form className="filter-pill" onSubmit={submitSearch}>
-        <i className="bi bi-search"></i>
-        <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search service name" />
-        <select value={platformInput} onChange={(event) => setPlatformInput(event.target.value)}>
-          <option value="">All platforms</option>
-          <option value="instagram">Instagram</option>
-          <option value="tiktok">TikTok</option>
-          <option value="youtube">YouTube</option>
-          <option value="facebook">Facebook</option>
-        </select>
-        <button className="btn btn-dark" type="submit" disabled={loading}>Search</button>
-        <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
-          <i className="bi bi-x-lg me-2"></i>Reset
-        </button>
-      </form>
+      <div className="toolbar-actions mb-4">
+        <form className="filter-pill filter-only" onSubmit={submitSearch}>
+          <i className="bi bi-search"></i>
+          <input 
+             value={searchInput} 
+             onChange={(event) => setSearchInput(event.target.value)} 
+             placeholder="Search service name..." 
+          />
+          <select value={platformInput} onChange={(event) => setPlatformInput(event.target.value)}>
+            <option value="">All Platforms</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="facebook">Facebook</option>
+          </select>
+          <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+          <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
+            <i className="bi bi-x-lg me-2"></i>Reset
+          </button>
+        </form>
+      </div>
 
       <section className="table-panel">
         <table className="table app-table table-wide align-middle">
           <thead>
             <tr>
-              <th>{sortButton('provider_service_id', 'ID')}</th>
+              <th style={{ width: '80px' }}>{sortButton('provider_service_id', 'ID')}</th>
               <th>{sortButton('name', 'Service Name')}</th>
               <th>{sortButton('platform', 'Platform')}</th>
-              <th>{sortButton('min_quantity', 'Min/Max')}</th>
-              <th>{sortButton('price', 'Price / 1k')}</th>
-              <th>Status</th>
+              <th className="text-end">Min / Max</th>
+              <th className="text-end">{sortButton('price', 'Price / 1k')}</th>
+              <th className="text-end">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -189,38 +197,67 @@ const SMMServices = () => {
                   <td colSpan="6">
                     <div className="table-group-head">
                       <div className="table-group-meta">
+                        <i className="bi bi-folder2-open text-primary"></i>
                         <span className="table-group-title">{group.name}</span>
-                        <span className="table-group-count">{group.rows.length} service{group.rows.length === 1 ? '' : 's'}</span>
-                        {platform && <span className="table-group-badge text-capitalize">{platform}</span>}
+                        <span className="table-group-count">{group.rows.length} items</span>
                       </div>
-                      {sortButton('category', 'Category')}
+                      <span className="status-badge status-badge-sm info text-capitalize">{group.rows[0]?.platform || 'multi'}</span>
                     </div>
                   </td>
                 </tr>
                 {group.rows.map((row) => (
                   <tr key={row.id}>
-                    <td><span className="table-id">{row.provider_service_id}</span></td>
-                    <td><span className="table-main"><strong>{row.name}</strong></span></td>
-                    <td className="text-capitalize table-nowrap">{row.platform || '-'}</td>
-                    <td className="table-number">{row.min_quantity || '-'} / {row.max_quantity || '-'}</td>
-                    <td className="table-number">{formatMoney(row.price)}</td>
-                    <td><span className={`badge ${row.is_active ? 'text-bg-success' : 'text-bg-secondary'}`}>{row.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td><span className="luxe-value-code">{row.provider_service_id}</span></td>
+                    <td>
+                       <span className="table-main">
+                          <strong>{row.name}</strong>
+                          <span className="table-subtext d-block">{row.brand || group.name}</span>
+                       </span>
+                    </td>
+                    <td>
+                       <span className="status-badge status-badge-sm info text-capitalize">
+                          <i className={`bi bi-${row.platform || 'globe'} me-1`}></i> {row.platform || '-'}
+                       </span>
+                    </td>
+                    <td className="table-number">
+                       <div className="table-main">
+                          <strong>{row.min_quantity?.toLocaleString('id-ID') || '1'}</strong>
+                          <span className="table-subtext">to {row.max_quantity?.toLocaleString('id-ID') || '∞'}</span>
+                       </div>
+                    </td>
+                    <td className="table-number">
+                       <span className="luxe-value-strong text-primary">{formatMoney(row.price)}</span>
+                    </td>
+                    <td className="text-end">
+                       <span className={`status-badge ${row.is_active ? 'success' : 'danger'}`}>
+                          {row.is_active ? 'Available' : 'Disabled'}
+                       </span>
+                    </td>
                   </tr>
                 ))}
               </Fragment>
             ))}
             {!rows.length && (
-              <tr><td colSpan="6" className="empty-cell">{loading ? 'Loading...' : 'No services found'}</td></tr>
+              <tr>
+                <td colSpan="6" className="empty-cell py-5">
+                   <div className="text-center">
+                      <i className="bi bi-collection text-muted display-4"></i>
+                      <p className="mt-3 text-muted">{loading ? 'Fetching catalog...' : 'No services found.'}</p>
+                   </div>
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </section>
       <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
+      
       <ConfirmationModal
         show={confirmSync}
         title="Sync Services"
-        message={`Sync SMM services${platformInput ? ` for ${platformInput}` : ''} from provider? Existing service data may be updated.`}
-        confirmLabel="Sync"
+        message={`This will update the ${platformInput || 'global'} catalog from the provider. Service pricing and availability may change.`}
+        confirmLabel="Start Sync"
+        confirmClassName="btn-primary"
         loading={confirmLoading}
         onCancel={() => setConfirmSync(false)}
         onConfirm={sync}

@@ -30,11 +30,12 @@ const Dashboard = () => {
       ]
       if (canViewProviderData) requests.push(providerService.getBalance())
 
-      const [summaryRes, walletRes, providerRes] = await Promise.allSettled(requests)
-      if (summaryRes.status === 'fulfilled') setSummary(summaryRes.value.data.data)
-      if (walletRes.status === 'fulfilled') setWallet(walletRes.value.data.data)
-      if (providerRes?.status === 'fulfilled') setProviderBalance(providerRes.value.data.data)
-      if (!canViewProviderData) setProviderBalance(null)
+      const results = await Promise.allSettled(requests)
+      if (results[0].status === 'fulfilled') setSummary(results[0].value.data.data)
+      if (results[1].status === 'fulfilled') setWallet(results[1].value.data.data)
+      if (canViewProviderData && results[2]?.status === 'fulfilled') {
+        setProviderBalance(results[2].value.data.data)
+      }
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to load dashboard'))
     } finally {
@@ -47,86 +48,116 @@ const Dashboard = () => {
   }, [load])
 
   const cards = [
-    { label: 'Total orders', value: summary?.total_orders, icon: 'bi-bag' },
-    { label: 'Completed', value: summary?.completed_orders, icon: 'bi-check2-circle' },
-    { label: 'Processing', value: summary?.processing_orders, icon: 'bi-arrow-repeat' },
-    { label: 'Pending', value: summary?.pending_orders, icon: 'bi-hourglass-split' },
+    { label: 'Total Orders', value: summary?.total_orders, icon: 'bi-bag-heart', color: 'primary' },
+    { label: 'Completed', value: summary?.completed_orders, icon: 'bi-check2-circle', color: 'success' },
+    { label: 'Processing', value: summary?.processing_orders, icon: 'bi-arrow-repeat', color: 'warning' },
+    { label: 'Pending', value: summary?.pending_orders, icon: 'bi-hourglass-split', color: 'info' },
   ]
 
   return (
-    <div>
-      <div className="page-hero">
-        <div>
-          <h1>3ZA Digital Operations</h1>
-          <p>{canViewProviderData ? 'Track SMM orders, margin, wallet balance, and provider readiness.' : 'Track your SMM orders, wallet balance, and deposit activity.'}</p>
+    <div className="luxe-page-fade">
+      <div className="luxe-detail-hero mb-4">
+        <div className="luxe-hero-content">
+          <div className="luxe-hero-kicker">
+             <i className="bi bi-speedometer2"></i> Operation Center
+          </div>
+          <h1 className="luxe-hero-title">Overview</h1>
+          <p className="luxe-hero-subtitle">
+            {canViewProviderData 
+               ? 'Monitor SMM operations, profit margins, and provider readiness.' 
+               : 'Track your personal SMM orders and wallet balance activity.'}
+          </p>
         </div>
-        <div className="hero-actions">
-          <Link to="/smm/orders/new" className="btn btn-primary"><i className="bi bi-plus-lg me-2"></i>New order</Link>
-          <button type="button" className="btn btn-outline-dark" onClick={load}>Refresh</button>
+        <div className="toolbar-actions">
+           <button type="button" className="btn btn-outline-dark d-flex align-items-center gap-2" onClick={load}>
+              <i className={`bi bi-arrow-repeat ${loading ? 'spin' : ''}`}></i> Refresh
+           </button>
+           <Link to="/smm/orders/new" className="btn btn-primary d-flex align-items-center gap-2">
+              <i className="bi bi-plus-circle-fill"></i> New Order
+           </Link>
         </div>
       </div>
 
-      <div className="metric-grid">
+      <div className="metric-grid mb-4">
         {cards.map((card) => (
           <div className="metric-card" key={card.label}>
-            <i className={`bi ${card.icon}`}></i>
-            <span>{card.label}</span>
-            <strong>{loading ? '-' : new Intl.NumberFormat('id-ID').format(card.value || 0)}</strong>
+            <div className={`metric-icon-box ${card.color}`}>
+               <i className={`bi ${card.icon}`}></i>
+            </div>
+            <div className="metric-info">
+               <span>{card.label}</span>
+               <strong>{loading ? '...' : new Intl.NumberFormat('id-ID').format(card.value || 0)}</strong>
+            </div>
           </div>
         ))}
       </div>
 
       <div className="content-grid two">
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Revenue snapshot</h2>
-            <span className="status-dot">SMM</span>
+        <section className="luxe-detail-card">
+          <div className="luxe-card-header">
+            <h3><i className="bi bi-graph-up-arrow"></i> Financial Snapshot</h3>
+            <span className="status-badge status-badge-sm info">Live</span>
           </div>
-          <div className="money-row">
-            <span>Total amount</span>
-            <strong>{formatMoney(summary?.total_amount)}</strong>
+          <div className="luxe-card-body">
+            <div className="money-row">
+              <span>Total Spending</span>
+              <strong>{formatMoney(summary?.total_amount)}</strong>
+            </div>
+            {canViewProviderData && (
+              <>
+                <div className="money-row">
+                  <span>Provider Cost</span>
+                  <span className="text-muted">{formatMoney(summary?.total_provider_charge)}</span>
+                </div>
+                <div className="money-row highlight mt-3 pt-3 border-top">
+                  <span>Net Profit</span>
+                  <strong className="text-success" style={{ fontSize: '20px' }}>{formatMoney(summary?.total_profit)}</strong>
+                </div>
+              </>
+            )}
           </div>
-          {canViewProviderData && (
-            <>
-              <div className="money-row">
-                <span>Provider charge</span>
-                <strong>{formatMoney(summary?.total_provider_charge)}</strong>
-              </div>
-              <div className="money-row highlight">
-                <span>Profit</span>
-                <strong>{formatMoney(summary?.total_profit)}</strong>
-              </div>
-            </>
-          )}
         </section>
 
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Balances</h2>
-            <span className="status-dot">Live</span>
+        <section className="luxe-detail-card">
+          <div className="luxe-card-header">
+            <h3><i className="bi bi-wallet2"></i> Current Balances</h3>
+            <span className={`status-badge status-badge-sm ${wallet?.is_active !== false ? 'success' : 'danger'}`}>
+               {wallet?.is_active !== false ? 'Active' : 'Locked'}
+            </span>
           </div>
-          <div className="money-row">
-            <span>My wallet</span>
-            <strong>{formatMoney(wallet?.balance)}</strong>
-          </div>
-          <div className="money-row">
-            <span>Currency</span>
-            <strong>{wallet?.currency || 'IDR'}</strong>
-          </div>
-          {canViewProviderData && (
+          <div className="luxe-card-body">
             <div className="money-row">
-              <span>Provider</span>
-              <strong>{formatMoney(providerBalance?.balance || providerBalance?.data?.balance)}</strong>
+              <span>Your Wallet</span>
+              <strong className="text-primary" style={{ fontSize: '20px' }}>{formatMoney(wallet?.balance)}</strong>
             </div>
-          )}
+            <div className="money-row">
+              <span>Currency</span>
+              <strong>{wallet?.currency || 'IDR'}</strong>
+            </div>
+            {canViewProviderData && (
+              <div className="money-row mt-3 pt-3 border-top">
+                <span>H2H Provider</span>
+                <strong>{formatMoney(providerBalance?.balance || providerBalance?.data?.balance)}</strong>
+              </div>
+            )}
+          </div>
         </section>
       </div>
 
+      <h3 className="mt-4 mb-3" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--ink)' }}>Quick Navigation</h3>
       <div className="quick-actions">
-        <Link to="/smm/services"><i className="bi bi-grid"></i>Browse services</Link>
-        <Link to="/smm/orders"><i className="bi bi-bag-check"></i>Review orders</Link>
-        <Link to="/deposits"><i className="bi bi-receipt"></i>Deposit history</Link>
-        <Link to="/wallet"><i className="bi bi-wallet2"></i>Wallet ledger</Link>
+        <Link to="/smm/services" className="luxe-card-header py-3 px-4" style={{ borderRadius: '16px', border: '1px solid var(--hairline-soft)' }}>
+           <i className="bi bi-grid-fill text-primary"></i> Browse Services
+        </Link>
+        <Link to="/smm/orders" className="luxe-card-header py-3 px-4" style={{ borderRadius: '16px', border: '1px solid var(--hairline-soft)' }}>
+           <i className="bi bi-bag-check-fill text-success"></i> Review Orders
+        </Link>
+        <Link to="/deposits" className="luxe-card-header py-3 px-4" style={{ borderRadius: '16px', border: '1px solid var(--hairline-soft)' }}>
+           <i className="bi bi-receipt-cutoff text-warning"></i> Add Funds
+        </Link>
+        <Link to="/wallet" className="luxe-card-header py-3 px-4" style={{ borderRadius: '16px', border: '1px solid var(--hairline-soft)' }}>
+           <i className="bi bi-journals text-info"></i> Transaction Log
+        </Link>
       </div>
     </div>
   )
