@@ -1071,6 +1071,11 @@ body {
   margin-bottom: 24px;
 }
 
+/* Optimization: No bottom margin when inside a grid to avoid double spacing */
+.content-grid > .luxe-detail-card {
+  margin-bottom: 0;
+}
+
 .luxe-card-header {
   padding: 20px 24px;
   border-bottom: 1px solid var(--hairline-soft);
@@ -1314,6 +1319,10 @@ body {
   
   .luxe-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .content-grid {
     gap: 16px;
   }
 
@@ -2674,7 +2683,7 @@ body {
   background: var(--canvas);
   border: 1px solid var(--hairline);
   border-radius: 8px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   display: inline-flex;
   flex-direction: column;
   min-width: 128px;
@@ -2682,8 +2691,13 @@ body {
   position: absolute;
   right: 12px;
   text-align: left;
-  top: calc(50% + 20px);
-  z-index: 20;
+  top: calc(100% + 4px); /* Positioned below the button */
+  z-index: 100; /* High z-index to stay on top */
+}
+
+.open-up .table-action-menu {
+  top: auto;
+  bottom: calc(100% + 4px); /* Positioned above the button */
 }
 
 .table-action-item {

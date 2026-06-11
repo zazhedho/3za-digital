@@ -3,10 +3,23 @@ import { Link } from 'react-router-dom'
 
 const TableActionMenu = ({ items = [], label = 'Open actions' }) => {
   const [open, setOpen] = useState(false)
+  const [openUp, setOpenUp] = useState(false)
   const menuRef = useRef(null)
 
   useEffect(() => {
     if (!open) return undefined
+
+    const checkPosition = () => {
+      if (menuRef.current) {
+        const rect = menuRef.current.getBoundingClientRect()
+        const spaceBelow = window.innerHeight - rect.bottom
+        // If less than 200px below, open upwards
+        setOpenUp(spaceBelow < 200)
+      }
+    }
+
+    checkPosition()
+    window.addEventListener('scroll', checkPosition, true)
 
     const closeMenu = (event) => {
       if (menuRef.current?.contains(event.target)) return
@@ -14,13 +27,16 @@ const TableActionMenu = ({ items = [], label = 'Open actions' }) => {
     }
 
     document.addEventListener('mousedown', closeMenu)
-    return () => document.removeEventListener('mousedown', closeMenu)
+    return () => {
+      document.removeEventListener('mousedown', closeMenu)
+      window.removeEventListener('scroll', checkPosition, true)
+    }
   }, [open])
 
   const close = () => setOpen(false)
 
   return (
-    <span className="table-action-cell" ref={menuRef}>
+    <span className={`table-action-cell ${openUp ? 'open-up' : ''}`} ref={menuRef}>
       <button
         className="action-menu-button"
         type="button"
