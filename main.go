@@ -116,16 +116,7 @@ func main() {
 }
 
 func runMigration() {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-			utils.GetEnv("DB_USERNAME", ""),
-			utils.GetEnv("DB_PASS", ""),
-			utils.GetEnv("DB_HOST", ""),
-			utils.GetEnv("DB_PORT", ""),
-			utils.GetEnv("DB_NAME", ""),
-			utils.GetEnv("DB_SSLMODE", "disable"))
-	}
+	dsn := database.PostgresDSN()
 
 	m, err := migrate.New(utils.GetEnv("PATH_MIGRATE", "file://migrations"), dsn)
 	if err != nil {
