@@ -1,27 +1,40 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
 import menuService from '../../services/menuService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import TableActionMenu from '../../components/common/TableActionMenu'
+import PaginationBar from '../../components/common/PaginationBar'
 
 const MenuList = () => {
   const { hasPermission } = useAuth()
+  const [params, setParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState(params.get('search') || '')
+  const [search, setSearch] = useState(params.get('search') || '')
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 10 })
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await menuService.getAll({ search, limit: 10 })
-      setRows(getListPayload(response).rows)
+      const response = await menuService.getAll({ search, page, limit: 10 })
+      const payload = getListPayload(response)
+      setRows(payload.rows)
+      setPagination(payload)
     } finally {
       setLoading(false)
     }
-  }, [search])
+  }, [search, page])
+
+  useEffect(() => {
+    const nextSearch = params.get('search') || ''
+    setSearchInput(nextSearch)
+    setSearch(nextSearch)
+    setPage(1)
+  }, [params])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load menus')))
@@ -29,12 +42,17 @@ const MenuList = () => {
 
   const submitSearch = (event) => {
     event.preventDefault()
-    setSearch(searchInput.trim())
+    const nextSearch = searchInput.trim()
+    setSearch(nextSearch)
+    setPage(1)
+    setParams(nextSearch ? { search: nextSearch } : {})
   }
 
   const resetSearch = () => {
     setSearchInput('')
     setSearch('')
+    setPage(1)
+    setParams({})
   }
 
   return (
@@ -44,14 +62,9 @@ const MenuList = () => {
           <h1>Navigation Menus</h1>
           <p>Configure sidebar navigation and application route visibility.</p>
         </div>
-        {hasPermission('menus', 'create') && (
-          <Link to="/menus/new" className="btn btn-primary d-flex align-items-center gap-2">
-            <i className="bi bi-layout-sidebar-inset"></i> New Menu
-          </Link>
-        )}
       </div>
 
-      <div className="toolbar-actions list-filter-bar">
+      <div className="toolbar-actions mb-4">
         <form className="filter-pill filter-only" onSubmit={submitSearch}>
           <i className="bi bi-search"></i>
           <input 
@@ -124,6 +137,7 @@ const MenuList = () => {
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
     </div>
   )
 }

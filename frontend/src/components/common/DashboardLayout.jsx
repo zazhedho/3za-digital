@@ -70,13 +70,13 @@ const DashboardLayout = () => {
       path: '/admin/wallets',
       label: 'Admin Wallets',
       icon: 'bi-safe',
-      orderIndex: 905,
+      orderIndex: 104,
     })
     addPermissionMenu('admin_deposits', 'list', {
       path: '/admin/deposits',
       label: 'Admin Deposits',
       icon: 'bi-bank',
-      orderIndex: 906,
+      orderIndex: 105,
     })
 
     return nextMenus.sort((a, b) => a.orderIndex - b.orderIndex)

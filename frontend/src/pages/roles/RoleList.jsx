@@ -1,27 +1,40 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
 import roleService from '../../services/roleService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import TableActionMenu from '../../components/common/TableActionMenu'
+import PaginationBar from '../../components/common/PaginationBar'
 
 const RoleList = () => {
   const { hasPermission } = useAuth()
+  const [params, setParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState(params.get('search') || '')
+  const [search, setSearch] = useState(params.get('search') || '')
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 10 })
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await roleService.getAll({ search, limit: 10 })
-      setRows(getListPayload(response).rows)
+      const response = await roleService.getAll({ search, page, limit: 10 })
+      const payload = getListPayload(response)
+      setRows(payload.rows)
+      setPagination(payload)
     } finally {
       setLoading(false)
     }
-  }, [search])
+  }, [search, page])
+
+  useEffect(() => {
+    const nextSearch = params.get('search') || ''
+    setSearchInput(nextSearch)
+    setSearch(nextSearch)
+    setPage(1)
+  }, [params])
 
   useEffect(() => {
     load().catch((error) => toast.error(getErrorMessage(error, 'Failed to load roles')))
@@ -29,12 +42,17 @@ const RoleList = () => {
 
   const submitSearch = (event) => {
     event.preventDefault()
-    setSearch(searchInput.trim())
+    const nextSearch = searchInput.trim()
+    setSearch(nextSearch)
+    setPage(1)
+    setParams(nextSearch ? { search: nextSearch } : {})
   }
 
   const resetSearch = () => {
     setSearchInput('')
     setSearch('')
+    setPage(1)
+    setParams({})
   }
 
   return (
@@ -117,6 +135,7 @@ const RoleList = () => {
           </tbody>
         </table>
       </section>
+      <PaginationBar pagination={pagination} loading={loading} onPageChange={setPage} />
     </div>
   )
 }

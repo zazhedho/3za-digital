@@ -11,8 +11,10 @@ const titleMap = {
   wallet: 'Wallet',
   deposits: 'Deposits',
   admin: 'Admin',
+  wallets: 'Wallets',
   users: 'Users',
   roles: 'Roles',
+  menus: 'Menus',
   configs: 'Configs',
   audits: 'Audit Trails',
   profile: 'Profile',
@@ -24,6 +26,8 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 
 const getRouteTitle = (parts) => {
   const path = `/${parts.join('/')}`
+  if (path === '/admin/wallets') return 'Admin Wallets'
+  if (path === '/menus') return 'Navigation Menus'
   if (uuidPattern.test(parts.at(-1) || '')) {
     if (path.startsWith('/admin/deposits/')) return 'Admin Deposit Detail'
     if (path.startsWith('/smm/orders/')) return 'SMM Order Detail'
