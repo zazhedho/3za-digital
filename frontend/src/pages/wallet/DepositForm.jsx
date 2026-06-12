@@ -76,6 +76,13 @@ const DepositForm = ({ onClose, onCreated }) => {
           <div className="deposit-created">
             {createdIsQRIS ? (
               <>
+                <div className="luxe-alert warning mb-4 text-start">
+                   <i className="bi bi-shield-check"></i>
+                   <div>
+                      <strong className="d-block mb-1">Verify Merchant Name</strong>
+                      <span>Please ensure you are paying to <strong>ZA Labs Tech</strong>. Payments to any other name will not be processed.</span>
+                   </div>
+                </div>
                 <div className="qris-modal-code">
                   {createdQRISImage ? (
                     <img src={createdQRISImage} alt="QRIS payment code" />

@@ -1392,6 +1392,33 @@ body {
 .mx-auto { margin-left: auto; margin-right: auto; }
 .h-fit { height: fit-content; }
 
+.luxe-alert {
+  border-radius: 12px;
+  font-size: 13px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.5;
+}
+
+.luxe-alert.info {
+  background: #f0f9ff;
+  border: 1px solid #ccdcff;
+  color: #0284c7;
+}
+
+.luxe-alert.warning {
+  background: #fffbeb;
+  border: 1px solid #f3df9d;
+  color: #a16207;
+}
+
+.luxe-alert i {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 .layout-wrapper {
   background: var(--canvas);
   --sidebar-width: 280px;
@@ -2078,10 +2105,16 @@ body {
 }
 
 .qris-modal-body {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  display: grid;
-  gap: 14px;
-  justify-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.qris-modal-body .luxe-alert {
+  width: 100%;
+  text-align: left;
 }
 
 .qris-modal-body strong {
@@ -2146,6 +2179,46 @@ body {
   padding: 10px;
   resize: vertical;
   width: 100%;
+}
+
+/* QRIS Action Box for Details Page */
+.qris-action-box {
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.qris-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qris-action-box .btn {
+  height: 48px;
+  padding: 0 24px;
+  font-weight: 700;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 576px) {
+  .qris-action-box {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .qris-action-info {
+    margin-bottom: 8px;
+  }
 }
 
 .detail-grid {
