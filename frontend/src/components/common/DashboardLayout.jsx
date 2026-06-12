@@ -53,8 +53,11 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     setMobileOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
     loadWallet().catch(() => setWallet(null))
-  }, [loadWallet, location.pathname])
+  }, [loadWallet])
 
   const menus = useMemo(() => {
     const nextMenus = [...apiMenus]

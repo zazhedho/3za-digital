@@ -2,7 +2,9 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import api, { getErrorMessage } from '../services/api'
 import authService from '../services/authService'
+import { clearUserMenusCache } from '../services/menuService'
 import permissionService from '../services/permissionService'
+import { clearMyWalletCache } from '../services/walletService'
 
 const AuthContext = createContext()
 
@@ -21,6 +23,8 @@ export const AuthProvider = ({ children }) => {
   const clearSession = useCallback(() => {
     localStorage.removeItem('token')
     localStorage.removeItem('refresh_token')
+    clearUserMenusCache()
+    clearMyWalletCache()
     setToken(null)
     setUser(null)
     setPermissions([])
