@@ -1,15 +1,13 @@
 package boqris
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"path"
 	"strings"
+
+	"3za-digital/internal/integrations/httpjson"
 )
 
 type Client struct {
@@ -61,74 +59,34 @@ func (c *Client) GetTransaction(ctx context.Context, transactionID string) (*Cre
 }
 
 func (c *Client) doJSON(ctx context.Context, method, endpoint string, payload interface{}, target interface{}) error {
-	requestURL, err := c.buildURL(endpoint)
+	response, err := httpjson.Do(ctx, httpjson.Request{
+		Client:   c.httpClient,
+		BaseURL:  c.config.BaseURL,
+		Method:   method,
+		Endpoint: endpoint,
+		Payload:  payload,
+		Target:   target,
+		Headers: map[string]string{
+			"Authorization": "Bearer " + strings.TrimSpace(c.config.APIKey),
+		},
+	})
 	if err != nil {
 		return err
 	}
-
-	var body io.Reader
-	if payload != nil {
-		encoded, err := json.Marshal(payload)
-		if err != nil {
-			return err
-		}
-		body = bytes.NewReader(encoded)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, requestURL, body)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(c.config.APIKey))
-	if payload != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+	if !httpjson.IsSuccess(response.StatusCode) {
 		return &APIError{
-			HTTPStatus: resp.StatusCode,
-			Message:    fmt.Sprintf("boqris returned http status %d", resp.StatusCode),
-			Raw:        cloneRaw(responseBody),
+			HTTPStatus: response.StatusCode,
+			Message:    fmt.Sprintf("boqris returned http status %d", response.StatusCode),
+			Raw:        response.Body,
 		}
 	}
-	if err := json.Unmarshal(responseBody, target); err != nil {
-		return err
-	}
-	setRaw(target, responseBody)
+	setRaw(target, response.Body)
 	return nil
-}
-
-func (c *Client) buildURL(endpoint string) (string, error) {
-	baseURL, err := url.Parse(strings.TrimRight(c.config.BaseURL, "/"))
-	if err != nil {
-		return "", err
-	}
-	baseURL.Path = strings.TrimRight(baseURL.Path, "/") + "/" + strings.TrimLeft(endpoint, "/")
-	return baseURL.String(), nil
 }
 
 func setRaw(target interface{}, body []byte) {
 	switch response := target.(type) {
 	case *CreateTransactionResponse:
-		response.Raw = cloneRaw(body)
+		response.Raw = httpjson.CloneRaw(body)
 	}
-}
-
-func cloneRaw(body []byte) json.RawMessage {
-	if len(body) == 0 {
-		return nil
-	}
-	cloned := make([]byte, len(body))
-	copy(cloned, body)
-	return cloned
 }
