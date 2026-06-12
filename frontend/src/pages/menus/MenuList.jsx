@@ -16,7 +16,7 @@ const MenuList = () => {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await menuService.getAll({ search, limit: 100 })
+      const response = await menuService.getAll({ search, limit: 10 })
       setRows(getListPayload(response).rows)
     } finally {
       setLoading(false)

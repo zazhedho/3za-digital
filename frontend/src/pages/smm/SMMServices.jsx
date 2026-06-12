@@ -31,7 +31,8 @@ const SMMServices = () => {
   const [sortBy, setSortBy] = useState('category')
   const [sortDirection, setSortDirection] = useState('asc')
   const [page, setPage] = useState(1)
-  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
+  const [limit, setLimit] = useState(20)
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 })
   const [loading, setLoading] = useState(false)
   const [confirmSync, setConfirmSync] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
@@ -67,7 +68,7 @@ const SMMServices = () => {
       const response = await smmService.getServices({
         search,
         page,
-        limit: 50,
+        limit,
         order_by: sortBy,
         order_direction: sortDirection,
         'filters[platform]': platform || undefined,
@@ -81,7 +82,7 @@ const SMMServices = () => {
     } finally {
       setLoading(false)
     }
-  }, [page, platform, search, sortBy, sortDirection])
+  }, [page, limit, platform, search, sortBy, sortDirection])
 
   useEffect(() => {
     load()
@@ -101,6 +102,7 @@ const SMMServices = () => {
     setPlatform('')
     setSortBy('category')
     setSortDirection('asc')
+    setLimit(20)
     setPage(1)
     setParams({})
   }
@@ -156,13 +158,14 @@ const SMMServices = () => {
         )}
       </div>
 
-      <div className="toolbar-actions list-filter-bar">
+      <div className="toolbar-actions list-filter-bar mb-4">
         <form className="filter-pill filter-only" onSubmit={submitSearch}>
           <i className="bi bi-search"></i>
           <input 
              value={searchInput} 
              onChange={(event) => setSearchInput(event.target.value)} 
              placeholder="Search service name..." 
+             style={{ flex: 2 }}
           />
           <select value={platformInput} onChange={(event) => setPlatformInput(event.target.value)}>
             <option value="">All Platforms</option>
@@ -171,7 +174,14 @@ const SMMServices = () => {
             <option value="youtube">YouTube</option>
             <option value="facebook">Facebook</option>
           </select>
-          <button className="btn btn-dark" type="submit" disabled={loading}>Filter</button>
+          <select value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setPage(1); }}>
+            <option value="10">Show 10</option>
+            <option value="20">Show 20</option>
+            <option value="30">Show 30</option>
+            <option value="50">Show 50</option>
+            <option value="100">Show 100</option>
+          </select>
+          <button className="btn btn-dark px-4" type="submit" disabled={loading}>Filter</button>
           <button className="btn btn-outline-dark" type="button" onClick={resetSearch} disabled={loading}>
             <i className="bi bi-x-lg me-2"></i>Reset
           </button>
@@ -185,8 +195,8 @@ const SMMServices = () => {
               <th style={{ width: '80px' }}>{sortButton('provider_service_id', 'ID')}</th>
               <th>{sortButton('name', 'Service Name')}</th>
               <th>{sortButton('platform', 'Platform')}</th>
-              <th>Min / Max</th>
-              <th>{sortButton('price', 'Price / 1k')}</th>
+              <th className="text-end">Min / Max</th>
+              <th className="text-end">{sortButton('price', 'Price / 1k')}</th>
               <th className="text-end">Status</th>
             </tr>
           </thead>

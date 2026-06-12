@@ -17,7 +17,7 @@ const Wallet = () => {
   const [wallet, setWallet] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [page, setPage] = useState(1)
-  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 30 })
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 10 })
   const [loading, setLoading] = useState(false)
   const [typeInput, setTypeInput] = useState('')
   const [type, setType] = useState('')
@@ -32,7 +32,7 @@ const Wallet = () => {
         walletService.getMyWallet(),
         walletService.getMyTransactions({
           page,
-          limit: 30,
+          limit: 10,
           'filters[type]': type || undefined,
           'filters[direction]': direction || undefined,
         }),

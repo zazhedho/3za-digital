@@ -19,7 +19,7 @@ const DepositList = () => {
   const { hasPermission } = useAuth()
   const [rows, setRows] = useState([])
   const [page, setPage] = useState(1)
-  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 30 })
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 10 })
   const [loading, setLoading] = useState(false)
   const [statusInput, setStatusInput] = useState('')
   const [status, setStatus] = useState('')
@@ -32,7 +32,7 @@ const DepositList = () => {
     try {
       const response = await walletService.getMyDeposits({
         page,
-        limit: 30,
+        limit: 10,
         'filters[status]': status || undefined,
       })
       const payload = getListPayload(response)

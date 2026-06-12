@@ -32,7 +32,7 @@ const AuditList = () => {
   const [resourceFilter, setResourceFilter] = useState(params.get('filters[resource]') || '')
   const [resourceIdFilter, setResourceIdFilter] = useState(params.get('filters[resource_id]') || '')
   const [page, setPage] = useState(1)
-  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 20 })
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 10 })
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -50,7 +50,7 @@ const AuditList = () => {
       const response = await auditService.getAll({
         search,
         page,
-        limit: 20,
+        limit: 10,
         'filters[status]': status || undefined,
         'filters[action]': action || undefined,
         'filters[resource]': resourceFilter || undefined,

@@ -29,7 +29,7 @@ const AdminWallets = () => {
     try {
       const response = await walletService.getWallets({
         page,
-        limit: 50,
+        limit: 10,
         'filters[currency]': currency || undefined,
         'filters[is_active]': isActive || undefined,
       })

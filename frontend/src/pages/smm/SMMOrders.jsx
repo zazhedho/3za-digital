@@ -31,7 +31,7 @@ const SMMOrders = () => {
   const [statusInput, setStatusInput] = useState('')
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
-  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 50 })
+  const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1, limit: 10 })
   const [loading, setLoading] = useState(false)
   const [refreshingId, setRefreshingId] = useState('')
 
@@ -48,7 +48,7 @@ const SMMOrders = () => {
       const response = await smmService.getOrders({
         search,
         page,
-        limit: 50,
+        limit: 10,
         'filters[status]': status || undefined,
       })
       const payload = getListPayload(response)

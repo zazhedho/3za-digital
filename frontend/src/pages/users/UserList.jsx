@@ -16,7 +16,7 @@ const UserList = () => {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await userService.getAll({ search, limit: 50 })
+      const response = await userService.getAll({ search, limit: 10 })
       setRows(getListPayload(response).rows)
     } finally {
       setLoading(false)
