@@ -27,6 +27,7 @@ const (
 
 	DepositProviderQRIS   = "qris"
 	DepositProviderQRISLY = "qrisly"
+	DepositProviderBOQRIS = "boqris"
 
 	DepositMinimumAmount = "10000.00"
 )

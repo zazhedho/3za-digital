@@ -165,6 +165,10 @@ Optional but recommended:
   - `SMM_ORDER_RATE_LIMIT`, `SMM_ORDER_RATE_WINDOW_SECONDS`
   - `DEPOSIT_CREATE_RATE_LIMIT`, `DEPOSIT_CREATE_RATE_WINDOW_SECONDS`
 - `PAYMENT_WEBHOOK_RATE_LIMIT`, `PAYMENT_WEBHOOK_RATE_WINDOW_SECONDS`
+- Dynamic QRIS provider settings:
+  - `QRISLY_BASE_URL`, `QRISLY_API_KEY`, `QRISLY_QRIS_ID`, `QRISLY_OUTPUT_TYPE`, `QRISLY_TIMEOUT_SECONDS`
+  - `BOQRIS_BASE_URL`, `BOQRIS_API_KEY`, `BOQRIS_MERCHANT_ID`, `BOQRIS_TIMEOUT_SECONDS`
+  - choose the active dynamic provider from Configs using `payment.qris.dynamic_provider` (`qrisly` or `boqris`)
 
 H2H provider settings:
 - `H2H_BASE_URL`
@@ -174,6 +178,8 @@ H2H provider settings:
 - `H2H_TIMEOUT_SECONDS`
 
 H2H credentials must stay in backend environment variables only. Do not put them in frontend code, Postman shared variables, request logs, or provider API logs.
+
+QRIS provider credentials must also stay in backend environment variables only. Do not put `QRISLY_API_KEY` or `BOQRIS_API_KEY` in frontend code, Postman shared variables, request logs, or provider API logs.
 
 Optional payment webhook signature guard:
 - `PAYMENT_WEBHOOK_ENABLED` (default `false`)

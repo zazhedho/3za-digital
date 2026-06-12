@@ -24,6 +24,7 @@ import (
 	smmHandler "3za-digital/internal/handlers/http/smm"
 	userHandler "3za-digital/internal/handlers/http/user"
 	walletHandler "3za-digital/internal/handlers/http/wallet"
+	"3za-digital/internal/integrations/boqris"
 	"3za-digital/internal/integrations/h2h"
 	"3za-digital/internal/integrations/qrisly"
 	interfaceprovider "3za-digital/internal/interfaces/provider"
@@ -393,11 +394,16 @@ func (r *Routes) WalletRoutes() {
 	})
 	svcAppConfig := appConfigSvc.NewAppConfigService(repoAppConfig)
 	svcWallet := walletSvc.NewWalletService(repoWallet, svcProvider).WithConfigService(svcAppConfig)
-	if qrisClient, err := qrisly.NewClient(qrisly.LoadConfigFromEnv()); err != nil {
+	if qrisProvider, err := qrisly.NewProvider(qrisly.LoadConfigFromEnv()); err != nil {
 		logger.WriteLog(logger.LogLevelWarn, "QRISLY client not configured: ", err)
 		svcWallet.WithQRISInitError(err)
 	} else {
-		svcWallet.WithQRISProvider(qrisClient)
+		svcWallet.WithQRISProvider(qrisProvider)
+	}
+	if boqrisProvider, err := boqris.NewProvider(boqris.LoadConfigFromEnv()); err != nil {
+		logger.WriteLog(logger.LogLevelWarn, "BOQRIS client not configured: ", err)
+	} else {
+		svcWallet.WithQRISProvider(boqrisProvider)
 	}
 	repoAudit := auditRepo.NewAuditRepo(r.DB)
 	svcAudit := auditSvc.NewAuditService(repoAudit)

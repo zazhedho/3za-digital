@@ -12,9 +12,8 @@ import (
 	domainprovider "3za-digital/internal/domain/provider"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
-	"3za-digital/internal/integrations/qrisly"
+	interfacewallet "3za-digital/internal/interfaces/wallet"
 	"3za-digital/pkg/filter"
-	"3za-digital/utils"
 
 	"gorm.io/gorm"
 )
@@ -139,14 +138,22 @@ func (p mainBalanceProviderStub) GetH2HBalance(ctx context.Context) (domainprovi
 }
 
 type qrisProviderStub struct {
-	req             qrisly.GenerateQRISRequest
+	providerName    string
+	req             interfacewallet.QRISGenerateRequest
 	statusHistoryID string
-	response        *qrisly.GenerateQRISResponse
-	statusResponse  *qrisly.PaymentStatusResponse
+	response        *interfacewallet.QRISGenerateResponse
+	statusResponse  *interfacewallet.QRISPaymentStatusResponse
 	err             error
 }
 
-func (p *qrisProviderStub) GenerateQRIS(ctx context.Context, req qrisly.GenerateQRISRequest) (*qrisly.GenerateQRISResponse, error) {
+func (p *qrisProviderStub) Provider() string {
+	if p.providerName != "" {
+		return p.providerName
+	}
+	return domainwallet.DepositProviderQRISLY
+}
+
+func (p *qrisProviderStub) GenerateQRIS(ctx context.Context, req interfacewallet.QRISGenerateRequest) (*interfacewallet.QRISGenerateResponse, error) {
 	p.req = req
 	if p.err != nil {
 		return nil, p.err
@@ -154,7 +161,7 @@ func (p *qrisProviderStub) GenerateQRIS(ctx context.Context, req qrisly.Generate
 	return p.response, nil
 }
 
-func (p *qrisProviderStub) GetPaymentStatus(ctx context.Context, historyID string) (*qrisly.PaymentStatusResponse, error) {
+func (p *qrisProviderStub) GetPaymentStatus(ctx context.Context, historyID string) (*interfacewallet.QRISPaymentStatusResponse, error) {
 	p.statusHistoryID = historyID
 	if p.err != nil {
 		return nil, p.err
@@ -306,16 +313,15 @@ func TestCreateDepositStaticQRISUsesConfiguredImageAndUniqueCode(t *testing.T) {
 
 func TestCreateDepositDynamicQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.T) {
 	repo := &walletRepoStub{}
-	qrisProvider := &qrisProviderStub{response: &qrisly.GenerateQRISResponse{
-		Data: qrisly.GenerateQRISData{
-			HistoryID:      utils.FlexibleString("1778"),
-			QRISImageURL:   "https://qris.test/image.png",
-			OriginalAmount: utils.FlexibleInt64(105000),
-			FinalAmount:    utils.FlexibleInt64(105003),
-			PaymentStatus:  "unpaid",
-			ExpiryTime:     "2026-03-03 14:52:52",
-			MerchantName:   "ABC Store",
-		},
+	qrisProvider := &qrisProviderStub{response: &interfacewallet.QRISGenerateResponse{
+		Provider:         domainwallet.DepositProviderQRISLY,
+		TransactionID:    "1778",
+		PaymentReference: "1778",
+		QRISImageURL:     "https://qris.test/image.png",
+		PayableAmount:    105003,
+		Status:           "unpaid",
+		ExpiresAt:        "2026-03-03 14:52:52",
+		MerchantName:     "ABC Store",
 	}}
 	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
 
@@ -341,8 +347,8 @@ func TestCreateDepositDynamicQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.
 	if qrisProvider.req.Amount != 105000 {
 		t.Fatalf("expected QRISLY amount 105000, got %d", qrisProvider.req.Amount)
 	}
-	if !qrisProvider.req.UniqueAmount {
-		t.Fatal("expected unique amount request")
+	if qrisProvider.req.InvoiceNo == "" {
+		t.Fatal("expected invoice no request")
 	}
 
 	var metadata map[string]string
@@ -369,6 +375,64 @@ func TestCreateDepositDynamicQRISAddsFeeUniqueCodeAndPayableMetadata(t *testing.
 	}
 }
 
+func TestCreateDepositDynamicQRISUsesConfiguredBOQRISProvider(t *testing.T) {
+	repo := &walletRepoStub{}
+	boqrisProvider := &qrisProviderStub{
+		providerName: domainwallet.DepositProviderBOQRIS,
+		response: &interfacewallet.QRISGenerateResponse{
+			Provider:         domainwallet.DepositProviderBOQRIS,
+			TransactionID:    "8df2fc44-78c7-48a6-83f8-d6c94c352ae1",
+			PaymentReference: "8df2fc44-78c7-48a6-83f8-d6c94c352ae1",
+			Status:           "pending",
+			QRISString:       "000201010212",
+			QRISImageURL:     "https://api.boqris.id/qr/8df2fc44-78c7-48a6-83f8-d6c94c352ae1",
+			PayableAmount:    105771,
+			ExpiresAt:        "2026-06-12 04:15:06",
+		},
+	}
+	service := NewWalletService(repo).
+		WithConfigService(appConfigServiceStub{values: map[string]string{"payment.qris.dynamic_provider": "boqris"}}).
+		WithQRISProvider(boqrisProvider)
+
+	_, err := service.CreateDeposit(context.Background(), "user-1", dto.CreateDepositRequest{
+		Amount:   "100000",
+		Provider: "qrisly",
+	})
+	if err != nil {
+		t.Fatalf("CreateDeposit returned error: %v", err)
+	}
+	if repo.createdDeposit.Provider != domainwallet.DepositProviderBOQRIS {
+		t.Fatalf("expected boqris provider, got %q", repo.createdDeposit.Provider)
+	}
+	if boqrisProvider.req.Amount != 105000 {
+		t.Fatalf("expected BOQRIS base amount 105000, got %d", boqrisProvider.req.Amount)
+	}
+	if boqrisProvider.req.InvoiceNo == "" {
+		t.Fatal("expected invoice no")
+	}
+
+	var metadata map[string]string
+	if err := json.Unmarshal(repo.createdDeposit.Metadata, &metadata); err != nil {
+		t.Fatalf("unmarshal metadata: %v", err)
+	}
+	if metadata["qris_provider"] != domainwallet.DepositProviderBOQRIS || metadata["boqris_status"] != "pending" {
+		t.Fatalf("expected boqris metadata, got %+v", metadata)
+	}
+	if metadata["unique_code"] != "771" || metadata["payable_amount"] != "105771.00" {
+		t.Fatalf("expected BOQRIS payable amount metadata, got %+v", metadata)
+	}
+}
+
+func TestParseGatewayTimeUsesJakartaForNaiveProviderTime(t *testing.T) {
+	parsed := parseGatewayTime("2026-06-12 04:15:06")
+	if parsed == nil {
+		t.Fatal("expected parsed time")
+	}
+	if _, offset := parsed.Zone(); offset != 7*60*60 {
+		t.Fatalf("expected Asia/Jakarta offset, got %d", offset)
+	}
+}
+
 func TestGetDepositsUsesEmptyUserFilterForAdminList(t *testing.T) {
 	repo := &walletRepoStub{}
 	service := NewWalletService(repo)
@@ -392,12 +456,10 @@ func TestGetMyDepositsSyncsQRISLYUnpaidStatusForDisplay(t *testing.T) {
 		PaymentReference: "2847",
 		Metadata:         utilsJSON(map[string]string{"payable_amount": "10002.00", "qrisly_history_id": "2847"}),
 	}}}
-	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
-		Data: qrisly.PaymentStatusData{
-			HistoryID:     utils.FlexibleString("2847"),
-			PaymentStatus: "unpaid",
-			Amount:        utils.FlexibleInt64(10002),
-		},
+	qrisProvider := &qrisProviderStub{statusResponse: &interfacewallet.QRISPaymentStatusResponse{
+		RequestID: "2847",
+		Status:    "unpaid",
+		Amount:    10002,
 	}}
 	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
 
@@ -433,12 +495,10 @@ func TestGetMyDepositsCompletesPaidQRISLYDeposit(t *testing.T) {
 		PaymentReference: "2847",
 		Metadata:         utilsJSON(map[string]string{"payable_amount": "10002.00", "qrisly_history_id": "2847"}),
 	}}}
-	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
-		Data: qrisly.PaymentStatusData{
-			HistoryID:     utils.FlexibleString("2847"),
-			PaymentStatus: "paid",
-			Amount:        utils.FlexibleInt64(10002),
-		},
+	qrisProvider := &qrisProviderStub{statusResponse: &interfacewallet.QRISPaymentStatusResponse{
+		RequestID: "2847",
+		Status:    "paid",
+		Amount:    10002,
 	}}
 	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
 
@@ -464,12 +524,10 @@ func TestGetMyDepositsExpiresQRISLYDeposit(t *testing.T) {
 		PaymentReference: "2847",
 		Metadata:         utilsJSON(map[string]string{"payable_amount": "10002.00", "qrisly_history_id": "2847"}),
 	}}}
-	qrisProvider := &qrisProviderStub{statusResponse: &qrisly.PaymentStatusResponse{
-		Data: qrisly.PaymentStatusData{
-			HistoryID:     utils.FlexibleString("2847"),
-			PaymentStatus: "expired",
-			Amount:        utils.FlexibleInt64(10002),
-		},
+	qrisProvider := &qrisProviderStub{statusResponse: &interfacewallet.QRISPaymentStatusResponse{
+		RequestID: "2847",
+		Status:    "expired",
+		Amount:    10002,
 	}}
 	service := NewWalletService(repo).WithQRISProvider(qrisProvider)
 

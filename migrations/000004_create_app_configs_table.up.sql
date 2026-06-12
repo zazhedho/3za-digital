@@ -100,6 +100,15 @@ VALUES
     ),
     (
         gen_random_uuid(),
+        'payment.qris.dynamic_provider',
+        'Dynamic QRIS Provider',
+        'payment',
+        'boqris',
+        'Dynamic QRIS payment provider. Supported values: qrisly, boqris.',
+        TRUE
+    ),
+    (
+        gen_random_uuid(),
         'payment.qris.image_url',
         'QRIS Image URL',
         'payment',

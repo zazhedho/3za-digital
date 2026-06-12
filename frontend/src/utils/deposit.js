@@ -12,7 +12,7 @@ export const depositMetadata = (deposit) => {
 
 export const isQRISDeposit = (deposit) => {
   const metadata = depositMetadata(deposit)
-  return ['qris', 'qrisly'].includes(deposit?.provider) || ['qris', 'qrisly'].includes(metadata.payment_channel)
+  return ['qris', 'qrisly', 'boqris'].includes(deposit?.provider) || ['qris', 'qrisly', 'boqris'].includes(metadata.payment_channel)
 }
 
 export const depositPayableAmount = (deposit) => depositMetadata(deposit).payable_amount || deposit?.amount
@@ -29,8 +29,8 @@ export const depositProviderLabel = (deposit) => {
 
 export const depositStatus = (deposit) => {
   const metadata = depositMetadata(deposit)
-  if (isQRISDeposit(deposit) && deposit?.status === 'pending' && metadata.qrisly_status) {
-    return metadata.qrisly_status
+  if (isQRISDeposit(deposit) && deposit?.status === 'pending') {
+    return metadata.qris_status || metadata.qrisly_status || metadata.boqris_status || deposit.status
   }
   return deposit?.status || '-'
 }

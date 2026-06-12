@@ -2472,7 +2472,7 @@
               "mode": "raw",
               "raw": "{\n  \"amount\": \"{{deposit_amount}}\",\n  \"provider\": \"{{payment_provider}}\"\n}"
             },
-            "description": "Creates pending manual deposit request. Admin can approve it through Admin Topup Wallet using deposit_request_id."
+            "description": "Creates a deposit request. Use provider `qris` for static QRIS, `qrisly` for Dynamic QRIS, or `manual` for manual review. Dynamic QRIS resolves to the active backend config `payment.qris.dynamic_provider` (`qrisly` or `boqris`); provider credentials stay in backend env only."
           },
           "response": [],
           "event": [

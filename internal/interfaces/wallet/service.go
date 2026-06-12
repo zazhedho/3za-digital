@@ -2,16 +2,45 @@ package interfacewallet
 
 import (
 	"context"
+	"encoding/json"
 
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
-	"3za-digital/internal/integrations/qrisly"
 	"3za-digital/pkg/filter"
 )
 
+type QRISGenerateRequest struct {
+	Amount    int64
+	InvoiceNo string
+}
+
+type QRISGenerateResponse struct {
+	Provider         string
+	TransactionID    string
+	PaymentReference string
+	Status           string
+	MerchantName     string
+	QRISString       string
+	QRISImageURL     string
+	PayableAmount    int64
+	ExpiresAt        string
+	Raw              json.RawMessage
+}
+
+type QRISPaymentStatusResponse struct {
+	Provider         string
+	RequestID        string
+	PaymentReference string
+	Status           string
+	Amount           int64
+	PaidAt           string
+	Raw              json.RawMessage
+}
+
 type QRISPaymentProvider interface {
-	GenerateQRIS(ctx context.Context, req qrisly.GenerateQRISRequest) (*qrisly.GenerateQRISResponse, error)
-	GetPaymentStatus(ctx context.Context, historyID string) (*qrisly.PaymentStatusResponse, error)
+	Provider() string
+	GenerateQRIS(ctx context.Context, req QRISGenerateRequest) (*QRISGenerateResponse, error)
+	GetPaymentStatus(ctx context.Context, paymentReference string) (*QRISPaymentStatusResponse, error)
 }
 
 type ServiceWalletInterface interface {

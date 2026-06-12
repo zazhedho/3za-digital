@@ -10,7 +10,6 @@ import (
 	"3za-digital/internal/authscope"
 	domainwallet "3za-digital/internal/domain/wallet"
 	"3za-digital/internal/dto"
-	"3za-digital/internal/integrations/qrisly"
 	interfaceappconfig "3za-digital/internal/interfaces/appconfig"
 	interfacewallet "3za-digital/internal/interfaces/wallet"
 	"3za-digital/pkg/filter"
@@ -24,7 +23,7 @@ type WalletService struct {
 	Repo                interfacewallet.RepoWalletInterface
 	MainBalanceProvider interfacewallet.MainBalanceProvider
 	ConfigService       interfaceappconfig.ServiceAppConfigInterface
-	QRISProvider        interfacewallet.QRISPaymentProvider
+	QRISProviders       map[string]interfacewallet.QRISPaymentProvider
 	QRISInitError       error
 }
 
@@ -42,7 +41,13 @@ func (s *WalletService) WithConfigService(configService interfaceappconfig.Servi
 }
 
 func (s *WalletService) WithQRISProvider(provider interfacewallet.QRISPaymentProvider) *WalletService {
-	s.QRISProvider = provider
+	if provider == nil {
+		return s
+	}
+	if s.QRISProviders == nil {
+		s.QRISProviders = map[string]interfacewallet.QRISPaymentProvider{}
+	}
+	s.QRISProviders[utils.NormalizeKey(provider.Provider())] = provider
 	return s
 }
 
@@ -122,7 +127,7 @@ func (s *WalletService) CreateDeposit(ctx context.Context, userID string, req dt
 			return domainwallet.DepositRequest{}, err
 		}
 		deposit = qrisDeposit
-	case domainwallet.DepositProviderQRISLY:
+	case domainwallet.DepositProviderQRISLY, domainwallet.DepositProviderBOQRIS:
 		qrisDeposit, err := s.prepareDynamicQRISDeposit(ctx, deposit)
 		if err != nil {
 			return domainwallet.DepositRequest{}, err
@@ -147,7 +152,7 @@ func (s *WalletService) GetMyDeposits(ctx context.Context, params filter.BasePar
 	if err != nil {
 		return nil, 0, err
 	}
-	deposits, err = s.syncQRISLYDeposits(ctx, deposits)
+	deposits, err = s.syncDynamicQRISDeposits(ctx, deposits)
 	return deposits, total, err
 }
 
@@ -156,7 +161,7 @@ func (s *WalletService) GetDeposits(ctx context.Context, params filter.BaseParam
 	if err != nil {
 		return nil, 0, err
 	}
-	deposits, err = s.syncQRISLYDeposits(ctx, deposits)
+	deposits, err = s.syncDynamicQRISDeposits(ctx, deposits)
 	return deposits, total, err
 }
 
@@ -165,7 +170,7 @@ func (s *WalletService) GetDepositByID(ctx context.Context, id string) (domainwa
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
-	return s.syncQRISLYDeposit(ctx, deposit)
+	return s.syncDynamicQRISDeposit(ctx, deposit)
 }
 
 func (s *WalletService) GetMyDepositByID(ctx context.Context, id string) (domainwallet.DepositRequest, error) {
@@ -180,7 +185,7 @@ func (s *WalletService) GetMyDepositByID(ctx context.Context, id string) (domain
 	if deposit.UserID != userID {
 		return domainwallet.DepositRequest{}, gorm.ErrRecordNotFound
 	}
-	return s.syncQRISLYDeposit(ctx, deposit)
+	return s.syncDynamicQRISDeposit(ctx, deposit)
 }
 
 func (s *WalletService) AdminTopup(ctx context.Context, userID string, req dto.AdminWalletTopupRequest) (domainwallet.DepositRequest, error) {
@@ -434,7 +439,11 @@ func (s *WalletService) prepareStaticQRISDeposit(ctx context.Context, deposit do
 }
 
 func (s *WalletService) prepareDynamicQRISDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
-	if s.QRISProvider == nil {
+	qrisProvider, providerName, err := s.dynamicQRISProvider(ctx, deposit.Provider)
+	if err != nil {
+		return domainwallet.DepositRequest{}, err
+	}
+	if qrisProvider == nil {
 		detail := s.QRISInitError
 		if detail == nil {
 			detail = domainwallet.ErrQRISProviderUnavailable
@@ -446,15 +455,16 @@ func (s *WalletService) prepareDynamicQRISDeposit(ctx context.Context, deposit d
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
-	qrisResponse, err := s.QRISProvider.GenerateQRIS(ctx, qrisly.GenerateQRISRequest{
-		Amount:       parts.AmountWithFeeRupiah,
-		UniqueAmount: true,
+	invoiceNo := dynamicQRISInvoiceNo(deposit.Id)
+	qrisResponse, err := qrisProvider.GenerateQRIS(ctx, interfacewallet.QRISGenerateRequest{
+		Amount:    parts.AmountWithFeeRupiah,
+		InvoiceNo: invoiceNo,
 	})
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
 
-	payableRupiah := qrisResponse.Data.PayableAmount()
+	payableRupiah := qrisResponse.PayableAmount
 	if payableRupiah <= 0 {
 		payableRupiah = parts.AmountWithFeeRupiah
 	}
@@ -466,35 +476,47 @@ func (s *WalletService) prepareDynamicQRISDeposit(ctx context.Context, deposit d
 	uniqueCodeAmount := money.FormatCents(uniqueCodeValue * 100)
 	uniqueCode := fmt.Sprintf("%d", uniqueCodeValue)
 
-	paymentReference := strings.TrimSpace(qrisResponse.Data.HistoryID.String())
+	paymentReference := strings.TrimSpace(qrisResponse.PaymentReference)
 	if paymentReference == "" {
-		paymentReference = "QRISLY-" + strings.ToUpper(strings.ReplaceAll(deposit.Id, "-", "")[:12])
+		paymentReference = strings.ToUpper(providerName) + "-" + strings.ToUpper(strings.ReplaceAll(deposit.Id, "-", "")[:12])
 	}
-	expiredAt := parseGatewayTime(qrisResponse.Data.ExpiryValue())
+	expiredAt := parseGatewayTime(qrisResponse.ExpiresAt)
 
 	deposit.Method = domainwallet.DepositMethodPaymentGateway
-	deposit.Provider = domainwallet.DepositProviderQRISLY
+	deposit.Provider = providerName
 	deposit.PaymentReference = paymentReference
-	deposit.PaymentURL = strings.TrimSpace(qrisResponse.Data.ImageValue())
+	deposit.PaymentURL = strings.TrimSpace(qrisResponse.QRISImageURL)
 	deposit.ExpiredAt = expiredAt
-	deposit.Metadata = utils.MustJSON(map[string]string{
-		"payment_channel":    domainwallet.DepositProviderQRISLY,
-		"qris_type":          "dynamic",
-		"credit_amount":      deposit.Amount,
-		"fee_percent":        parts.FeePercent,
-		"fee_amount":         parts.FeeAmount,
-		"unique_code":        uniqueCode,
-		"unique_code_amount": uniqueCodeAmount,
-		"payable_amount":     payableAmount,
-		"qris_base_amount":   parts.AmountWithFee,
-		"qris_image_url":     qrisResponse.Data.ImageValue(),
-		"qris_string":        qrisResponse.Data.QRISString,
-		"qris_merchant_name": qrisResponse.Data.MerchantValue(),
-		"qrisly_history_id":  qrisResponse.Data.HistoryID.String(),
-		"qrisly_qris_id":     qrisResponse.Data.QRISID.String(),
-		"qrisly_status":      qrisResponse.Data.PaymentStatus,
-		"qrisly_expiry_time": qrisResponse.Data.ExpiryValue(),
-	})
+	metadata := map[string]string{
+		"payment_channel":     providerName,
+		"qris_type":           "dynamic",
+		"credit_amount":       deposit.Amount,
+		"fee_percent":         parts.FeePercent,
+		"fee_amount":          parts.FeeAmount,
+		"unique_code":         uniqueCode,
+		"unique_code_amount":  uniqueCodeAmount,
+		"payable_amount":      payableAmount,
+		"qris_base_amount":    parts.AmountWithFee,
+		"qris_image_url":      qrisResponse.QRISImageURL,
+		"qris_string":         qrisResponse.QRISString,
+		"qris_merchant_name":  qrisResponse.MerchantName,
+		"qris_provider":       providerName,
+		"qris_transaction_id": qrisResponse.TransactionID,
+		"qris_status":         qrisResponse.Status,
+		"qris_expiry_time":    qrisResponse.ExpiresAt,
+		"invoice_no":          invoiceNo,
+	}
+	switch providerName {
+	case domainwallet.DepositProviderQRISLY:
+		metadata["qrisly_history_id"] = qrisResponse.PaymentReference
+		metadata["qrisly_status"] = qrisResponse.Status
+		metadata["qrisly_expiry_time"] = qrisResponse.ExpiresAt
+	case domainwallet.DepositProviderBOQRIS:
+		metadata["boqris_transaction_id"] = qrisResponse.TransactionID
+		metadata["boqris_status"] = qrisResponse.Status
+		metadata["boqris_expiry_time"] = qrisResponse.ExpiresAt
+	}
+	deposit.Metadata = utils.MustJSON(metadata)
 	return deposit, nil
 }
 
@@ -540,9 +562,9 @@ type depositAmountParts struct {
 	AmountWithFeeRupiah int64
 }
 
-func (s *WalletService) syncQRISLYDeposits(ctx context.Context, deposits []domainwallet.DepositRequest) ([]domainwallet.DepositRequest, error) {
+func (s *WalletService) syncDynamicQRISDeposits(ctx context.Context, deposits []domainwallet.DepositRequest) ([]domainwallet.DepositRequest, error) {
 	for index := range deposits {
-		updated, err := s.syncQRISLYDeposit(ctx, deposits[index])
+		updated, err := s.syncDynamicQRISDeposit(ctx, deposits[index])
 		if err != nil {
 			return nil, err
 		}
@@ -554,70 +576,76 @@ func (s *WalletService) syncQRISLYDeposits(ctx context.Context, deposits []domai
 	return deposits, nil
 }
 
-func (s *WalletService) syncQRISLYDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
-	if s.QRISProvider == nil || !shouldSyncQRISLYDeposit(deposit) {
+func (s *WalletService) syncDynamicQRISDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
+	if !shouldSyncDynamicQRISDeposit(deposit) {
+		return deposit, nil
+	}
+	if isDepositExpired(deposit) {
+		return s.expireDynamicQRISDeposit(ctx, deposit)
+	}
+
+	providerName := utils.NormalizeKey(deposit.Provider)
+	qrisProvider := s.QRISProviders[providerName]
+	if qrisProvider == nil {
 		return deposit, nil
 	}
 
-	historyID := qrislyHistoryID(deposit)
-	if historyID == "" {
+	paymentReference := dynamicQRISPaymentReference(deposit)
+	if paymentReference == "" {
 		return deposit, nil
 	}
-	statusResp, err := s.QRISProvider.GetPaymentStatus(ctx, historyID)
+	statusResp, err := qrisProvider.GetPaymentStatus(ctx, paymentReference)
 	if err != nil {
 		return domainwallet.DepositRequest{}, err
 	}
 
-	qrislyStatus := qrislyPaymentStatus(statusResp.Data)
-	if qrislyStatus == "" {
+	gatewayStatus := utils.NormalizeKey(statusResp.Status)
+	if gatewayStatus == "" {
 		return deposit, nil
 	}
-	deposit.Metadata = mergeDepositMetadata(deposit.Metadata, map[string]string{
-		"qrisly_status":     qrislyStatus,
-		"qrisly_checked_at": time.Now().Format(time.RFC3339),
-	})
+	deposit.Metadata = mergeDepositMetadata(deposit.Metadata, dynamicQRISStatusMetadata(providerName, gatewayStatus))
 
-	status := normalizeGatewayStatus(qrislyStatus)
+	status := normalizeGatewayStatus(gatewayStatus)
 	if status == domainwallet.DepositStatusPending {
 		return deposit, nil
 	}
 
-	log := qrislyStatusLog(deposit, qrislyStatus, statusResp)
+	log := dynamicQRISStatusLog(deposit, providerName, gatewayStatus, paymentReference, statusResp)
 	if status == domainwallet.DepositStatusPaid {
-		updated, err := s.Repo.CompleteDepositByPaymentReference(ctx, domainwallet.DepositProviderQRISLY, deposit.PaymentReference, qrislyPaidAmount(deposit, statusResp.Data), log)
+		updated, err := s.Repo.CompleteDepositByPaymentReference(ctx, providerName, deposit.PaymentReference, dynamicQRISPaidAmount(deposit, statusResp), log)
 		return mergeSyncedDeposit(deposit, updated), err
 	}
 	if isDepositWebhookStatus(status) {
-		updated, err := s.Repo.UpdateDepositStatusByPaymentReference(ctx, domainwallet.DepositProviderQRISLY, deposit.PaymentReference, status, log)
+		updated, err := s.Repo.UpdateDepositStatusByPaymentReference(ctx, providerName, deposit.PaymentReference, status, log)
 		return mergeSyncedDeposit(deposit, updated), err
 	}
 	return deposit, nil
 }
 
-func shouldSyncQRISLYDeposit(deposit domainwallet.DepositRequest) bool {
-	return utils.NormalizeKey(deposit.Provider) == domainwallet.DepositProviderQRISLY &&
+func shouldSyncDynamicQRISDeposit(deposit domainwallet.DepositRequest) bool {
+	provider := utils.NormalizeKey(deposit.Provider)
+	return (provider == domainwallet.DepositProviderQRISLY || provider == domainwallet.DepositProviderBOQRIS) &&
 		deposit.Status == domainwallet.DepositStatusPending &&
 		strings.TrimSpace(deposit.PaymentReference) != ""
 }
 
-func qrislyHistoryID(deposit domainwallet.DepositRequest) string {
+func dynamicQRISPaymentReference(deposit domainwallet.DepositRequest) string {
 	metadata := depositMetadata(deposit.Metadata)
 	if historyID := strings.TrimSpace(metadata["qrisly_history_id"]); historyID != "" {
 		return historyID
 	}
+	if transactionID := strings.TrimSpace(metadata["boqris_transaction_id"]); transactionID != "" {
+		return transactionID
+	}
+	if transactionID := strings.TrimSpace(metadata["qris_transaction_id"]); transactionID != "" {
+		return transactionID
+	}
 	return strings.TrimSpace(deposit.PaymentReference)
 }
 
-func qrislyPaymentStatus(data qrisly.PaymentStatusData) string {
-	if status := utils.NormalizeKey(data.PaymentStatus); status != "" {
-		return status
-	}
-	return utils.NormalizeKey(data.Status)
-}
-
-func qrislyPaidAmount(deposit domainwallet.DepositRequest, data qrisly.PaymentStatusData) string {
-	if data.Amount.Int64() > 0 {
-		return money.FormatCents(data.Amount.Int64() * 100)
+func dynamicQRISPaidAmount(deposit domainwallet.DepositRequest, response *interfacewallet.QRISPaymentStatusResponse) string {
+	if response != nil && response.Amount > 0 {
+		return money.FormatCents(response.Amount * 100)
 	}
 	metadata := depositMetadata(deposit.Metadata)
 	if payableAmount := strings.TrimSpace(metadata["payable_amount"]); payableAmount != "" {
@@ -626,24 +654,81 @@ func qrislyPaidAmount(deposit domainwallet.DepositRequest, data qrisly.PaymentSt
 	return deposit.Amount
 }
 
-func qrislyStatusLog(deposit domainwallet.DepositRequest, status string, statusResp *qrisly.PaymentStatusResponse) domainwallet.PaymentGatewayLog {
-	payload := statusResp.Raw
+func dynamicQRISStatusLog(deposit domainwallet.DepositRequest, providerName string, status string, paymentReference string, statusResp *interfacewallet.QRISPaymentStatusResponse) domainwallet.PaymentGatewayLog {
+	var payload json.RawMessage
+	if statusResp != nil {
+		payload = statusResp.Raw
+	}
 	if len(payload) == 0 {
 		payload = utils.MustJSON(map[string]string{
-			"history_id":     qrislyHistoryID(deposit),
+			"payment_ref":    paymentReference,
 			"payment_status": status,
-			"amount":         qrislyPaidAmount(deposit, statusResp.Data),
+			"amount":         dynamicQRISPaidAmount(deposit, statusResp),
 		})
 	}
 	return domainwallet.PaymentGatewayLog{
 		Id:               utils.CreateUUID(),
-		Provider:         domainwallet.DepositProviderQRISLY,
+		Provider:         providerName,
 		EventType:        "payment_status",
-		RequestID:        qrislyHistoryID(deposit),
+		RequestID:        paymentReference,
 		PaymentReference: strings.TrimSpace(deposit.PaymentReference),
 		Status:           status,
 		Payload:          payload,
 	}
+}
+
+func (s *WalletService) dynamicQRISProvider(ctx context.Context, requestedProvider string) (interfacewallet.QRISPaymentProvider, string, error) {
+	providerName := utils.NormalizeKey(requestedProvider)
+	if providerName == "" || providerName == domainwallet.DepositProviderQRISLY {
+		providerName = defaultDynamicQRISProvider
+		if s.ConfigService != nil {
+			value, err := s.ConfigService.GetString(ctx, "payment.qris.dynamic_provider", defaultDynamicQRISProvider)
+			if err != nil {
+				return nil, "", err
+			}
+			if normalized := utils.NormalizeKey(value); normalized != "" {
+				providerName = normalized
+			}
+		}
+	}
+	return s.QRISProviders[providerName], providerName, nil
+}
+
+func dynamicQRISInvoiceNo(depositID string) string {
+	compactID := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(depositID), "-", ""))
+	if len(compactID) > 12 {
+		compactID = compactID[:12]
+	}
+	return "DEP" + compactID
+}
+
+func isDepositExpired(deposit domainwallet.DepositRequest) bool {
+	return deposit.ExpiredAt != nil && time.Now().After(*deposit.ExpiredAt)
+}
+
+func (s *WalletService) expireDynamicQRISDeposit(ctx context.Context, deposit domainwallet.DepositRequest) (domainwallet.DepositRequest, error) {
+	providerName := utils.NormalizeKey(deposit.Provider)
+	paymentReference := dynamicQRISPaymentReference(deposit)
+	deposit.Metadata = mergeDepositMetadata(deposit.Metadata, dynamicQRISStatusMetadata(providerName, domainwallet.DepositStatusExpired))
+	log := dynamicQRISStatusLog(deposit, providerName, domainwallet.DepositStatusExpired, paymentReference, nil)
+	updated, err := s.Repo.UpdateDepositStatusByPaymentReference(ctx, providerName, deposit.PaymentReference, domainwallet.DepositStatusExpired, log)
+	return mergeSyncedDeposit(deposit, updated), err
+}
+
+func dynamicQRISStatusMetadata(providerName string, status string) map[string]string {
+	metadata := map[string]string{
+		"qris_status":     status,
+		"qris_checked_at": time.Now().Format(time.RFC3339),
+	}
+	switch providerName {
+	case domainwallet.DepositProviderQRISLY:
+		metadata["qrisly_status"] = status
+		metadata["qrisly_checked_at"] = metadata["qris_checked_at"]
+	case domainwallet.DepositProviderBOQRIS:
+		metadata["boqris_status"] = status
+		metadata["boqris_checked_at"] = metadata["qris_checked_at"]
+	}
+	return metadata
 }
 
 func mergeSyncedDeposit(original domainwallet.DepositRequest, updated domainwallet.DepositRequest) domainwallet.DepositRequest {
@@ -702,7 +787,10 @@ func belowMinimumDeposit(amount string) bool {
 	return amountCents < minimumCents
 }
 
-const defaultQRISFeePercent = "5"
+const (
+	defaultQRISFeePercent      = "5"
+	defaultDynamicQRISProvider = domainwallet.DepositProviderQRISLY
+)
 
 func parseGatewayTime(value string) *time.Time {
 	value = strings.TrimSpace(value)
@@ -711,11 +799,16 @@ func parseGatewayTime(value string) *time.Time {
 	}
 	layouts := []string{
 		time.RFC3339,
-		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05-07:00",
 	}
 	for _, layout := range layouts {
 		parsed, err := time.Parse(layout, value)
+		if err == nil {
+			return &parsed
+		}
+	}
+	if location, err := time.LoadLocation("Asia/Jakarta"); err == nil {
+		parsed, err := time.ParseInLocation("2006-01-02 15:04:05", value, location)
 		if err == nil {
 			return &parsed
 		}
