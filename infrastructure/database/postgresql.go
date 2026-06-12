@@ -5,7 +5,6 @@ import (
 	"3za-digital/utils"
 	"database/sql"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -74,7 +73,7 @@ func withPostgresTimeZone(dsn string) string {
 		if strings.Contains(dsn, "?") {
 			separator = "&"
 		}
-		return dsn + separator + "TimeZone=" + url.QueryEscape(postgresTimeZone)
+		return dsn + separator + "TimeZone=" + postgresTimeZone
 	}
 
 	return dsn + " TimeZone=" + postgresTimeZone

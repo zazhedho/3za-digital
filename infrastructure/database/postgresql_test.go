@@ -4,7 +4,7 @@ import "testing"
 
 func TestWithPostgresTimeZoneAddsTimeZoneToDatabaseURL(t *testing.T) {
 	got := withPostgresTimeZone("postgres://user:pass@localhost:5432/app?sslmode=require")
-	want := "postgres://user:pass@localhost:5432/app?sslmode=require&TimeZone=Asia%2FJakarta"
+	want := "postgres://user:pass@localhost:5432/app?sslmode=require&TimeZone=Asia/Jakarta"
 
 	if got != want {
 		t.Fatalf("expected %q, got %q", want, got)
