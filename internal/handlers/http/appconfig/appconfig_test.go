@@ -204,6 +204,26 @@ func TestUpdateAppConfigReturnsOKAndWritesAudit(t *testing.T) {
 	}
 }
 
+func TestUpdateAppConfigAllowsEmptyValue(t *testing.T) {
+	service := &appConfigServiceTestDouble{config: domainappconfig.AppConfig{
+		Id:        "550e8400-e29b-41d4-a716-446655440000",
+		ConfigKey: "payment.qris.image_url",
+		Value:     "https://example.test/qris.png",
+		IsActive:  true,
+	}}
+	handler := NewAppConfigHandler(service, &auditServiceAppConfigTestDouble{})
+
+	rec := performAppConfigRequest(http.MethodPut, "/configs/:id", "/configs/550e8400-e29b-41d4-a716-446655440000", dto.UpdateAppConfig{
+		Value: "",
+	}, handler.Update)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if service.updateReq.Value != "" {
+		t.Fatalf("expected empty update value, got %+v", service.updateReq)
+	}
+}
+
 func TestUpdateAppConfigMapsServiceErrors(t *testing.T) {
 	handler := NewAppConfigHandler(&appConfigServiceTestDouble{err: errors.New("database down")}, &auditServiceAppConfigTestDouble{})
 

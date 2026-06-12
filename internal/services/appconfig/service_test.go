@@ -254,6 +254,20 @@ func TestUpdateStillWorks(t *testing.T) {
 	}
 }
 
+func TestUpdateAllowsEmptyValue(t *testing.T) {
+	nowConfig := domainappconfig.AppConfig{Id: "cfg-1", ConfigKey: "payment.qris.image_url", Value: "https://example.test/qris.png", IsActive: true}
+	repo := &appConfigRepoMock{byID: nowConfig}
+	service := NewAppConfigService(repo)
+
+	updated, err := service.Update(context.Background(), "cfg-1", dto.UpdateAppConfig{Value: ""})
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+	if updated.Value != "" || repo.update.Value != "" {
+		t.Fatalf("expected empty value, got updated=%+v repo=%+v", updated, repo.update)
+	}
+}
+
 func TestAppConfigServicePassThroughMethodsAndIsEnabled(t *testing.T) {
 	repo := &appConfigRepoMock{
 		byID:  domainappconfig.AppConfig{Id: "cfg-1", ConfigKey: "feature.example", Value: "old", IsActive: true},

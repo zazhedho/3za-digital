@@ -5,6 +5,7 @@ import roleService from '../../services/roleService'
 import permissionService from '../../services/permissionService'
 import { getErrorMessage, getListPayload } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import BackButton from '../../components/common/BackButton'
 
 const formatResource = (value) => (value || 'other').replace(/_/g, ' ')
 
@@ -52,9 +53,7 @@ const RoleForm = () => {
   }, [id, isEdit])
 
   useEffect(() => {
-    if (isEdit) {
-      return
-    }
+    if (isEdit) return
     setForm((current) => ({
       ...current,
       name: current.name.toLowerCase().replace(/\s+/g, ''),
@@ -91,7 +90,7 @@ const RoleForm = () => {
   const submit = async (event) => {
     event.preventDefault()
     if (canAssignPermissions && selectedPermissions.length === 0) {
-      toast.error('Select at least one permission')
+      toast.error('Please select at least one permission')
       return
     }
     setSaving(true)
@@ -104,7 +103,7 @@ const RoleForm = () => {
         roleId = response.data.data.id
       }
       if (canAssignPermissions) await roleService.assignPermissions(roleId, { permission_ids: selectedPermissions })
-      toast.success(isEdit ? 'Role updated' : 'Role created')
+      toast.success(isEdit ? 'Role updated' : 'New role created')
       navigate(isEdit ? `/roles/${roleId}` : '/roles', { replace: isEdit })
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save role'))
@@ -132,90 +131,162 @@ const RoleForm = () => {
     return groups
   }, {})
 
-  if (loading) {
-    return <div className="empty-cell">Loading role form...</div>
-  }
+  if (loading) return <div className="loading-fade">Loading role permissions...</div>
 
   return (
-    <div>
+    <div className="luxe-page-fade">
       <div className="page-toolbar">
-        <div><h1>{isEdit ? 'Edit Role' : 'Create Role'}</h1><p>Role metadata and permissions.</p></div>
+        <div>
+          <h1>{isEdit ? 'Edit Role' : 'Create Role'}</h1>
+          <p>Define access levels and system permissions.</p>
+        </div>
+        <div className="toolbar-actions">
+           <BackButton fallback="/roles" />
+        </div>
       </div>
-      <section className="form-panel">
-        <form onSubmit={submit}>
-          <label className="form-label">Name</label>
-          <input
-            className="form-control"
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value.toLowerCase().replace(/\s+/g, '') })}
-            required
-            disabled={isEdit || isSystem}
-          />
-          <label className="form-label mt-3">Display name</label>
-          <input className="form-control" value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} required disabled={isSystem} />
-          <label className="form-label mt-3">Description</label>
-          <textarea className="form-control" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} disabled={isSystem} />
 
-          {canAssignPermissions && (
-            <div className="role-permission-section">
-              <div className="role-permission-heading">
-                <div>
-                  <h2>Permissions</h2>
-                  <p>{selectedPermissions.length} selected from {permissions.length} permissions.</p>
-                </div>
-                <div className="toolbar-actions">
-                  <button className="btn btn-sm btn-outline-dark" type="button" onClick={selectAllPermissions} disabled={selectedPermissions.length === permissions.length}>Select all</button>
-                  <button className="btn btn-sm btn-outline-dark" type="button" onClick={clearPermissions} disabled={!selectedPermissions.length}>Clear</button>
-                </div>
-              </div>
-
-              <div className="permission-search">
-                <i className="bi bi-search"></i>
-                <input value={permissionSearch} onChange={(event) => setPermissionSearch(event.target.value)} placeholder="Search permission" />
-              </div>
-
-              <div className="permission-group-list">
-                {Object.keys(groupedPermissions).sort().map((resource) => (
-                  <div className="permission-group" key={resource}>
-                    <label className="permission-group-title">
-                      <span className="permission-resource-label">
-                        <input
-                          type="checkbox"
-                          checked={groupedPermissions[resource].every((permission) => selectedPermissions.includes(permission.id))}
-                          onChange={() => toggleResourcePermissions(groupedPermissions[resource])}
-                        />
-                        <strong>{formatResource(resource)}</strong>
-                      </span>
-                      <span>{groupedPermissions[resource].length}</span>
-                    </label>
-                    <div className="permission-check-grid">
-                      {groupedPermissions[resource].map((permission) => (
-                        <label className="permission-check" key={permission.id}>
-                          <input
-                            type="checkbox"
-                            checked={selectedPermissions.includes(permission.id)}
-                            onChange={() => togglePermission(permission.id)}
-                          />
-                          <span>
-                            <strong>{permission.action || permission.name}</strong>
-                            <small>{permission.display_name || permission.name}</small>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
+      <form onSubmit={submit}>
+        <div className="content-grid two">
+          <section className="luxe-detail-card h-fit">
+            <div className="luxe-card-header">
+              <h3><i className="bi bi-info-circle"></i> Role Metadata</h3>
+            </div>
+            <div className="luxe-card-body">
+              <div className="deposit-form-modern">
+                <div className="deposit-input-group">
+                  <label>Unique Name</label>
+                  <div className="auth-input m-0">
+                    <i className="bi bi-tag"></i>
+                    <input
+                      value={form.name}
+                      onChange={(event) => setForm({ ...form, name: event.target.value.toLowerCase().replace(/\s+/g, '') })}
+                      required
+                      disabled={isEdit || isSystem}
+                      placeholder="e.g. support_staff"
+                      style={{ background: isEdit || isSystem ? '#f8fafc' : 'white' }}
+                    />
                   </div>
-                ))}
-                {!filteredPermissions.length && <div className="empty-cell">No permissions found</div>}
+                </div>
+
+                <div className="deposit-input-group mt-3">
+                  <label>Display Name</label>
+                  <div className="auth-input m-0">
+                    <i className="bi bi-type-strikethrough"></i>
+                    <input 
+                      value={form.display_name} 
+                      onChange={(event) => setForm({ ...form, display_name: event.target.value })} 
+                      required 
+                      disabled={isSystem}
+                      placeholder="e.g. Support Staff"
+                      style={{ background: isSystem ? '#f8fafc' : 'white' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="deposit-input-group mt-3">
+                  <label>Description</label>
+                  <textarea 
+                    className="form-control" 
+                    rows="3"
+                    value={form.description} 
+                    onChange={(event) => setForm({ ...form, description: event.target.value })} 
+                    disabled={isSystem}
+                    placeholder="Describe what this role can do..."
+                    style={{ borderRadius: '14px', padding: '12px', background: isSystem ? '#f8fafc' : 'white' }}
+                  />
+                </div>
+                
+                {isSystem && (
+                   <div className="auth-alert mt-4 mb-0">
+                      <i className="bi bi-shield-lock me-2"></i>
+                      System roles are protected and cannot be fully modified.
+                   </div>
+                )}
               </div>
             </div>
-          )}
+          </section>
 
-          <div className="d-flex gap-2 mt-4">
-            <button className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
-            <button className="btn btn-outline-secondary" type="button" onClick={() => navigate(-1)}>Cancel</button>
-          </div>
-        </form>
-      </section>
+          {canAssignPermissions && (
+            <section className="luxe-detail-card">
+              <div className="luxe-card-header">
+                <div>
+                  <h3><i className="bi bi-shield-check"></i> Permissions</h3>
+                  <small className="text-muted">{selectedPermissions.length} / {permissions.length} selected</small>
+                </div>
+                <div className="toolbar-actions">
+                  <button className="btn btn-sm btn-outline-dark" type="button" onClick={selectAllPermissions}>All</button>
+                  <button className="btn btn-sm btn-outline-dark" type="button" onClick={clearPermissions}>Clear</button>
+                </div>
+              </div>
+
+              <div className="luxe-card-body p-0">
+                <div className="px-4 pt-3 pb-2 border-bottom bg-light">
+                   <div className="auth-input m-0" style={{ height: '40px' }}>
+                      <i className="bi bi-search" style={{ fontSize: '14px' }}></i>
+                      <input 
+                         value={permissionSearch} 
+                         onChange={(event) => setPermissionSearch(event.target.value)} 
+                         placeholder="Filter permissions..." 
+                         style={{ fontSize: '14px' }}
+                      />
+                   </div>
+                </div>
+
+                <div className="permission-group-list-luxe" style={{ maxHeight: '600px', overflow: 'auto', padding: '12px 24px' }}>
+                  {Object.keys(groupedPermissions).sort().map((resource) => (
+                    <div className="permission-group-box mb-4" key={resource}>
+                      <label className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <div className="d-flex align-items-center gap-2 cursor-pointer">
+                          <input
+                            className="form-check-input m-0"
+                            type="checkbox"
+                            checked={groupedPermissions[resource].every((permission) => selectedPermissions.includes(permission.id))}
+                            onChange={() => toggleResourcePermissions(groupedPermissions[resource])}
+                          />
+                          <strong className="text-capitalize" style={{ fontSize: '15px' }}>{formatResource(resource)}</strong>
+                        </div>
+                        <span className="status-badge status-badge-sm info">{groupedPermissions[resource].length}</span>
+                      </label>
+                      <div className="d-grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+                        {groupedPermissions[resource].map((permission) => (
+                          <label className={`permission-item-luxe ${selectedPermissions.includes(permission.id) ? 'selected' : ''}`} key={permission.id}>
+                            <input
+                              type="checkbox"
+                              hidden
+                              checked={selectedPermissions.includes(permission.id)}
+                              onChange={() => togglePermission(permission.id)}
+                            />
+                            <div className="d-flex align-items-center gap-2">
+                               <i className={`bi ${selectedPermissions.includes(permission.id) ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'}`}></i>
+                               <div className="d-flex flex-column">
+                                  <strong style={{ fontSize: '13px' }}>{permission.action || permission.name}</strong>
+                                  <small className="text-muted" style={{ fontSize: '11px' }}>{permission.display_name}</small>
+                               </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {!filteredPermissions.length && (
+                    <div className="text-center py-5">
+                       <i className="bi bi-search text-muted display-4"></i>
+                       <p className="mt-2 text-muted">No permissions matching your search.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
+
+        <div className="toolbar-actions justify-content-center mt-4">
+           <button className="btn btn-outline-dark px-5" type="button" onClick={() => navigate(-1)} disabled={saving}>Cancel</button>
+           <button className="btn btn-primary px-5" disabled={saving}>
+              {saving ? 'Saving...' : 'Save Role Configuration'}
+           </button>
+        </div>
+      </form>
     </div>
   )
 }

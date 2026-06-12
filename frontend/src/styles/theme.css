@@ -1343,6 +1343,55 @@ body {
   }
 }
 
+.permission-item-luxe {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.permission-item-luxe:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.permission-item-luxe.selected {
+  background: #fff4f6;
+  border-color: #ffb8c5;
+}
+
+.permission-item-luxe i {
+  font-size: 18px;
+}
+
+.permission-group-box {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.luxe-switch {
+  padding-left: 3.5rem;
+  min-height: 1.5rem;
+}
+
+.luxe-switch .form-check-input {
+  width: 3rem;
+  height: 1.5rem;
+  margin-left: -3.5rem;
+  cursor: pointer;
+}
+
+.luxe-switch .form-check-input:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.max-w-lg { max-width: 600px; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.h-fit { height: fit-content; }
+
 .layout-wrapper {
   background: var(--canvas);
   --sidebar-width: 280px;
