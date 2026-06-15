@@ -9,6 +9,11 @@ const SearchableSelect = ({
   searchPlaceholder = 'Search...',
   emptyLabel = 'No options found',
   loading = false,
+  loadingMore = false,
+  hasMore = false,
+  onLoadMore,
+  loadMoreLabel = 'Load more',
+  remote = false,
 }) => {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -16,12 +21,13 @@ const SearchableSelect = ({
 
   const selected = options.find((option) => option.value === value)
   const filteredOptions = useMemo(() => {
+    if (remote) return options
     const keyword = query.trim().toLowerCase()
     if (!keyword) return options
     return options.filter((option) => (
       `${option.label} ${option.description || ''} ${(option.meta || []).map((item) => item.value).join(' ')}`.toLowerCase().includes(keyword)
     ))
-  }, [options, query])
+  }, [options, query, remote])
 
   useEffect(() => {
     const close = (event) => {
@@ -76,7 +82,7 @@ const SearchableSelect = ({
           </div>
           <div className="searchable-select-options">
             {loading && <div className="searchable-select-empty">Searching...</div>}
-            {filteredOptions.map((option) => (
+            {!loading && filteredOptions.map((option) => (
               <button
                 type="button"
                 className={`searchable-select-option ${option.value === value ? 'selected' : ''}`}
@@ -95,6 +101,16 @@ const SearchableSelect = ({
               </button>
             ))}
             {!loading && !filteredOptions.length && <div className="searchable-select-empty">{emptyLabel}</div>}
+            {!loading && hasMore && (
+              <button
+                type="button"
+                className="searchable-select-load-more"
+                onClick={onLoadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Loading...' : loadMoreLabel}
+              </button>
+            )}
           </div>
         </div>
       )}

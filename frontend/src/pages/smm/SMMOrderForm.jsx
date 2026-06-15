@@ -36,10 +36,20 @@ const platformOptions = [
   { value: 'facebook', label: 'Facebook' },
 ]
 
+const servicePageSize = 50
+
+const mergeServices = (current, next) => {
+  const seen = new Set(current.map((service) => service.id))
+  return [...current, ...next.filter((service) => !seen.has(service.id))]
+}
+
 const SMMOrderForm = () => {
   const [services, setServices] = useState([])
   const [serviceSearch, setServiceSearch] = useState('')
   const [serviceLoading, setServiceLoading] = useState(false)
+  const [serviceLoadingMore, setServiceLoadingMore] = useState(false)
+  const [servicePage, setServicePage] = useState(1)
+  const [serviceHasMore, setServiceHasMore] = useState(false)
   const [platform, setPlatform] = useState('')
   const [form, setForm] = useState({ service_id: '', target: '', quantity: 1 })
   const [loading, setLoading] = useState(false)
@@ -48,29 +58,44 @@ const SMMOrderForm = () => {
   const minQuantity = getMinQuantity(selectedService)
   const maxQuantity = getMaxQuantity(selectedService)
 
-  const loadServices = useCallback(async (keyword = '') => {
-    setServiceLoading(true)
+  const loadServices = useCallback(async ({ keyword = serviceSearch, page = 1, append = false } = {}) => {
+    if (append) {
+      setServiceLoadingMore(true)
+    } else {
+      setServiceLoading(true)
+    }
     try {
       const response = await smmService.getServices({
         search: keyword,
-        limit: 50,
+        page,
+        limit: servicePageSize,
         'filters[platform]': platform || undefined,
         'filters[is_active]': 'true',
       })
-      setServices(getListPayload(response).rows)
+      const payload = getListPayload(response)
+      setServices((current) => (append ? mergeServices(current, payload.rows) : payload.rows))
+      setServicePage(payload.page || page)
+      setServiceHasMore(Boolean(payload.nextPage) || (payload.page || page) < (payload.totalPages || 1))
     } catch {
-      setServices([])
+      if (!append) setServices([])
+      setServiceHasMore(false)
     } finally {
       setServiceLoading(false)
+      setServiceLoadingMore(false)
     }
-  }, [platform])
+  }, [platform, serviceSearch])
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadServices(serviceSearch)
+      loadServices({ keyword: serviceSearch, page: 1, append: false })
     }, 300)
     return () => clearTimeout(timer)
   }, [loadServices, serviceSearch])
+
+  const loadMoreServices = () => {
+    if (serviceLoading || serviceLoadingMore || !serviceHasMore) return
+    loadServices({ keyword: serviceSearch, page: servicePage + 1, append: true })
+  }
 
   const handleServiceChange = (serviceId) => {
     const service = services.find((item) => item.id === serviceId)
@@ -84,7 +109,15 @@ const SMMOrderForm = () => {
   const handlePlatformChange = (event) => {
     setPlatform(event.target.value)
     setServiceSearch('')
+    setServicePage(1)
+    setServiceHasMore(false)
     setForm((current) => ({ ...current, service_id: '', quantity: 1 }))
+  }
+
+  const handleServiceSearch = (value) => {
+    setServiceSearch(value)
+    setServicePage(1)
+    setServiceHasMore(false)
   }
 
   const handleQuantityChange = (event) => {
@@ -157,8 +190,13 @@ const SMMOrderForm = () => {
                   key={platform || 'all-platforms'}
                   value={form.service_id}
                   onChange={handleServiceChange}
-                  onSearch={setServiceSearch}
+                  onSearch={handleServiceSearch}
                   loading={serviceLoading}
+                  loadingMore={serviceLoadingMore}
+                  hasMore={serviceHasMore}
+                  onLoadMore={loadMoreServices}
+                  loadMoreLabel="Load more services"
+                  remote
                   placeholder="Select service"
                   searchPlaceholder="Search service name or provider ID"
                   emptyLabel={serviceSearch ? 'No matching service found' : 'No active services found'}

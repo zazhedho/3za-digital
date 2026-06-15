@@ -162,6 +162,8 @@ body {
   border: 1px solid var(--hairline-soft);
   border-radius: 14px;
   box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
   left: 0;
   max-height: 320px;
   overflow: hidden;
@@ -169,7 +171,7 @@ body {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  z-index: 1500;
+  z-index: 800; /* Must be lower than topnav (900) */
 }
 
 .searchable-select-input {
@@ -191,9 +193,10 @@ body {
 }
 
 .searchable-select-options {
+  flex: 1 1 auto;
   max-height: 248px;
   overflow-y: auto;
-  padding-top: 8px;
+  padding: 8px 2px 2px;
 }
 
 .searchable-select-option {
@@ -227,6 +230,34 @@ body {
   color: var(--muted);
   padding: 16px 12px;
   text-align: center;
+}
+
+.searchable-select-load-more {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 10px;
+  color: var(--ink);
+  display: flex;
+  font-size: 13px;
+  font-weight: 750;
+  justify-content: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.searchable-select-load-more:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.searchable-select-load-more:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .loading-screen,
@@ -4110,11 +4141,13 @@ body {
 
   .searchable-select-menu {
     border-radius: 12px;
-    max-height: min(62vh, 420px);
+    max-height: min(58dvh, 420px);
+    padding-bottom: 12px; /* Ensure space at the bottom of the menu */
   }
 
   .searchable-select-options {
-    max-height: calc(min(62vh, 420px) - 58px);
+    max-height: calc(min(58dvh, 420px) - 64px);
+    padding-bottom: 24px; /* Ensure scroll area clears the load more button */
   }
 
   .searchable-select-meta em {
