@@ -1,337 +1,285 @@
 # 3ZA Digital
 
-Backend for 3ZA Digital with:
-- Gin HTTP router
-- PostgreSQL via GORM
-- JWT authentication
-- permission-first RBAC
-- runtime application configurations from database
-- optional Redis-based session management and rate limiting
+> Permission-first social commerce panel for SMM services, wallet balance, deposits, provider integrations, and operational audit trails.
 
-This repository is intended to be the foundation for future projects. The current structure is generic on purpose and should be extended by adding new business modules on top of the existing patterns.
+![Go](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111111)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Permission First](https://img.shields.io/badge/Auth-permission--first-222222?style=for-the-badge)
 
-## Core Principles
+## Overview
 
-### Permission-First RBAC
+3ZA Digital is a full-stack dashboard for selling SMM services through provider integration while keeping user balance, deposit, pricing, menu visibility, and admin operations under a permission-first backend.
 
-RBAC in this backend is designed with these rules:
-- `permission` is the runtime source of truth for access control
-- `role` is a label and a grouping mechanism for permissions
-- `superadmin` is the only exception and bypasses permission checks
-- menu visibility is derived from permissions, not from manual menu assignment
+The system is built to stay extendable for future product surfaces such as pulsa, PPOB, game, and e-wallet.
 
-Practical implications:
-- endpoint access is checked by `PermissionMiddleware(resource, action)`
-- `/api/menus/me` is built from the permissions owned by the current user
-- if a role has at least one permission for a module resource, the menu for that module can appear automatically
-- parent menus are included automatically when a permitted child menu exists
+| Area | Stack |
+| --- | --- |
+| Backend | Go, Gin, GORM |
+| Frontend | React, Vite |
+| Database | PostgreSQL |
+| Cache/session | Redis, optional |
+| Auth | JWT, refresh token, optional Redis sessions |
+| Provider | H2H.id for SMM catalog/order flow |
+| QRIS | Static QRIS, QRISLY, BOQRIS |
+| CI/CD | GitHub Actions, Docker, GHCR |
 
-### Runtime Configuration
+## Contents
 
-Application configuration values can be stored in `app_configs` and changed without restarting the service.
+- [Features](#features)
+- [Architecture](#architecture)
+- [Permission Model](#permission-model)
+- [Quick Start](#quick-start)
+- [Environment](#environment)
+- [Payment And Deposit](#payment-and-deposit)
+- [SMM Order Flow](#smm-order-flow)
+- [Main Routes](#main-routes)
+- [Frontend](#frontend)
+- [Testing And Quality](#testing-and-quality)
+- [Adding Modules](#adding-modules)
+- [Documentation](#documentation)
 
-Use this for values such as:
-- external URLs
-- feature toggles
-- integration settings
-- module-specific runtime configuration
+## Features
 
-Built-in auth feature flags:
-- `auth.public_registration_enabled`: enable or disable public self-registration endpoints
-- `auth.register_otp_enabled`: require OTP verification for public registration
-- `auth.password_reset_email_enabled`: send password reset tokens through the email sender instead of returning a development token in the API response
+- Email/password login with email or phone identifier.
+- Google login and auto-register controlled by backend config.
+- Register OTP controlled by runtime config.
+- Permission-first RBAC with role as a grouping label.
+- Sidebar menu visibility derived from permissions.
+- Runtime application config from `app_configs`.
+- SMM service sync, service search, service pagination, and order creation.
+- Wallet ledger with idempotent debits/refunds/credits.
+- Manual deposit, Static QRIS, Dynamic QRIS through QRISLY or BOQRIS.
+- Admin deposit approve/cancel flow with reason.
+- Admin wallet adjustment modal flow.
+- Audit trails for important write operations.
+- Provider balance snapshots and provider API logs.
+- Redis-backed sessions, permission cache, and route rate limits when Redis is enabled.
 
-This backend includes a typed helper on top of `app_configs`, so services do not need to parse raw strings manually for common cases such as:
-- `GetString`
-- `GetBool`
-- `GetInt`
-- `GetDuration`
-- `IsEnabled`
-- `DecodeJSON`
-
-Behavior:
-- if a config key does not exist, the helper returns the provided fallback
-- if a config exists but `is_active = false`, the helper also returns the fallback
-- parsing errors are returned only when an active config exists but contains an invalid value
-
-For feature flags, `is_active` controls whether the stored config overrides the code fallback. The actual on/off value is stored in `value`.
-
-Public registration example:
-- missing config: allowed, because code fallback is `true`
-- `is_active = false`: allowed, because the config is ignored and fallback `true` is used
-- `is_active = true`, `value = true`: allowed
-- `is_active = true`, `value = false`: disabled
-
-Default auth config rows are seeded by the existing app config migration:
-- `auth.public_registration_enabled`: active, value `true`
-- `auth.register_otp_enabled`: active, value `false`
-- `auth.password_reset_email_enabled`: active, value `false`
-
-### Authentication Flow
-
-Email/phone login:
-- `POST /api/user/login` accepts either `identifier` or `email` plus `password`.
-- `identifier` can be an email address or phone number.
-- Successful responses return `access_token` and `refresh_token`.
-
-Google login:
-- `POST /api/user/google/login` accepts a Google Identity Services `id_token`.
-- Backend validates the token using `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_IDS`.
-- Existing Google-linked users can log in even when public registration is disabled.
-- First-time Google auto-registration is blocked when `auth.public_registration_enabled=false`.
-
-Public register:
-- Frontend displays email registration only when `auth.public_registration_enabled=true`.
-- When `auth.register_otp_enabled=true`, frontend requires `otp_code` and sends OTP through `POST /api/user/register/otp/send`.
-- Frontend enforces password requirements before submitting register: minimum 8 characters, lowercase, uppercase, number, and symbol.
-
-## Current Modules
-
-System modules currently included:
-- Authentication and user profile
-- Users
-- Roles
-- Permissions
-- Menus
-- Configurations
-- Locations
-- Sessions when Redis is enabled
-- SMM catalog and orders through H2H.id
-- Provider balance and API logs
-- Wallet, wallet ledger, deposit requests, and admin topup/adjustment
-- Dashboard summary
-
-Business modules are designed to stay generic internally. SMM is the first product surface, but the same `provider_services`, `orders`, wallet, deposit, pricing, and provider-client foundation is intended to support pulsa, PPOB, game, and e-wallet later.
-
-## Project Structure
-
-Main backend layout:
+## Architecture
 
 ```text
 3za-digital/
-├── infrastructure/
+├── cmd/                         # helper commands
+├── frontend/                    # Vite React app
+├── infrastructure/              # database, cache, external infra setup
 ├── internal/
-│   ├── domain/
-│   ├── dto/
-│   ├── handlers/http/
-│   ├── interfaces/
-│   ├── repositories/
-│   ├── router/
-│   └── services/
+│   ├── domain/                  # domain entities and constants
+│   ├── dto/                     # request/response DTOs
+│   ├── handlers/http/           # HTTP handlers
+│   ├── integrations/            # external provider clients
+│   ├── interfaces/              # service/repository contracts
+│   ├── repositories/            # database access
+│   ├── router/                  # route wiring
+│   └── services/                # business logic
 ├── middlewares/
 ├── migrations/
 ├── pkg/
+├── postman/
 ├── utils/
 └── main.go
 ```
 
-Pattern for each module:
+Backend flow:
 
 ```text
-route -> handler -> service -> repository -> database
+route -> middleware -> handler -> service -> repository -> database
 ```
 
-Repository layer convention:
-- use the generic repository in `internal/repositories/generic` for common CRUD and list query behavior
-- keep module repository files focused on custom query cases only, such as joins, aggregates, or transactional assignment logic
+Repository convention:
 
-## Environment
+- Use `internal/repositories/generic` for common CRUD/list behavior.
+- Keep module repositories focused on custom joins, aggregates, and transactions.
+- Define search/filter/sort behavior through generic query options.
 
-Copy `.env.example` to `.env` and adjust the values as needed.
+Integration convention:
 
-Minimum required variables:
-- `APP_NAME`
-- `APP_ENV`
-- `PORT`
-- `DATABASE_URL`, or these database parts when `DATABASE_URL` is empty:
-  - `DB_HOST`
-  - `DB_PORT`
-  - `DB_USERNAME`
-  - `DB_NAME`
-  - `DB_PASS`
-  - `DB_SSLMODE`
-- `JWT_KEY` (minimum 32 characters; use a random secret for production)
-- `JWT_EXP`
-- `PATH_MIGRATE`
+- Provider-specific clients live in `internal/integrations/<provider>`.
+- Shared HTTP JSON client helpers live in `internal/integrations/httpjson`.
+- Business services depend on interfaces, not concrete provider response structs.
 
-Optional but recommended:
-- Redis settings for sessions and rate limiting. These stay optional; when any Redis env is set, `REDIS_URL`, `REDIS_PORT`, and `REDIS_DB` format is validated.
-- Permission cache settings such as `PERMISSION_CACHE_TTL` or `PERMISSION_CACHE_TTL_SECONDS` (default `5m`). These only apply when Redis is available; otherwise permission checks read from the database. Cache entries are invalidated after role-permission, permission, user-role, and user-delete mutations; TTL remains the fallback when Redis invalidation fails.
-- Location Service settings: `LOCATION_SERVICE_BASE_URL` (default `https://location-service-y7si.onrender.com`) and `LOCATION_SERVICE_TIMEOUT_SECONDS` (default `20`). Location sync imports from this shared service.
-- storage settings for file upload use cases. These stay optional; when storage connection env is set, provider and required storage credentials are validated.
-- `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_IDS` for Google login
-- SMTP settings for register OTP and password reset email flows. These stay optional; when SMTP connection env is set, `SMTP_HOST`, `SMTP_PASS`, `SMTP_FROM`, and `SMTP_PORT` format are validated.
-- Rate limit settings for sensitive routes when Redis is enabled:
-  - `SMM_ORDER_RATE_LIMIT`, `SMM_ORDER_RATE_WINDOW_SECONDS`
-  - `DEPOSIT_CREATE_RATE_LIMIT`, `DEPOSIT_CREATE_RATE_WINDOW_SECONDS`
-- `PAYMENT_WEBHOOK_RATE_LIMIT`, `PAYMENT_WEBHOOK_RATE_WINDOW_SECONDS`
-- Dynamic QRIS provider settings:
-  - `QRISLY_BASE_URL`, `QRISLY_API_KEY`, `QRISLY_QRIS_ID`, `QRISLY_OUTPUT_TYPE`, `QRISLY_TIMEOUT_SECONDS`
-  - `BOQRIS_BASE_URL`, `BOQRIS_API_KEY`, `BOQRIS_MERCHANT_ID`, `BOQRIS_TIMEOUT_SECONDS`
-  - choose the active dynamic provider from Configs using `payment.qris.dynamic_provider` (`qrisly` or `boqris`)
+## Permission Model
 
-H2H provider settings:
-- `H2H_BASE_URL`
-- `H2H_MEMBER_ID`
-- `H2H_PIN`
-- `H2H_PASSWORD`
-- `H2H_TIMEOUT_SECONDS`
+RBAC rules:
 
-H2H credentials must stay in backend environment variables only. Do not put them in frontend code, Postman shared variables, request logs, or provider API logs.
+- `permission` is the runtime source of truth.
+- `role` is a label and permission grouping mechanism.
+- `superadmin` is the only bypass exception.
+- Menus are derived from permissions, not manual menu assignment.
 
-QRIS provider credentials must also stay in backend environment variables only. Do not put `QRISLY_API_KEY` or `BOQRIS_API_KEY` in frontend code, Postman shared variables, request logs, or provider API logs.
+Practical behavior:
 
-Optional payment webhook signature guard:
-- `PAYMENT_WEBHOOK_ENABLED` (default `false`)
-- `PAYMENT_WEBHOOK_SECRET_<PROVIDER>`
-- Example: `PAYMENT_WEBHOOK_SECRET_MIDTRANS`
+- Endpoint access uses `PermissionMiddleware(resource, action)`.
+- `/api/menus/me` is built from current user permissions.
+- A module menu can appear when user has at least one permission for that resource.
+- Parent menus are included automatically when a child menu is permitted.
 
-Payment webhooks are disabled by default because manual deposit is the active flow. When `PAYMENT_WEBHOOK_ENABLED=true`, `/api/webhooks/payments/:provider` requires `PAYMENT_WEBHOOK_SECRET_<PROVIDER>` and `signature` in the request body. Current generic guard expects HMAC-SHA256 hex over:
+Menu order convention:
 
 ```text
-provider|payment_reference|amount|status
+100-199  Product and member operations
+900-999  System administration
 ```
 
-Real payment gateway adapters can replace this provider-specific verification later.
+Current intended order:
 
-## Run Locally
+```text
+100 SMM Services
+101 SMM Orders
+102 Wallet
+103 Deposits
+104 Admin Wallets
+105 Admin Deposits
+900 Users
+901 Roles
+902 Menus
+903 Configurations
+```
 
-Install dependencies and prepare `.env`, then:
+## Quick Start
+
+1. Copy env:
 
 ```bash
-go run . -migrate
+cp .env.example .env
 ```
 
-Or run migration and server separately:
+2. Run migration and backend:
 
 ```bash
 go run . -migrate
 go run .
 ```
 
-Default health check:
+3. Run frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+4. Health check:
 
 ```text
 GET /healthcheck
 ```
 
-## Main Routes
+## Environment
 
-The current route set includes:
+Minimum backend env:
 
-- `POST /api/user/register`
-- `POST /api/user/register/otp/send`
-- `POST /api/user/login`
-- `POST /api/user/google/login`
-- `POST /api/user/refresh-token`
-- `POST /api/user/forgot-password`
-- `POST /api/user/reset-password`
-- `POST /api/user/logout`
-- `GET /api/user`
-- `GET /api/users`
+| Key | Notes |
+| --- | --- |
+| `APP_NAME` | Application name |
+| `APP_ENV` | `development`, `staging`, `production` |
+| `PORT` | Backend port |
+| `DATABASE_URL` | Preferred database URL |
+| `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASS`, `DB_NAME`, `DB_SSLMODE` | Used when `DATABASE_URL` is empty |
+| `JWT_KEY` | Minimum 32 chars in production |
+| `JWT_EXP` | Access token expiration |
+| `PATH_MIGRATE` | Migration source path |
 
-- `GET /api/roles`
-- `POST /api/role`
-- `GET /api/role/:id`
-- `PUT /api/role/:id`
-- `DELETE /api/role/:id`
-- `POST /api/role/:id/permissions`
+Optional but recommended:
 
-- `GET /api/permissions`
-- `GET /api/permissions/me`
-- `POST /api/permission`
-- `GET /api/permission/:id`
-- `PUT /api/permission/:id`
-- `DELETE /api/permission/:id`
+| Area | Keys |
+| --- | --- |
+| Redis | `REDIS_URL`, `REDIS_PORT`, `REDIS_DB`, `REDIS_PASSWORD` |
+| Permission cache | `PERMISSION_CACHE_TTL`, `PERMISSION_CACHE_TTL_SECONDS` |
+| Google login | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_IDS` |
+| SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` |
+| Storage | storage provider keys when upload is enabled |
+| Location sync | `LOCATION_SERVICE_BASE_URL`, `LOCATION_SERVICE_TIMEOUT_SECONDS` |
+| Rate limits | `SMM_ORDER_RATE_LIMIT`, `DEPOSIT_CREATE_RATE_LIMIT`, `PAYMENT_WEBHOOK_RATE_LIMIT` |
 
-- `GET /api/menus/active`
-- `GET /api/menus/me`
-- `GET /api/menus`
-- `GET /api/menu/:id`
-- `PUT /api/menu/:id`
+Provider env:
 
-- `GET /api/configs`
-- `GET /api/config/:id`
-- `PUT /api/config/:id`
+| Provider | Keys |
+| --- | --- |
+| H2H | `H2H_BASE_URL`, `H2H_MEMBER_ID`, `H2H_PIN`, `H2H_PASSWORD`, `H2H_TIMEOUT_SECONDS` |
+| QRISLY | `QRISLY_BASE_URL`, `QRISLY_API_KEY`, `QRISLY_QRIS_ID`, `QRISLY_OUTPUT_TYPE`, `QRISLY_TIMEOUT_SECONDS` |
+| BOQRIS | `BOQRIS_BASE_URL`, `BOQRIS_API_KEY`, `BOQRIS_MERCHANT_ID`, `BOQRIS_TIMEOUT_SECONDS` |
 
-- `GET /api/location/province`
-- `GET /api/location/city?province_code=11`
-- `GET /api/location/district?city_code=1101`
-- `GET /api/location/village?district_code=110101`
-- `POST /api/location/sync`
-- `GET /api/location/sync/:id`
+Security rule:
 
-- `GET /api/audits`
-- `GET /api/audit/:id`
+> Provider credentials must stay in backend environment variables only. Do not put H2H, QRISLY, BOQRIS, PIN, password, API key, bearer token, or webhook secrets in frontend code, Postman shared variables, request logs, or provider API logs.
 
-Additional session routes are registered only when Redis is available:
-- `GET /api/user/sessions`
-- `DELETE /api/user/session/:session_id`
-- `POST /api/user/sessions/revoke-others`
+## Runtime Config
 
-SMM routes:
-- `GET /api/smm/services`
-- `POST /api/smm/services/sync`
-- `GET /api/smm/orders`
-- `POST /api/smm/orders`
-- `GET /api/smm/orders/:id`
-- `GET /api/smm/orders/:id/status-logs`
-- `POST /api/smm/orders/:id/refresh-status`
+Runtime config is stored in `app_configs` and can be changed from the admin Configurations page.
 
-Wallet and deposit routes:
-- `GET /api/wallet/me`
-- `GET /api/wallet/transactions`
-- `GET /api/admin/wallets`
-- `POST /api/admin/wallets/:user_id/topup`
-- `POST /api/admin/wallets/:user_id/adjust`
-- `GET /api/admin/deposits`
-- `GET /api/admin/deposits/:id`
-- `POST /api/admin/deposits/:id/approve`
-- `POST /api/deposits`
-- `GET /api/deposits`
-- `GET /api/deposits/:id`
-- `POST /api/webhooks/payments/:provider`
+Auth flags:
 
-Provider and dashboard routes:
-- `GET /api/provider/h2h/balance`
-- `GET /api/provider/api-logs`
-- `GET /api/dashboard/summary`
+| Key | Meaning |
+| --- | --- |
+| `auth.public_registration_enabled` | Enable public register |
+| `auth.register_otp_enabled` | Require OTP for email register |
+| `auth.password_reset_email_enabled` | Send reset token by email |
 
-Location architecture:
-- PostgreSQL is the source of truth for provinces, cities, districts, and villages
-- Redis is used only as runtime cache
-- shared Location Service is used only for sync/import to the database
-- location sync runs asynchronously; start the job with `POST /api/location/sync` and poll its status via `GET /api/location/sync/:id`
-- use scoped sync for regular updates; `level=all` is intended for initial bootstrap because it performs a full hierarchical import
+Pricing and SMM:
 
-## SMM, Wallet, And Provider Flow
+| Key | Meaning |
+| --- | --- |
+| `pricing.default_markup_percent` | Default provider price markup |
+| `pricing.product_markup_percent.smm` | SMM-specific markup |
+| `pricing.smm_service_price_max_age` | Max cached SMM price age before lazy sync |
 
-Provider balance and user balance are separate:
-- Provider balance is the main balance in H2H and is visible only to internal/admin users.
-- User balance is stored in 3ZA Digital wallet tables and is used by reseller/enduser order flow.
-- H2H balance is stored only as snapshots for audit/history, not as user spendable balance.
+Payment:
 
-SMM service sync:
-1. Admin/superadmin with `smm_services:sync` calls `POST /api/smm/services/sync`.
-2. Backend calls H2H pricelist.
-3. Services are upserted into `provider_services` for `product_type = smm`.
-4. Sync updates existing provider service rows instead of duplicating by provider/type/provider service id.
+| Key | Meaning |
+| --- | --- |
+| `payment.qris.fee_percent` | Topup fee percent |
+| `payment.qris.image_url` | Static QRIS image URL |
+| `payment.qris.merchant_name` | Static QRIS merchant name |
+| `payment.qris.dynamic_provider` | `qrisly` or `boqris` |
 
-Order flow:
-1. User creates order through backend, never directly to H2H.
-2. Backend validates service and quantity.
-3. Backend computes user price from provider price plus markup config.
-4. Backend debits wallet and creates internal order in one database transaction.
-5. Backend calls H2H using provider balance.
-6. If provider create fails, wallet refund is created automatically and idempotently.
-7. If final provider status is `failed`, wallet refund is created automatically and idempotently.
+## Payment And Deposit
 
-Pricing config is stored in `app_configs`:
-- `pricing.default_markup_percent`
-- `pricing.product_markup_percent.smm`
-- `pricing.smm_service_price_max_age`
+Deposit methods:
 
-Formula:
+| Method | Provider | Behavior |
+| --- | --- | --- |
+| Manual review | `manual` | User creates request, admin approves/cancels |
+| Static QRIS | `qris` | Uses configured image URL, unique code, fee |
+| Dynamic QRIS | `qrisly` or `boqris` | Provider generates QR and payable amount |
+
+Dynamic QRIS selection:
+
+1. Frontend sends provider `qrisly` for “Dynamic QRIS”.
+2. Backend resolves active provider from `payment.qris.dynamic_provider`.
+3. Backend calls QRISLY or BOQRIS based on config.
+4. UI still displays user-facing label `Dynamic QRIS`.
+
+BOQRIS flow:
+
+- Create transaction: `POST /api/v1/transactions`
+- Status check: `GET /api/v1/transactions/{transaction_id}`
+- `paid` status completes the deposit and credits wallet.
+- `expired`, `failed`, or `cancelled` update the deposit status without crediting wallet.
+
+Wallet rules:
+
+- Every balance mutation must create a `wallet_transactions` row.
+- Wallet balance cannot go negative.
+- Money calculations use integer cents internally.
+- Member can access only their own wallet, deposits, and orders.
+- Admin and superadmin access is permission-based.
+- Admin topup and credit adjustment are blocked when active wallet liability would exceed live H2H main balance.
+
+## SMM Order Flow
+
+1. Admin syncs SMM services from H2H.
+2. Backend upserts services into `provider_services`.
+3. User creates order through backend.
+4. Backend validates service, target URL, and quantity range.
+5. Backend calculates price from provider price per 1,000 quantity plus markup.
+6. Backend debits wallet and creates internal order in one transaction.
+7. Backend calls H2H provider.
+8. If provider create fails, backend creates an idempotent wallet refund.
+9. If final provider status is failed, backend creates an idempotent refund.
+
+Price formula:
 
 ```text
 provider_charge = ceil_to_whole(provider_price_per_1k * quantity / 1000)
@@ -340,107 +288,192 @@ amount          = ceil_to_whole(provider_charge + markup_amount)
 profit          = amount - provider_charge
 ```
 
-For SMM orders, provider service price is treated as price per 1,000 quantity. Order debit is calculated from requested quantity and rounded up to a whole amount to avoid undercharging.
-Backend stores last successful SMM catalog sync time in Redis using a product-scoped key and checks that value for lazy sync decisions. Redis is used as a cache: when the key is missing, expired, malformed, or Redis is unavailable, backend falls back to `provider_services.synced_at` from the database and refills Redis when possible. If the sync time is older than `pricing.smm_service_price_max_age`, backend triggers lazy sync before list or order flow continues. A Redis lock per product type prevents concurrent requests from syncing the same catalog at the same time when Redis is available. `provider_services.synced_at` remains stored per row for fallback, data history, and display.
+Catalog freshness:
 
-Wallet rules:
-- Every balance mutation must create `wallet_transactions`.
-- Wallet balance may not go negative.
-- Money calculation uses integer cents internally and formats to 2 decimal places before storing to `NUMERIC(18,2)`.
-- Member can access only their own wallet, deposits, and SMM orders.
-- Admin/superadmin can list wallets and perform topup/adjustment using permissions.
-- Admin topup, wallet adjustment, deposit creation, and payment webhook processing write `audit_trails`.
+- Redis stores last successful product sync timestamp when available.
+- Database `provider_services.synced_at` is fallback.
+- Lazy sync runs when cached price age exceeds `pricing.smm_service_price_max_age`.
+- Redis lock prevents concurrent sync for the same product type.
 
-Deposit and payment gateway readiness:
-- Member deposit request creates a pending `deposit_requests` row with `manual_admin` method.
-- Admin/superadmin can list and view all deposit requests through `GET /api/admin/deposits` and `GET /api/admin/deposits/:id`; admin responses include safe user summary (`id`, `name`, `email`, `phone`, `role`, `avatar_url`) for frontend tables/detail views.
-- Admin manual topup can approve an existing pending deposit request or create a direct paid topup.
-- Admin topup and credit adjustment are blocked when resulting total active wallet liability would exceed live H2H main balance. Liability is active wallet `balance + locked_balance`.
-- If main balance is insufficient, the deposit stays `pending`; admin must top up H2H main balance first, then approve the deposit again.
-- `payment_gateway_logs` stores future gateway callback/invoice logs.
-- `POST /api/webhooks/payments/:provider` is prepared for future gateway callbacks but disabled unless `PAYMENT_WEBHOOK_ENABLED=true`.
-- Production payment gateway integration must verify callback signature and amount before crediting wallet.
+## Main Routes
 
-Security notes:
-- Do not log H2H credentials, payment gateway secrets, API keys, PINs, passwords, or bearer tokens.
-- Provider API logs must contain sanitized request/response context only.
-- Payment webhook payloads must be sanitized if provider sends secrets.
-- Refund and deposit credit operations must remain idempotent.
-- Rate limits apply to SMM order create, deposit create, and payment webhook when Redis is enabled.
+Auth and users:
 
-## Module Seed Helper
-
-To avoid writing menu and permission seed SQL manually for every new module, the starter kit includes a helper command:
-
-```bash
-go run ./cmd/module-seed \
-  --name projects \
-  --display-name "Projects" \
-  --path /projects \
-  --icon bi-folder \
-  --order-index 905
+```text
+POST /api/user/register
+POST /api/user/register/otp/send
+POST /api/user/login
+POST /api/user/google/login
+POST /api/user/refresh-token
+POST /api/user/forgot-password
+POST /api/user/reset-password
+POST /api/user/logout
+GET  /api/user
+GET  /api/users
 ```
 
-The command prints SQL for:
-- one `menu_items` row
-- matching `permissions` rows for the same resource
-- optional default `role_permissions` grants
+RBAC and configuration:
 
-This helps prevent mismatch bugs such as:
-- `menu_items.name = projects`
-- `permissions.resource = project`
+```text
+GET    /api/roles
+POST   /api/role
+GET    /api/role/:id
+PUT    /api/role/:id
+DELETE /api/role/:id
+POST   /api/role/:id/permissions
+GET    /api/permissions
+GET    /api/permissions/me
+GET    /api/menus/me
+GET    /api/menus
+GET    /api/menu/:id
+PUT    /api/menu/:id
+GET    /api/configs
+GET    /api/config/:id
+PUT    /api/config/:id
+```
 
-Optional flags:
-- `--parent-name education`
-- `--resource reports`
-- `--actions list,view,export`
-- `--grant-roles admin,superadmin`
+SMM:
 
-For nested menus, `--parent-name` generates a `parent_id` subquery so the migration stays declarative and consistent.
+```text
+GET  /api/smm/services
+POST /api/smm/services/sync
+GET  /api/smm/orders
+POST /api/smm/orders
+GET  /api/smm/orders/:id
+GET  /api/smm/orders/:id/status-logs
+POST /api/smm/orders/:id/refresh-status
+```
 
-## How To Add A New Module
+Wallet and deposits:
 
-When adding a new module, keep it aligned with the permission-first design.
+```text
+GET  /api/wallet/me
+GET  /api/wallet/transactions
+GET  /api/admin/wallets
+POST /api/admin/wallets/:user_id/topup
+POST /api/admin/wallets/:user_id/adjust
+GET  /api/deposits
+POST /api/deposits
+GET  /api/deposits/:id
+GET  /api/deposits/settings
+GET  /api/admin/deposits
+GET  /api/admin/deposits/:id
+POST /api/admin/deposits/:id/status
+```
 
-### 1. Add the backend layers
+Provider, dashboard, audit, sessions:
 
-Create these parts:
-- `internal/domain/<module>`
-- `internal/dto`
-- `internal/interfaces/<module>`
-- `internal/repositories/<module>`
-- `internal/services/<module>`
-- `internal/handlers/http/<module>`
-- route registration in `internal/router/router.go`
+```text
+GET /api/provider/h2h/balance
+GET /api/provider/api-logs
+GET /api/dashboard/summary
+GET /api/audits
+GET /api/audit/:id
+GET /api/user/sessions
+DELETE /api/user/session/:session_id
+POST /api/user/sessions/revoke-others
+```
 
-For repository implementation:
-- reuse `internal/repositories/generic.GenericRepository[T]` for `Store`, `GetByID`, `GetAll`, `Update`, and `Delete`
-- embed `interfacegeneric.GenericRepository[T]` in module repository interfaces for the common contract
-- configure searchable columns, allowed filters, and sortable columns through `repositorygeneric.QueryOptions`
-- add custom methods in the module repo only when the query is business-specific
+Location:
 
-### 2. Add migration
+```text
+GET  /api/location/province
+GET  /api/location/city?province_code=11
+GET  /api/location/district?city_code=1101
+GET  /api/location/village?district_code=110101
+POST /api/location/sync
+GET  /api/location/sync/:id
+```
 
-For a new business module, create:
-- the business table(s)
-- one `menu_items` row for the module
-- the required `permissions` rows for the same resource name
-- optional default `role_permissions` seed if needed
+## Frontend
 
-Important:
-- use the same resource name across menu and permissions
-- example:
-  - menu name: `projects`
-  - permission resource: `projects`
+Frontend lives in `frontend/`.
 
-This is what allows menus to be derived automatically from permissions.
+```bash
+cd frontend
+npm install
+npm run dev
+npm run lint
+npm run build
+```
 
-Tip:
-- use `go run ./cmd/module-seed ...` to generate the menu and permission seed block before pasting it into the migration
+Important behavior:
 
-### 3. Protect routes with permissions
+- Login supports local auth and Google Identity Services.
+- Register follows backend config.
+- Sidebar balance uses cached `/wallet/me` to avoid API spam.
+- `/menus/me` is cached for the session and cleared on logout.
+- SMM service dropdown uses remote search plus paginated “Load more”.
+- Mobile layout is first-class because most users are expected to use mobile.
 
-Use:
+See [frontend/README.md](frontend/README.md).
+
+## Testing And Quality
+
+Backend:
+
+```bash
+go test ./...
+golangci-lint run --config .golangci.yml --timeout=5m ./...
+go build ./...
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+Postman collection:
+
+```text
+postman/3za-digital.postman_collection.json
+```
+
+CI:
+
+- `.github/workflows/lint.yml`
+- `.github/workflows/docker.yml`
+
+GitHub Actions use Node 24-compatible action major versions:
+
+- `actions/checkout@v6`
+- `docker/login-action@v4`
+- `docker/build-push-action@v7`
+
+## Adding Modules
+
+Keep new modules aligned with permission-first design.
+
+Backend layers:
+
+```text
+internal/domain/<module>
+internal/dto
+internal/interfaces/<module>
+internal/repositories/<module>
+internal/services/<module>
+internal/handlers/http/<module>
+internal/router/router.go
+```
+
+Required migration pieces:
+
+- business table(s)
+- `menu_items` row
+- `permissions` rows
+- optional `role_permissions` seed
+
+Resource naming must match:
+
+```text
+menu_items.name      = projects
+permissions.resource = projects
+```
+
+Protect routes with permissions:
 
 ```go
 mdw.PermissionMiddleware("projects", "list")
@@ -450,28 +483,33 @@ mdw.PermissionMiddleware("projects", "update")
 mdw.PermissionMiddleware("projects", "delete")
 ```
 
-Avoid using role-name checks for module access unless the case is explicitly special like `superadmin`.
+Seed helper:
 
-## Role Management Flow
+```bash
+go run ./cmd/module-seed \
+  --name projects \
+  --display-name "Projects" \
+  --path /projects \
+  --icon bi-folder \
+  --order-index 106
+```
 
-Recommended admin flow:
+## Documentation
 
-1. Create a role.
-2. Assign permissions to the role.
-3. Do not assign menus manually.
-4. Let menu visibility be derived from permissions automatically.
+| File | Purpose |
+| --- | --- |
+| [DESIGN.md](DESIGN.md) | Visual design reference |
+| [SMM_PLAN.md](SMM_PLAN.md) | SMM, wallet, deposit, and QRIS architecture |
+| [frontend/README.md](frontend/README.md) | Frontend setup and behavior |
+| [frontend/FRONTEND_STRUCTURE.md](frontend/FRONTEND_STRUCTURE.md) | Frontend module structure |
+| [frontend/RESPONSIVE_DESIGN.md](frontend/RESPONSIVE_DESIGN.md) | Responsive UI notes |
+| [postman/3za-digital.postman_collection.json](postman/3za-digital.postman_collection.json) | API collection |
 
-Menu management note:
-- `menus` is code-defined, but selected presentation fields may still be updated at runtime
-- do not create or delete menus through admin API
-- structural changes such as adding new menus should still go through code and migration
+## Operational Notes
 
-This prevents drift between:
-- what a user can see
-- what a user can actually access
-
-## Notes
-
-- `role_menus` still exists in the base schema for compatibility, but runtime access control does not depend on it.
-- For new modules, prefer permission-based design from the start.
-- If you introduce nested menus, parent menu visibility will be resolved automatically when the child menu is permitted.
+- Do not use role name checks for normal module access.
+- Do not expose provider details like H2H to end users.
+- Do not store provider credentials in database config rows.
+- Keep payment credit, refund, and provider callback handling idempotent.
+- Use confirmation modals for destructive or financially important actions.
+- Use audit trails for important admin actions and financial state changes.

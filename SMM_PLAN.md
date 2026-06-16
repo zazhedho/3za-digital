@@ -1,91 +1,16 @@
-# 3ZA Digital Product Order Plan
+# SMM, Wallet, And Deposit Architecture
 
-## Scope Awal
+> Current implementation notes for 3ZA Digital SMM service catalog, order flow, wallet ledger, deposit, and payment provider integration.
 
-Project dimulai sebagai dashboard Social Media Marketing (SMM) only, tetapi pondasi backend harus siap untuk product lain:
+## Product Scope
 
-- SMM
-- pulsa
-- PPOB
-- game
-- e-wallet
-
-Integrasi external API memakai H2H.id: https://h2h.id/docs/api
-
-Frontend tidak boleh memanggil H2H langsung karena credential H2H harus aman di backend.
-
-Prinsip utama: **API publik boleh SMM-specific, tetapi domain inti, tabel inti, wallet, order, pricing, dan provider client harus generic multi-product.**
-
-## Model Bisnis Balance
-
-3ZA Digital memakai dua level balance:
-
-```text
-Provider balance = saldo utama di H2H
-User balance     = saldo reseller/enduser di sistem 3ZA Digital
-```
-
-Provider balance:
-
-- Source of truth ada di H2H.
-- Dipakai backend untuk membayar order ke provider.
-- Hanya internal/admin yang boleh melihat.
-- Di sistem kita disimpan sebagai snapshot histori, bukan saldo operasional user.
-
-User balance:
-
-- Source of truth ada di database 3ZA Digital.
-- Dipakai reseller/enduser untuk membuat order.
-- Harus cukup sebelum order dibuat.
-- Bisa bertambah dari deposit/topup/adjustment.
-- Berkurang saat order dibuat.
-- Refund saat order gagal.
-
-Implikasi:
-
-- User tidak langsung memakai saldo H2H.
-- Semua order user harus melewati wallet 3ZA Digital.
-- H2H balance adalah saldo master untuk memenuhi order ke provider.
-- Pricing ke user bisa lebih tinggi dari provider charge agar ada margin.
-
-Keputusan bisnis awal:
-
-- Wallet dibuat otomatis saat user dibuat.
-- Topup fase awal dilakukan manual: admin/superadmin topup saldo utama di H2H.id sebagai modal, reseller/user membuat request deposit, lalu admin approve/topup wallet user.
-- Struktur deposit tidak boleh hardcoded hanya admin topup, karena fase berikutnya user harus bisa topup sendiri lewat payment gateway.
-- Payment gateway optional untuk fase berikutnya; tabel dan flow tetap disiapkan agar callback gateway bisa credit wallet tanpa ubah model utama.
-- Admin topup dan credit adjustment tidak boleh membuat total liability wallet aktif (`balance + locked_balance`) lebih besar dari live H2H main balance.
-- Jika provider gagal membuat order, refund wallet otomatis penuh.
-- Jika order final `partial`, sistem harus mendukung refund sisa berdasarkan `remains`, tetapi implementasi bisa masuk fase setelah order dasar stabil.
-- Harga awal dihitung dari service price estimate.
-- Final charge/profit bisa disesuaikan dari provider charge jika H2H mengembalikan charge final.
-- Nominal IDR disimpan sebagai `NUMERIC(18,2)`, tetapi tampilan bisa dibulatkan rupiah tanpa desimal.
-
-Deposit/topup direction:
-
-- Manual topup admin dan payment gateway self-topup future masuk lewat konsep `deposit_request`.
-- Fase awal: user membuat `deposit_request` pending method `manual_admin`, admin approve/topup setelah validasi pembayaran manual.
-- Wallet hanya bertambah setelah deposit berstatus final `paid` atau admin action yang valid.
-- Callback payment gateway harus idempotent agar retry webhook tidak double credit.
-- Setiap credit wallet dari deposit wajib punya ledger `wallet_transactions`.
-
-## Kondisi Backend Saat Ini
-
-- Stack: Go, Gin, GORM, PostgreSQL, Redis opsional.
-- Modul dasar sudah tersedia: auth, user, role, permission, menu, app config, audit, location.
-- `go.mod` sudah memakai module `3za-digital`.
-- Import path sudah memakai `3za-digital/...`.
-- Dokumentasi dasar sudah memakai nama 3ZA Digital.
-
-## Product Type
-
-Product type awal:
+Initial product type:
 
 ```text
 smm
 ```
 
-Product type berikutnya:
+The data model and service layer stay generic enough for future products:
 
 ```text
 pulsa
@@ -94,266 +19,141 @@ game
 ewallet
 ```
 
-Semua product type disimpan sebagai data, bukan dipisah menjadi tabel besar berbeda.
+Frontend must never call external providers directly. Provider credentials stay in backend environment variables.
 
-## Environment Baru
+## Balance Model
 
-Tambahkan ke `.env.example`:
+3ZA Digital uses two balance concepts:
 
-```text
-APP_NAME=3ZA Digital
-DB_NAME=3za_digital
+| Balance | Source | Visible To | Purpose |
+| --- | --- | --- | --- |
+| Provider balance | External provider | Admin only | Operational capital used to fulfill provider orders |
+| User balance | 3ZA database | User/admin by permission | User funds used to create orders |
 
-H2H_BASE_URL=https://api.h2h.id/api/trx
-H2H_MEMBER_ID=
-H2H_PIN=
-H2H_PASSWORD=
-H2H_TIMEOUT_SECONDS=20
-```
+Rules:
 
-Credential H2H wajib disimpan di `.env`, bukan di frontend dan bukan di log.
+- User orders debit user wallet first.
+- Provider order is created after internal validation and wallet debit.
+- Failed provider order refunds user wallet automatically.
+- Admin approve for deposits must still check provider main balance when required by business logic.
+- Wallet changes must always create `wallet_transactions` ledger rows.
+- Wallet mutation must be idempotent.
 
-## Endpoint H2H Yang Dipakai Di Fase SMM
+## Main Tables
 
-Base URL:
+| Table | Purpose |
+| --- | --- |
+| `provider_services` | Cached provider service catalog |
+| `orders` | Internal order records for all product types |
+| `order_status_logs` | Order status history |
+| `provider_balance_snapshots` | Provider balance snapshots |
+| `provider_api_logs` | Provider request/response diagnostics without secrets |
+| `wallets` | User wallet balances |
+| `wallet_transactions` | Wallet ledger |
+| `deposit_requests` | Manual, static QRIS, and dynamic QRIS deposit requests |
+| `payment_gateway_logs` | Payment provider request/status/webhook logs |
 
-```text
-https://api.h2h.id/api/trx
-```
+## Provider Services
 
-Endpoint awal:
+`provider_services` stores provider catalog data:
 
-```text
-GET /balance
-GET /pricelist?type=smm
-GET /pricelist?type=smm&platform=instagram
-GET /?type=smm&service={service}&target={target}&quantity={quantity}&refID={refID}
-GET /status?refID={refID}
-```
+- `provider`
+- `product_type`
+- `provider_service_id`
+- `name`
+- `category`
+- `brand`
+- `platform`
+- `min_quantity`
+- `max_quantity`
+- `price`
+- `metadata`
+- `raw_response`
+- `is_active`
+- `synced_at`
 
-Endpoint product lain tetap lewat H2H client yang sama, dengan `type` berbeda sesuai docs H2H.
+Frontend behavior:
 
-## Tahap 1: Project Cleanup
+- SMM Services must use pagination.
+- Service ID and service name must be shown separately.
+- Create SMM Order service dropdown must support search by `provider_service_id`.
+- Service dropdown should show readable name, provider service ID, platform, min/max quantity, and price per 1k.
+- Platform filter should reduce service search noise.
 
-Tujuan: backend bisa build stabil sebagai project 3ZA Digital.
+## Orders
 
-Pekerjaan:
+`orders` stores all internal orders:
 
-- Pastikan import path memakai `3za-digital/...`.
-- Update `.env.example` untuk brand dan database default.
-- Update README minimal agar memakai 3ZA Digital.
-- Pastikan `go test ./...` berjalan.
+- `provider`
+- `product_type`
+- `ref_id`
+- `order_number`
+- `service_id`
+- `provider_service_id`
+- `target`
+- `quantity`
+- `status`
+- `amount`
+- `provider_charge`
+- `profit`
+- `metadata`
+- `provider_response`
+- `created_by`
+- timestamps
 
-## Tahap 2: Provider Client
+SMM Create Order rules:
 
-Tujuan: semua akses provider terpusat, dan H2H menjadi provider pertama.
+- `target` must be a URL.
+- `quantity` defaults to selected service minimum.
+- `quantity` cannot be lower than service minimum.
+- `quantity` cannot be higher than service maximum.
+- Amount is calculated from selling price, not raw provider price.
+- Order creation must protect against race conditions around wallet debit and provider submission.
+- If provider submission fails after debit, refund must happen once.
 
-Lokasi:
-
-```text
-internal/integrations/h2h
-```
-
-Interface generic:
-
-```go
-type ProviderClient interface {
-    GetBalance(ctx context.Context) (*BalanceResponse, error)
-    GetPriceList(ctx context.Context, req PriceListRequest) (*PriceListResponse, error)
-    CreateOrder(ctx context.Context, req CreateOrderRequest) (*CreateOrderResponse, error)
-    GetOrderStatus(ctx context.Context, refID string) (*OrderStatusResponse, error)
-}
-```
-
-Request generic:
-
-```text
-PriceListRequest:
-- Type
-- Platform
-- Category
-
-CreateOrderRequest:
-- Type
-- ServiceCode
-- Target
-- Quantity
-- RefID
-- Metadata
-```
-
-Provider client tidak punya helper product-specific. Caller mengisi `Type`, misalnya `Type=smm`, lalu memanggil method generic.
-
-Aturan:
-
-- Semua request memakai timeout.
-- Semua response error H2H dinormalisasi.
-- Query credential ditambahkan hanya di client.
-- Log tidak boleh menyimpan `pin`, `password`, atau credential penuh.
-- Unit test memakai mock HTTP server.
-
-## Tahap 3: Database Generic
-
-Tambahkan migration baru.
-
-Tabel:
+Status:
 
 ```text
-provider_services
-orders
-order_status_logs
-provider_balance_snapshots
-provider_api_logs
-wallets
-wallet_transactions
-deposit_requests
-payment_gateway_logs
+pending
+processing
+completed
+partial
+failed
+cancelled
 ```
 
-`provider_services` menyimpan cache pricelist dari provider:
-
-- provider
-- product_type
-- provider_service_id
-- name
-- category
-- brand
-- platform
-- min_quantity
-- max_quantity
-- price
-- metadata
-- raw_response
-- is_active
-- synced_at
-
-`orders` menyimpan order internal semua product:
-
-- provider
-- product_type
-- ref_id unique
-- service_id
-- provider_service_id
-- target
-- quantity
-- customer_no
-- customer_name
-- status
-- amount
-- provider_charge
-- profit
-- start_count
-- remains
-- metadata
-- provider_response
-- created_by
-- created_at
-- updated_at
-
-Catatan field:
-
-- `target` dipakai SMM untuk link/username.
-- `customer_no` dipakai pulsa/PPOB/game/e-wallet untuk nomor pelanggan/player/account.
-- `metadata` JSONB dipakai untuk atribut khusus product, agar tabel tidak berubah tiap product baru.
-
-`order_status_logs` menyimpan histori status:
-
-- order_id
-- old_status
-- new_status
-- provider_status
-- provider_response
-- created_at
-
-`provider_balance_snapshots` menyimpan histori balance:
-
-- provider
-- balance
-- raw_response
-- created_at
-
-`provider_api_logs` opsional untuk debugging:
-
-- provider
-- endpoint
-- request_ref
-- product_type
-- response_status
-- response_body
-- duration_ms
-- error_message
-- created_at
-
-Credential tidak boleh masuk ke `provider_api_logs`.
-
-`wallets` menyimpan saldo user 3ZA Digital:
-
-- user_id
-- balance
-- locked_balance
-- currency
-- is_active
-- created_at
-- updated_at
-
-`wallet_transactions` menyimpan ledger mutasi saldo:
-
-- wallet_id
-- user_id
-- order_id
-- type
-- direction
-- amount
-- balance_before
-- balance_after
-- reference
-- description
-- metadata
-- created_by
-- created_at
-
-Tipe transaksi awal:
+Final statuses:
 
 ```text
-deposit
-debit_order
-refund_order
-adjustment
+completed
+partial
+failed
+cancelled
 ```
 
-Direction:
+## Pricing
 
-```text
-credit
-debit
-```
+Pricing uses provider cost plus runtime markup config.
 
-Aturan wallet:
+Important fields:
 
-- Semua perubahan saldo harus lewat `wallet_transactions`.
-- Saldo tidak boleh diubah tanpa ledger.
-- Debit order harus atomic dengan pembuatan order internal.
-- Refund order harus idempotent agar tidak double refund.
-- Admin adjustment wajib punya audit trail.
-- Balance user tidak boleh negatif kecuali ada kebijakan kredit khusus di masa depan.
+| Field | Meaning |
+| --- | --- |
+| `provider_services.price` | Raw provider cost |
+| `orders.provider_charge` | Provider charge for order |
+| `orders.amount` | User selling amount |
+| `orders.profit` | Selling amount minus provider charge |
 
-`deposit_requests` menyimpan permintaan topup user/admin dan disiapkan untuk payment gateway:
+UI rules:
 
-- user_id
-- amount
-- status
-- method
-- provider
-- payment_reference
-- payment_url
-- expired_at
-- paid_at
-- metadata
-- created_by
-- created_at
-- updated_at
+- Show user-facing selling price.
+- Do not expose provider brand names such as H2H to normal users.
+- Use "Provider" only where admin diagnostics need it.
+- Service price labels should say price per 1k when the value is per 1,000 quantity.
 
-Status deposit:
+## Deposits
+
+Deposit statuses:
 
 ```text
 pending
@@ -363,91 +163,76 @@ failed
 cancelled
 ```
 
-Method deposit:
+Deposit methods:
 
 ```text
 manual_admin
-payment_gateway
+qris_static
+qris_dynamic
 ```
 
-Aturan deposit:
+Rules:
 
-- `manual_admin` dibuat oleh user sebagai request deposit atau oleh admin/superadmin sebagai direct topup; status menjadi `paid` setelah validasi admin.
-- `payment_gateway` optional untuk fase berikutnya; backend nantinya membuat invoice/payment link ke gateway.
-- Deposit `paid` harus credit wallet tepat satu kali.
-- Deposit `expired`, `failed`, atau `cancelled` tidak boleh mengubah wallet.
-- `payment_reference` harus unik per provider jika tersedia.
+- Minimum deposit amount is `10000`.
+- Deposit fee comes from runtime config.
+- UI should show calculated Topup Fee amount, not hardcoded percentage text.
+- Manual review deposits must use the same fee calculation as QRIS deposits.
+- Paid deposit credits wallet exactly once.
+- Expired, failed, or cancelled deposit must not credit wallet.
+- Admin cancel/reject requires reason and displays reason in list/detail.
 
-`payment_gateway_logs` menyimpan log callback/invoice dari gateway:
+## QRIS
 
-- provider
-- event_type
-- request_id
-- payment_reference
-- deposit_request_id
-- signature
-- status
-- payload
-- error_message
-- created_at
+Supported QRIS modes:
 
-Credential, API key, token, dan secret payment gateway tidak boleh masuk ke log.
+| Mode | Config | Behavior |
+| --- | --- | --- |
+| Static QRIS | `payment.qris.image_url` filled | Uses uploaded QRIS image URL |
+| Dynamic QRIS | `payment.qris.image_url` empty and dynamic provider enabled | Creates provider transaction and returns QR image/data |
 
-## Tahap 4: Module Generic
+Dynamic providers:
 
-Struktur mengikuti pola existing:
+| Provider | Create | Status |
+| --- | --- | --- |
+| QRISLY | Provider invoice/QRIS endpoint | Provider status endpoint |
+| BOQRIS | `POST /api/v1/transactions` | `GET /api/v1/transactions/:transaction_id` |
+
+Status sync:
+
+- Deposit status should follow dynamic provider status when provider has final state.
+- `paid` status triggers wallet credit.
+- `expired` status should update local deposit as expired.
+- Provider logs must not include API keys or bearer tokens.
+
+## Backend Flow
 
 ```text
-route -> handler -> service -> repository -> database
+route -> middleware -> handler -> service -> repository -> database
 ```
 
-File/module:
+Layer rules:
 
-```text
-internal/domain/catalog
-internal/domain/order
-internal/domain/provider
-internal/dto/catalog.go
-internal/dto/order.go
-internal/repositories/catalog
-internal/repositories/order
-internal/services/catalog
-internal/services/order
-internal/handlers/http/smm
-internal/interfaces/catalog
-internal/interfaces/order
-```
+- Interfaces live in `internal/interfaces`.
+- Business services depend on interfaces.
+- Provider clients live in `internal/integrations/<provider>`.
+- Shared provider HTTP/JSON helper code belongs in reusable packages, not duplicated provider `flexible.go` files.
+- Provider-specific translation stays near provider integration.
 
-Catalog service responsibility:
+## Frontend Flow
 
-- Sync pricelist dari provider berdasarkan product type.
-- Upsert ke `provider_services`.
-- Filter service by type, platform, category, provider, active status.
+Important frontend expectations:
 
-Order service responsibility:
+- Permission-first route/menu rendering.
+- Form/list/detail file split for modules with full CRUD/detail flow.
+- Explicit search submit and reset buttons.
+- Pagination for large datasets.
+- Searchable remote dropdowns for services.
+- Confirmation modals for important write actions.
+- Mobile-first tables, filters, dropdowns, and modals.
 
-- Validasi service aktif.
-- Validasi quantity masuk min/max.
-- Generate `refID` unik.
-- Hitung `amount` user berdasarkan pricing/markup.
-- Cek wallet user aktif.
-- Cek saldo user cukup.
-- Debit wallet user secara atomic dengan order internal.
-- Simpan order internal dengan status awal `pending`.
-- Hit H2H create order.
-- Update status awal dari response provider.
-- Simpan status log.
-- Refund wallet otomatis jika provider gagal membuat order.
-- Refresh status order via H2H.
+## API Surface
 
-Handler SMM tetap boleh spesifik untuk pengalaman API yang jelas:
-
-- `internal/handlers/http/smm` memakai `catalog.Service` dan `order.Service`.
-- Handler mengisi `product_type = smm`.
-
-## Tahap 5: API Internal Fase SMM
-
-Endpoint backend:
+Main endpoints:
 
 ```text
 GET  /api/smm/balance
@@ -457,20 +242,23 @@ GET  /api/smm/orders
 POST /api/smm/orders
 GET  /api/smm/orders/:id
 POST /api/smm/orders/:id/refresh-status
+
 GET  /api/wallet/me
 GET  /api/wallet/transactions
 GET  /api/admin/wallets
-POST /api/admin/wallets/:user_id/topup
 POST /api/admin/wallets/:user_id/adjust
+
 POST /api/deposits
 GET  /api/deposits
 GET  /api/deposits/:id
+POST /api/deposits/:id/status
+
 POST /api/webhooks/payments/:provider
 ```
 
-Semua endpoint authenticated.
+## Permissions
 
-Permission:
+Representative permissions:
 
 ```text
 smm_balance:view
@@ -483,335 +271,12 @@ smm_orders:refresh_status
 wallet:view
 wallet_transactions:list
 wallets:list
-wallets:topup
 wallets:adjust
 deposits:create
 deposits:list
 deposits:view
+deposits:update_status
 payment_webhooks:receive
 ```
 
-Walaupun endpoint bernama SMM, data masuk ke tabel generic:
-
-```text
-provider_services.product_type = smm
-orders.product_type = smm
-```
-
-## Tahap 6: API Internal Masa Depan
-
-Jika product lain ditambahkan, pola API bisa memakai salah satu dari dua opsi.
-
-Opsi A, product-specific:
-
-```text
-GET  /api/pulsa/services
-POST /api/pulsa/orders
-GET  /api/ppob/services
-POST /api/ppob/orders
-GET  /api/game/services
-POST /api/game/orders
-GET  /api/ewallet/services
-POST /api/ewallet/orders
-```
-
-Opsi B, generic:
-
-```text
-GET  /api/products/:type/services
-POST /api/products/:type/orders
-GET  /api/products/:type/orders
-```
-
-Rekomendasi:
-
-- Mulai dengan endpoint SMM-specific untuk UX awal.
-- Siapkan service layer generic agar product lain tinggal menambah handler/route tipis.
-
-## Tahap 7: RBAC Dan Menu
-
-Tambah menu:
-
-```text
-SMM Dashboard -> /smm/dashboard
-SMM Services  -> /smm/services
-SMM Orders    -> /smm/orders
-```
-
-Tambah permission sesuai endpoint.
-
-Admin dan superadmin mendapat semua permission SMM.
-Operator mendapat akses list, view, create, refresh status.
-Member hanya list/view.
-
-Nanti product lain bisa punya resource:
-
-```text
-pulsa_services
-pulsa_orders
-ppob_services
-ppob_orders
-game_services
-game_orders
-ewallet_services
-ewallet_orders
-```
-
-Atau jika ingin lebih generic:
-
-```text
-provider_services
-orders
-```
-
-Rekomendasi RBAC awal: tetap resource per product agar permission mudah dipahami admin.
-
-## Tahap 8: Status Flow
-
-Status internal:
-
-```text
-pending
-processing
-completed
-partial
-failed
-cancelled
-```
-
-Mapping awal mengikuti status H2H:
-
-```text
-pending -> pending
-processing -> processing
-completed -> completed
-partial -> partial
-failed -> failed
-```
-
-Final status:
-
-```text
-completed
-partial
-failed
-cancelled
-```
-
-Final status tidak boleh berubah kecuali ada alasan bisnis eksplisit.
-
-Status ini harus reusable untuk semua product.
-
-## Tahap 9: Pricing Dan Margin
-
-Pondasi pricing harus siap dari awal walaupun fase pertama belum kompleks.
-
-Field minimal:
-
-```text
-provider_services.price
-orders.provider_charge
-orders.amount
-orders.profit
-```
-
-Fase awal:
-
-- `provider_charge = biaya H2H`.
-- `amount = harga yang dibayar user dari wallet`.
-- `profit = amount - provider_charge`.
-- Jika markup belum dikonfigurasi, boleh fallback `amount = provider_charge`.
-
-Pricing config disimpan di `app_configs` agar bisa diubah tanpa deploy.
-
-Config awal:
-
-```text
-pricing.default_markup_percent
-pricing.product_markup_percent.smm
-pricing.product_markup_percent.pulsa
-pricing.product_markup_percent.ppob
-pricing.product_markup_percent.game
-pricing.product_markup_percent.ewallet
-```
-
-Nilai config berupa persentase:
-
-```text
-5
-7.5
-10
-```
-
-Formula:
-
-```text
-markup_amount = provider_charge * markup_percent / 100
-amount        = provider_charge + markup_amount
-profit        = amount - provider_charge
-```
-
-Contoh:
-
-```text
-provider_charge = 10000
-markup_percent  = 5
-amount          = 10500
-profit          = 500
-```
-
-Prioritas config:
-
-```text
-specific product/category/platform/client markup
-product type markup
-default markup
-0 percent
-```
-
-Fase awal cukup implement:
-
-```text
-pricing.product_markup_percent.smm
-pricing.default_markup_percent
-```
-
-Fase berikut:
-
-- markup per product type
-- markup per category/platform
-- markup per client
-- promo/discount
-
-## Tahap 10: Wallet Dan Saldo User
-
-Wallet harus ada sebelum frontend transaksi dibuka untuk reseller/enduser.
-
-Flow create order:
-
-1. User memilih service.
-2. Backend menghitung harga user (`amount`).
-3. Backend cek wallet user.
-4. Jika saldo kurang, order ditolak.
-5. Jika saldo cukup, backend membuat order internal dan debit wallet dalam database transaction.
-6. Backend call H2H memakai provider balance utama.
-7. Jika H2H berhasil, order update mengikuti status provider.
-8. Jika H2H gagal sebelum order provider tercipta, wallet user direfund.
-9. Jika status akhir `failed` dari provider, wallet user direfund sesuai kebijakan.
-10. Semua mutasi saldo masuk `wallet_transactions`.
-
-API wallet fase awal:
-
-```text
-GET  /api/wallet/me
-GET  /api/wallet/transactions
-GET  /api/admin/wallets
-POST /api/admin/wallets/:user_id/topup
-POST /api/admin/wallets/:user_id/adjust
-GET  /api/admin/deposits
-GET  /api/admin/deposits/:id
-POST /api/admin/deposits/:id/approve
-```
-
-Catatan frontend admin: `GET /api/admin/deposits` dan `GET /api/admin/deposits/:id` mengembalikan `user` summary aman (`id`, `name`, `email`, `phone`, `role`, `avatar_url`) agar tabel/detail admin tidak perlu lookup user terpisah.
-
-API deposit yang disiapkan untuk payment gateway:
-
-```text
-POST /api/deposits
-GET  /api/deposits
-GET  /api/deposits/:id
-POST /api/webhooks/payments/:provider
-```
-
-Flow admin manual topup fase awal:
-
-1. Admin topup saldo utama di H2H.id sebagai modal.
-2. Reseller/user membuat `deposit_request` pending method `manual_admin`.
-3. Admin validasi pembayaran manual dari user.
-4. Backend cek live H2H main balance.
-5. Backend hitung `available = H2H main balance - total active wallet liability`.
-   Liability = total active wallet `balance + locked_balance`.
-6. Jika amount request lebih besar dari available, topup ditolak.
-7. Jika ditolak karena main balance kurang, deposit tetap `pending`; admin topup H2H main balance dulu lalu approve ulang.
-8. Jika valid, sistem set deposit `paid`.
-9. Sistem credit wallet dalam database transaction.
-10. Sistem tulis `wallet_transactions` type `deposit`.
-
-Flow payment gateway future:
-
-1. User membuat `deposit_request` method `payment_gateway`.
-2. Backend membuat invoice/payment link ke gateway.
-3. Backend menyimpan `payment_reference`, `payment_url`, `expired_at`, dan metadata gateway.
-4. User membayar lewat gateway.
-5. Gateway mengirim callback ke `/api/webhooks/payments/:provider`.
-6. Backend verifikasi signature dan status callback.
-7. Backend update deposit menjadi `paid`.
-8. Backend credit wallet dalam database transaction.
-9. Backend tulis `wallet_transactions` type `deposit`.
-10. Backend tulis `payment_gateway_logs`.
-
-Aturan payment gateway:
-
-- Webhook harus idempotent berdasarkan `payment_reference` dan status deposit.
-- Webhook payment gateway default disabled sampai provider gateway benar-benar aktif.
-- Saat webhook diaktifkan, `PAYMENT_WEBHOOK_ENABLED=true` dan `PAYMENT_WEBHOOK_SECRET_<PROVIDER>` wajib ada.
-- Wallet tidak boleh credit jika signature callback tidak valid.
-- Wallet tidak boleh credit jika amount callback berbeda dari amount deposit.
-- Deposit yang sudah `paid` tidak boleh diproses ulang.
-- Gateway provider harus lewat interface agar bisa menambah Midtrans/Xendit/Duitku/provider lain tanpa ubah wallet core.
-
-Permission:
-
-```text
-wallet:view
-wallet_transactions:list
-wallets:list
-wallets:topup
-wallets:adjust
-deposits:create
-deposits:list
-deposits:view
-payment_webhooks:receive
-```
-
-Catatan:
-
-- `member` melihat wallet miliknya sendiri.
-- `admin` dan `superadmin` bisa melihat wallet user.
-- Topup dan adjustment hanya admin/superadmin.
-- `member` boleh membuat deposit self-topup saat payment gateway aktif.
-- Payment webhook tidak memakai session user, tetapi wajib validasi signature provider dan secret config.
-- H2H balance tidak boleh dianggap wallet user.
-
-## Tahap 11: Fase 2
-
-Setelah flow order stabil:
-
-- Payment gateway adapter untuk self-topup.
-- Webhook/callback dari H2H jika tersedia.
-- Polling otomatis untuk order non-final.
-- Dashboard analytics.
-- Client management.
-- Margin/markup pricing.
-- Invoice dan laporan.
-- Frontend React dashboard.
-
-## Urutan Eksekusi Rekomendasi
-
-1. Cleanup import path dan brand.
-2. Tambah env H2H.
-3. Buat provider client interface dan H2H client plus test.
-4. Buat migration generic: `provider_services`, `orders`, `order_status_logs`, `provider_balance_snapshots`, `provider_api_logs`.
-5. Buat sync pricelist untuk `product_type=smm`.
-6. Buat list services.
-7. Buat wallet tables dan wallet service.
-8. Buat `deposit_requests` dan `payment_gateway_logs` agar topup siap berkembang ke gateway.
-9. Buat API wallet user dan admin topup/adjustment lewat deposit flow.
-10. Siapkan interface payment gateway tanpa wajib integrasi provider gateway dulu.
-11. Integrasikan debit wallet ke create order.
-12. Integrasikan refund wallet untuk provider gagal/status gagal.
-13. Buat create order.
-14. Buat refresh order status.
-15. Tambah RBAC dan menu.
-16. Jalankan test penuh.
+Permission assignment is managed through role permission setup. Role names are labels; permissions control access.
