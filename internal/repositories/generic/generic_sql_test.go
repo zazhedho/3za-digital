@@ -212,3 +212,31 @@ func TestBuildSearchFuncAndFilteringBranches(t *testing.T) {
 		t.Fatal("expected empty search columns to return original query")
 	}
 }
+
+func TestBuildTokenSearchFuncSplitsLongServiceNames(t *testing.T) {
+	db := newDryRunDB(t).Model(&sampleRecord{})
+
+	query := BuildTokenSearchFunc("name", "status")(db, "TikTok Followers [ Max 10M ] | LQ Accounts | Cancel Enable | No Refill ⚠️ | Instant Start | Day 50K 🚀")
+	var rows []sampleRecord
+	query.Find(&rows)
+
+	sql := query.Statement.SQL.String()
+	if !strings.Contains(sql, "LOWER(name)") || !strings.Contains(sql, " AND ") {
+		t.Fatalf("expected token search SQL across name/status with AND groups, got %q", sql)
+	}
+
+	vars := query.Statement.Vars
+	expectedTokens := []string{"%tiktok%", "%followers%", "%max%", "%10m%", "%lq%", "%accounts%", "%cancel%", "%enable%", "%no%", "%refill%", "%instant%", "%start%"}
+	if len(vars) != len(expectedTokens)*2 {
+		t.Fatalf("expected vars for 12 tokens across 2 columns, got %d: %#v", len(vars), vars)
+	}
+	for index, expected := range expectedTokens {
+		if vars[index*2] != expected || vars[index*2+1] != expected {
+			t.Fatalf("expected token %q at vars %d/%d, got %#v", expected, index*2, index*2+1, vars)
+		}
+	}
+
+	if got := BuildTokenSearchFunc()(db, "TikTok"); got != db {
+		t.Fatal("expected empty token search columns to return original query")
+	}
+}

@@ -21,7 +21,7 @@ func NewCatalogRepo(db *gorm.DB) interfacecatalog.RepoCatalogInterface {
 
 func (r *repo) GetAll(ctx context.Context, params filter.BaseParams) ([]domaincatalog.ProviderService, int64, error) {
 	return r.GenericRepository.GetAll(ctx, params, repositorygeneric.QueryOptions{
-		Search: repositorygeneric.BuildSearchFunc("name", "provider_service_id", "category", "brand", "platform"),
+		Search: repositorygeneric.BuildTokenSearchFunc("name", "provider_service_id", "category", "brand", "platform"),
 		AllowedFilters: []string{
 			"provider",
 			"product_type",

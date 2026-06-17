@@ -2,6 +2,7 @@ package repositoryorder
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -32,7 +33,7 @@ func NewOrderRepo(db *gorm.DB) interfaceorder.RepoOrderInterface {
 
 func (r *repo) GetAll(ctx context.Context, params filter.BaseParams) ([]domainorder.Order, int64, error) {
 	return r.GenericRepository.GetAll(ctx, params, repositorygeneric.QueryOptions{
-		Search: repositorygeneric.BuildSearchFunc("ref_id", "provider_service_id", "target", "customer_no", "customer_name"),
+		Search: orderSearchFunc,
 		AllowedFilters: []string{
 			"provider",
 			"product_type",
@@ -54,6 +55,37 @@ func (r *repo) GetAll(ctx context.Context, params filter.BaseParams) ([]domainor
 		},
 		DefaultOrders: []string{"created_at DESC"},
 	})
+}
+
+func orderSearchFunc(query *gorm.DB, search string) *gorm.DB {
+	tokens := repositorygeneric.SearchTokens(search)
+	if len(tokens) == 0 {
+		return query
+	}
+
+	expressions := []string{
+		"orders.ref_id",
+		"orders.provider_service_id",
+		"orders.target",
+		"orders.customer_no",
+		"orders.customer_name",
+		"COALESCE(orders.provider_response::text, '')",
+		"COALESCE((SELECT ps.name FROM provider_services ps WHERE ps.id = orders.service_id AND ps.deleted_at IS NULL LIMIT 1), '')",
+	}
+	clauses := make([]string, 0, len(tokens))
+	args := make([]interface{}, 0, len(tokens)*len(expressions))
+
+	for _, token := range tokens {
+		parts := make([]string, 0, len(expressions))
+		searchPattern := "%" + token + "%"
+		for _, expression := range expressions {
+			parts = append(parts, fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", expression))
+			args = append(args, searchPattern)
+		}
+		clauses = append(clauses, "("+strings.Join(parts, " OR ")+")")
+	}
+
+	return query.Where(strings.Join(clauses, " AND "), args...)
 }
 
 func (r *repo) GetByID(ctx context.Context, id string) (domainorder.Order, error) {

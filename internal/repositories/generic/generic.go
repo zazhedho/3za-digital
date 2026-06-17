@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -186,4 +187,60 @@ func BuildSearchFunc(columns ...string) SearchFunc {
 
 		return query.Where(strings.Join(parts, " OR "), args...)
 	}
+}
+
+func BuildTokenSearchFunc(columns ...string) SearchFunc {
+	safeColumns := safeColumnIdentifiers(columns)
+
+	return func(query *gorm.DB, search string) *gorm.DB {
+		if len(safeColumns) == 0 {
+			return query
+		}
+
+		tokens := SearchTokens(search)
+		if len(tokens) == 0 {
+			return query
+		}
+
+		clauses := make([]string, 0, len(tokens))
+		args := make([]interface{}, 0, len(tokens)*len(safeColumns))
+
+		for _, token := range tokens {
+			parts := make([]string, 0, len(safeColumns))
+			searchPattern := "%" + token + "%"
+			for _, column := range safeColumns {
+				parts = append(parts, fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", column))
+				args = append(args, searchPattern)
+			}
+			clauses = append(clauses, "("+strings.Join(parts, " OR ")+")")
+		}
+
+		return query.Where(strings.Join(clauses, " AND "), args...)
+	}
+}
+
+func SearchTokens(search string) []string {
+	fields := strings.FieldsFunc(strings.TrimSpace(search), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+	tokens := make([]string, 0, len(fields))
+	seen := map[string]struct{}{}
+
+	for _, field := range fields {
+		token := strings.ToLower(strings.TrimSpace(field))
+		if len(token) < 2 {
+			continue
+		}
+		if _, exists := seen[token]; exists {
+			continue
+		}
+		seen[token] = struct{}{}
+		tokens = append(tokens, token)
+	}
+
+	if len(tokens) > 12 {
+		return tokens[:12]
+	}
+
+	return tokens
 }
