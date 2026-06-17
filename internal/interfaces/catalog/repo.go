@@ -13,4 +13,5 @@ type RepoCatalogInterface interface {
 
 	GetAll(ctx context.Context, params filter.BaseParams) ([]domaincatalog.ProviderService, int64, error)
 	UpsertServices(ctx context.Context, services []domaincatalog.ProviderService) error
+	DeactivateStaleServices(ctx context.Context, productType string, syncedAtThreshold string) error
 }

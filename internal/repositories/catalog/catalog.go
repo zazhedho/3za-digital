@@ -69,3 +69,10 @@ func (r *repo) UpsertServices(ctx context.Context, services []domaincatalog.Prov
 		},
 	)
 }
+
+func (r *repo) DeactivateStaleServices(ctx context.Context, productType string, syncedAtThreshold string) error {
+	return r.DB.WithContext(ctx).
+		Model(&domaincatalog.ProviderService{}).
+		Where("product_type = ? AND (synced_at IS NULL OR synced_at < ?) AND is_active = ?", productType, syncedAtThreshold, true).
+		Update("is_active", false).Error
+}

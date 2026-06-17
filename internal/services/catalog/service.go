@@ -130,6 +130,14 @@ func (s *CatalogService) syncUnlocked(ctx context.Context, productType string, r
 	}
 	s.storeLastSyncedAt(ctx, productType, now)
 
+	// Threshold: any service not updated in this current sync batch (e.g. earlier than 'now' minus a small buffer)
+	// We use UTC string representation matching database time formats
+	threshold := now.Add(-5 * time.Second).UTC().Format(time.RFC3339)
+	if err := s.Repo.DeactivateStaleServices(ctx, productType, threshold); err != nil {
+		// Log the error but don't fail the sync, as the main data is already updated
+		return dto.SyncCatalogResponse{}, err
+	}
+
 	return dto.SyncCatalogResponse{
 		Provider:    domaincatalog.ProviderH2H,
 		ProductType: productType,

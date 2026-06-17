@@ -278,6 +278,10 @@ func (m *mockCatalogRepo) UpsertServices(ctx context.Context, services []domainc
 	return nil
 }
 
+func (m *mockCatalogRepo) DeactivateStaleServices(ctx context.Context, productType string, syncedAtThreshold string) error {
+	return nil
+}
+
 type mockCatalogConfigService struct {
 	values map[string]string
 	calls  map[string]int
