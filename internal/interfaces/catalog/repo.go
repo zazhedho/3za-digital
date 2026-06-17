@@ -2,6 +2,7 @@ package interfacecatalog
 
 import (
 	"context"
+	"time"
 
 	domaincatalog "3za-digital/internal/domain/catalog"
 	interfacegeneric "3za-digital/internal/interfaces/generic"
@@ -13,5 +14,5 @@ type RepoCatalogInterface interface {
 
 	GetAll(ctx context.Context, params filter.BaseParams) ([]domaincatalog.ProviderService, int64, error)
 	UpsertServices(ctx context.Context, services []domaincatalog.ProviderService) error
-	DeactivateStaleServices(ctx context.Context, productType string, syncedAtThreshold string) error
+	DeactivateStaleServices(ctx context.Context, provider, productType, platform, category string, syncedAtThreshold time.Time) error
 }

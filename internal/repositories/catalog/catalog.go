@@ -2,6 +2,8 @@ package repositorycatalog
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	domaincatalog "3za-digital/internal/domain/catalog"
 	interfacecatalog "3za-digital/internal/interfaces/catalog"
@@ -70,9 +72,21 @@ func (r *repo) UpsertServices(ctx context.Context, services []domaincatalog.Prov
 	)
 }
 
-func (r *repo) DeactivateStaleServices(ctx context.Context, productType string, syncedAtThreshold string) error {
-	return r.DB.WithContext(ctx).
+func (r *repo) DeactivateStaleServices(ctx context.Context, provider, productType, platform, category string, syncedAtThreshold time.Time) error {
+	query := r.DB.WithContext(ctx).
 		Model(&domaincatalog.ProviderService{}).
-		Where("product_type = ? AND (synced_at IS NULL OR synced_at < ?) AND is_active = ?", productType, syncedAtThreshold, true).
-		Update("is_active", false).Error
+		Where("provider = ? AND product_type = ? AND (synced_at IS NULL OR synced_at < ?) AND is_active = ?",
+			provider,
+			productType,
+			syncedAtThreshold,
+			true,
+		)
+	if strings.TrimSpace(platform) != "" {
+		query = query.Where("platform = ?", strings.TrimSpace(platform))
+	}
+	if strings.TrimSpace(category) != "" {
+		query = query.Where("category = ?", strings.TrimSpace(category))
+	}
+
+	return query.Update("is_active", false).Error
 }

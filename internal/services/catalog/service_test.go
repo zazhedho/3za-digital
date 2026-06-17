@@ -72,6 +72,18 @@ func TestCatalogServiceSyncSMM(t *testing.T) {
 	if !synced.IsActive {
 		t.Fatal("expected active service")
 	}
+	if repo.deactivatedProvider != domaincatalog.ProviderH2H {
+		t.Fatalf("expected stale deactivation provider h2h, got %s", repo.deactivatedProvider)
+	}
+	if repo.deactivatedProductType != domaincatalog.ProductTypeSMM {
+		t.Fatalf("expected stale deactivation product type smm, got %s", repo.deactivatedProductType)
+	}
+	if repo.deactivatedPlatform != "instagram" {
+		t.Fatalf("expected stale deactivation to be scoped to instagram, got %s", repo.deactivatedPlatform)
+	}
+	if repo.deactivatedAt.IsZero() {
+		t.Fatal("expected stale deactivation threshold")
+	}
 }
 
 func TestCatalogServiceSyncRejectsUnsupportedProductType(t *testing.T) {
@@ -248,9 +260,14 @@ func (m *mockProviderClient) GetOrderStatus(ctx context.Context, refID string) (
 }
 
 type mockCatalogRepo struct {
-	upserted []domaincatalog.ProviderService
-	list     []domaincatalog.ProviderService
-	total    int64
+	upserted               []domaincatalog.ProviderService
+	list                   []domaincatalog.ProviderService
+	total                  int64
+	deactivatedProvider    string
+	deactivatedProductType string
+	deactivatedPlatform    string
+	deactivatedCategory    string
+	deactivatedAt          time.Time
 }
 
 func (m *mockCatalogRepo) Store(ctx context.Context, data domaincatalog.ProviderService) error {
@@ -278,7 +295,12 @@ func (m *mockCatalogRepo) UpsertServices(ctx context.Context, services []domainc
 	return nil
 }
 
-func (m *mockCatalogRepo) DeactivateStaleServices(ctx context.Context, productType string, syncedAtThreshold string) error {
+func (m *mockCatalogRepo) DeactivateStaleServices(ctx context.Context, provider, productType, platform, category string, syncedAtThreshold time.Time) error {
+	m.deactivatedProvider = provider
+	m.deactivatedProductType = productType
+	m.deactivatedPlatform = platform
+	m.deactivatedCategory = category
+	m.deactivatedAt = syncedAtThreshold
 	return nil
 }
 

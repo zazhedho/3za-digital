@@ -110,10 +110,13 @@ func (s *CatalogService) syncUnlocked(ctx context.Context, productType string, r
 		return dto.SyncCatalogResponse{}, err
 	}
 
+	syncStartedAt := time.Now()
+	platform := strings.TrimSpace(req.Platform)
+	category := strings.TrimSpace(req.Category)
 	priceList, err := client.GetPriceList(ctx, h2h.PriceListRequest{
 		Type:     productType,
-		Platform: strings.TrimSpace(req.Platform),
-		Category: strings.TrimSpace(req.Category),
+		Platform: platform,
+		Category: category,
 	})
 	if err != nil {
 		return dto.SyncCatalogResponse{}, err
@@ -130,11 +133,7 @@ func (s *CatalogService) syncUnlocked(ctx context.Context, productType string, r
 	}
 	s.storeLastSyncedAt(ctx, productType, now)
 
-	// Threshold: any service not updated in this current sync batch (e.g. earlier than 'now' minus a small buffer)
-	// We use UTC string representation matching database time formats
-	threshold := now.Add(-5 * time.Second).UTC().Format(time.RFC3339)
-	if err := s.Repo.DeactivateStaleServices(ctx, productType, threshold); err != nil {
-		// Log the error but don't fail the sync, as the main data is already updated
+	if err := s.Repo.DeactivateStaleServices(ctx, domaincatalog.ProviderH2H, productType, platform, category, syncStartedAt); err != nil {
 		return dto.SyncCatalogResponse{}, err
 	}
 
