@@ -82,8 +82,13 @@ jobs:
       - build-backend
       - build-frontend
     if: |
-      needs.detect-changes.outputs.backend == 'true' ||
-      needs.detect-changes.outputs.frontend == 'true'
+      always() &&
+      !cancelled() &&
+      !failure() &&
+      (
+        needs.detect-changes.outputs.backend == 'true' ||
+        needs.detect-changes.outputs.frontend == 'true'
+      )
     runs-on: ubuntu-latest
     environment: Production
 
@@ -96,5 +101,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/apps/3za-digital
-            docker compose pull
-            docker compose up -d
+            if [ "${{ needs.detect-changes.outputs.backend }}" = "true" ]; then
+              docker compose pull backend
+              docker compose up -d backend
+            fi
+            if [ "${{ needs.detect-changes.outputs.frontend }}" = "true" ]; then
+              docker compose pull frontend
+              docker compose up -d frontend
+            fi
