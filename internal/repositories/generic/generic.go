@@ -16,6 +16,8 @@ type SearchFunc func(query *gorm.DB, search string) *gorm.DB
 type QueryFunc func(query *gorm.DB) *gorm.DB
 type FilterSanitizer func(filters map[string]interface{}, allowed []string) map[string]interface{}
 
+const maxSearchTokens = 20
+
 type QueryOptions struct {
 	BaseQuery           QueryFunc
 	Search              SearchFunc
@@ -238,8 +240,8 @@ func SearchTokens(search string) []string {
 		tokens = append(tokens, token)
 	}
 
-	if len(tokens) > 12 {
-		return tokens[:12]
+	if len(tokens) > maxSearchTokens {
+		return append(tokens[:maxSearchTokens-4], tokens[len(tokens)-4:]...)
 	}
 
 	return tokens

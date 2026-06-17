@@ -226,9 +226,9 @@ func TestBuildTokenSearchFuncSplitsLongServiceNames(t *testing.T) {
 	}
 
 	vars := query.Statement.Vars
-	expectedTokens := []string{"%tiktok%", "%followers%", "%max%", "%10m%", "%lq%", "%accounts%", "%cancel%", "%enable%", "%no%", "%refill%", "%instant%", "%start%"}
+	expectedTokens := []string{"%tiktok%", "%followers%", "%max%", "%10m%", "%lq%", "%accounts%", "%cancel%", "%enable%", "%no%", "%refill%", "%instant%", "%start%", "%day%", "%50k%"}
 	if len(vars) != len(expectedTokens)*2 {
-		t.Fatalf("expected vars for 12 tokens across 2 columns, got %d: %#v", len(vars), vars)
+		t.Fatalf("expected vars for %d tokens across 2 columns, got %d: %#v", len(expectedTokens), len(vars), vars)
 	}
 	for index, expected := range expectedTokens {
 		if vars[index*2] != expected || vars[index*2+1] != expected {
