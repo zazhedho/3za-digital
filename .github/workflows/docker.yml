@@ -25,10 +25,18 @@ jobs:
             frontend:
               - 'frontend/**'
             backend:
-              - '**'
-              - '!frontend/**'
-              - '!README.md'
-              - '!.github/**'
+              - 'Dockerfile'
+              - 'entrypoint.sh'
+              - 'go.mod'
+              - 'go.sum'
+              - 'main.go'
+              - 'cmd/**'
+              - 'infrastructure/**'
+              - 'internal/**'
+              - 'middlewares/**'
+              - 'migrations/**'
+              - 'pkg/**'
+              - 'utils/**'
 
   build-backend:
     needs: detect-changes
